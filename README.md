@@ -17,7 +17,7 @@ make lint
 make check
 ```
 
-服务端统一入口为 `./build/record-hub`。当前已提供 `help` 和 `version` 命令，运行模式将在配置与生命周期任务中加入。
+服务端统一入口为 `./build/record-hub`，提供 `help`、`version` 和 `serve` 命令。`serve` 从 `RECORD_HUB_*` 环境变量加载配置，示例见 [`.env.example`](.env.example)。
 
 ## 核心边界
 
