@@ -10,7 +10,7 @@ test:
 	go test ./...
 
 lint:
-	test -z "$$(gofmt -l server tools)"
+	test -z "$$(gofmt -l contracts server tools)"
 	go vet ./...
 
 openapi-lint:

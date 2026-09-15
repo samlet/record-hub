@@ -46,7 +46,7 @@ HTTP 契约以 [`api/openapi.yaml`](api/openapi.yaml) 为准。`make generate-cl
 - [ADR-0001：独立仓库与事实所有权](docs/adr/0001-independent-service-and-data-ownership.md)
 - [ADR-0002：Go 服务端](docs/adr/0002-go-server.md)
 
-公共事件 envelope 的初始草案位于 [contracts/event-envelope-v1.schema.json](contracts/event-envelope-v1.schema.json)。
+公共事件 envelope 契约位于 [contracts/eventenvelope/event-envelope-v1.schema.json](contracts/eventenvelope/event-envelope-v1.schema.json)。
 
 ## 仓库结构
 

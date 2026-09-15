@@ -1,0 +1,12 @@
+{
+  "kind": "event",
+  "eventType": "approver.application.summary-changed",
+  "schemaVersion": 1,
+  "sourceSystem": "approver",
+  "tenantId": "tenant-local",
+  "aggregateType": "Application",
+  "aggregateId": "app-123",
+  "aggregateVersion": 7,
+  "occurredAt": "2026-09-15T15:30:00Z",
+  "payload": {}
+}

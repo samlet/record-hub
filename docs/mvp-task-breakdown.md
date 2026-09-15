@@ -24,7 +24,7 @@
 | RH-M0-002 | Record Hub | 配置加载、结构化日志、graceful shutdown | DONE | 001 | api/worker/all 三种模式；配置缺失 fail closed；JSON 日志和有界退出已测试 |
 | RH-M0-003 | Record Hub | `/healthz`、`/readyz` 与依赖探针 | DONE | 002 | readiness 区分 Mongo/NATS/Dex；响应不泄露地址、凭据或底层错误；适配器接入前 fail closed |
 | RH-M0-004 | Record Hub | OpenAPI-first 基线与错误 envelope | DONE | 001 | spec lint 已纳入 check；统一错误 envelope；Go/Java/TS client 可重复生成 |
-| RH-M0-005 | Record Hub | event envelope schema/fixture/verifier | TODO | 001 | valid/invalid、大小、时间、版本和未知字段测试 |
+| RH-M0-005 | Record Hub | event envelope schema/fixture/verifier | DONE | 001 | valid/invalid fixture；大小、UTC 时间、未来偏移、版本、未知字段和尾随 JSON 测试 |
 | RH-M0-006 | Record Hub | CI 与依赖/SBOM/secret scan | TODO | 001 | clean checkout 全门禁通过 |
 
 ## 3. M1：本地基础设施与身份

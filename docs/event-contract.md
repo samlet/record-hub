@@ -83,3 +83,12 @@ aggregateVersion > currentVersion + 1   -> gap/pause/recover
 
 生产者仓库保存权威 schema、fixture 和兼容性测试；Record Hub Registry 保存已发布副本和 hash。
 
+## 8. Envelope v1 验证边界
+
+- 原始消息不得超过 256 KiB，先检查字节数再解析 JSON。
+- 顶层未知字段拒绝，`schemaVersion` 只接受当前支持的 `1`。
+- `occurredAt` 必须是带 `Z` 的 RFC3339 UTC；允许历史事件重放，但拒绝超过当前时间五分钟的未来时间。
+- JSON format 校验包含 UUID 和 date-time；尾随 JSON 和非法 UTF-8 拒绝。
+- 验证错误不包含原始 payload，避免把敏感内容带入日志或 DLQ。
+
+共享 schema、可执行 verifier 和跨语言输入 fixture 位于 `contracts/eventenvelope`。
