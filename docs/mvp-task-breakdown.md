@@ -20,7 +20,7 @@
 
 | ID | 仓库 | 任务 | 状态 | 依赖 | 验收 |
 | --- | --- | --- | --- | --- | --- |
-| RH-M0-001 | Record Hub | 初始化 Go 1.27 module、模块化目录和统一命令入口 | IN_PROGRESS | - | module path 已固定为 `github.com/samlet/record-hub`；build/test/lint 和命令入口待实现 |
+| RH-M0-001 | Record Hub | 初始化 Go 1.27 module、模块化目录和统一命令入口 | DONE | - | module path、模块边界、build/test/lint/check 和 `record-hub` 命令入口已实现 |
 | RH-M0-002 | Record Hub | 配置加载、结构化日志、graceful shutdown | TODO | 001 | api/worker/all 三种模式；配置缺失 fail closed |
 | RH-M0-003 | Record Hub | `/healthz`、`/readyz` 与依赖探针 | TODO | 002 | readiness 区分 Mongo/NATS/Dex；health 不泄露配置 |
 | RH-M0-004 | Record Hub | OpenAPI-first 基线与错误 envelope | TODO | 001 | spec lint；Go server stub 与 Java/Go/TS client 可生成 |

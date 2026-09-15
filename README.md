@@ -6,7 +6,18 @@ Record Hub 不是各业务系统的事实库，也不是跨 MongoDB、PostgreSQL
 
 ## 状态
 
-当前处于架构设计阶段。服务端确定使用 Go，Web 控制台使用 TypeScript；尚未开始生产代码。
+当前处于 MVP 实现阶段。服务端使用 Go，Web 控制台使用 TypeScript；实施状态以[MVP 任务分解](docs/mvp-task-breakdown.md)为准。
+
+## 开发命令
+
+```bash
+make build
+make test
+make lint
+make check
+```
+
+服务端统一入口为 `./build/record-hub`。当前已提供 `help` 和 `version` 命令，运行模式将在配置与生命周期任务中加入。
 
 ## 核心边界
 
@@ -34,11 +45,11 @@ Record Hub 不是各业务系统的事实库，也不是跨 MongoDB、PostgreSQL
 
 公共事件 envelope 的初始草案位于 [contracts/event-envelope-v1.schema.json](contracts/event-envelope-v1.schema.json)。
 
-## 计划中的仓库结构
+## 仓库结构
 
 ```text
 record-hub/
-  server/                 Go API、Schema、Record、Projection、Binding
+  server/                 Go 命令入口与模块化单体
   web/                    多维表格 UI
   contracts/              Record Hub 自有公共契约
   sdk/
