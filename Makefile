@@ -1,4 +1,4 @@
-.PHONY: build test lint check clean
+.PHONY: build test lint openapi-lint generate-clients check clean
 
 BUILD_DIR := build
 BINARY := $(BUILD_DIR)/record-hub
@@ -10,10 +10,16 @@ test:
 	go test ./...
 
 lint:
-	test -z "$$(gofmt -l server)"
+	test -z "$$(gofmt -l server tools)"
 	go vet ./...
 
-check: lint test build
+openapi-lint:
+	go run ./tools/openapi-lint api/openapi.yaml
+
+generate-clients:
+	./scripts/generate-clients.sh
+
+check: lint openapi-lint test build
 
 clean:
 	rm -f $(BINARY)

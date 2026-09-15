@@ -1,0 +1,161 @@
+openapi: 3.0.3
+info:
+  title: Record Hub API
+  version: 0.1.0
+  description: Stable HTTP contract for Record Hub clients and workflow bindings.
+servers:
+  - url: http://127.0.0.1:8080
+    description: Local development
+tags:
+  - name: System
+  - name: Identity
+paths:
+  /healthz:
+    get:
+      tags: [System]
+      operationId: getHealth
+      summary: Report process liveness
+      security: []
+      responses:
+        "200":
+          description: The process is alive.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /readyz:
+    get:
+      tags: [System]
+      operationId: getReadiness
+      summary: Report dependency readiness
+      security: []
+      responses:
+        "200":
+          description: All required dependencies are ready.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadinessResponse"
+        "503":
+          description: One or more required dependencies are not ready.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadinessResponse"
+  /api/v1/me:
+    get:
+      tags: [Identity]
+      operationId: getCurrentPrincipal
+      summary: Resolve the authenticated principal
+      responses:
+        "200":
+          description: The authenticated principal and its workspace memberships.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Principal"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+components:
+  securitySchemes:
+    oidc:
+      type: openIdConnect
+      openIdConnectUrl: http://127.0.0.1:5556/dex/.well-known/openid-configuration
+  responses:
+    Unauthorized:
+      description: Authentication is missing or invalid.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  schemas:
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          $ref: "#/components/schemas/APIError"
+    APIError:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          pattern: "^[A-Z][A-Z0-9_]{2,63}$"
+          example: AUTHENTICATION_REQUIRED
+        message:
+          type: string
+          maxLength: 512
+          example: Authentication is required.
+        requestId:
+          type: string
+          maxLength: 128
+        details:
+          type: object
+          additionalProperties: true
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+    ReadinessResponse:
+      type: object
+      additionalProperties: false
+      required: [status, checks]
+      properties:
+        status:
+          type: string
+          enum: [ready, not_ready]
+        checks:
+          type: object
+          additionalProperties: false
+          required: [mongodb, nats, dex]
+          properties:
+            mongodb:
+              $ref: "#/components/schemas/DependencyStatus"
+            nats:
+              $ref: "#/components/schemas/DependencyStatus"
+            dex:
+              $ref: "#/components/schemas/DependencyStatus"
+    DependencyStatus:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ready, not_ready]
+    Principal:
+      type: object
+      additionalProperties: false
+      required: [issuer, subject, memberships]
+      properties:
+        issuer:
+          type: string
+          format: uri
+        subject:
+          type: string
+          minLength: 1
+          maxLength: 256
+        memberships:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceMembership"
+    WorkspaceMembership:
+      type: object
+      additionalProperties: false
+      required: [workspaceId, role]
+      properties:
+        workspaceId:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [OWNER, EDITOR, VIEWER]
+security:
+  - oidc: []

@@ -15,9 +15,12 @@ make build
 make test
 make lint
 make check
+make generate-clients
 ```
 
 服务端统一入口为 `./build/record-hub`，提供 `help`、`version` 和 `serve` 命令。`serve` 从 `RECORD_HUB_*` 环境变量加载配置，示例见 [`.env.example`](.env.example)。
+
+HTTP 契约以 [`api/openapi.yaml`](api/openapi.yaml) 为准。`make generate-clients` 使用固定版本的 OpenAPI Generator 在 `build/generated-clients` 生成 Go server stub 以及 Go、Java 和 TypeScript 客户端。
 
 ## 核心边界
 
