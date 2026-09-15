@@ -7,3 +7,5 @@ Go module path 已固定为 `github.com/samlet/record-hub`。统一命令入口�
 从仓库根目录运行 `make check` 执行格式检查、静态分析、测试和构建。
 
 进程可通过 `RECORD_HUB_MODE=api|worker|all` 选择职责。配置缺失或无效时进程拒绝启动；日志采用 JSON，SIGINT/SIGTERM 会触发有超时边界的优雅退出。配置项见仓库根目录的 [`.env.example`](../.env.example)。
+
+API 模式提供 `/healthz` 和 `/readyz`。前者只表达进程存活；后者分别报告 `mongodb`、`nats`、`dex` 的安全状态，不返回地址、凭据或底层错误。依赖适配器接入前 readiness 会保持 `503 not_ready`。

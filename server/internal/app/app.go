@@ -6,9 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"time"
 
 	"github.com/samlet/record-hub/server/internal/config"
+	"github.com/samlet/record-hub/server/internal/health"
+	"github.com/samlet/record-hub/server/internal/httpapi"
 )
 
 // Service is one long-running process responsibility.
@@ -29,7 +32,13 @@ type App struct {
 func New(cfg config.Config, logger *slog.Logger) *App {
 	services := make([]Service, 0, 2)
 	if cfg.Mode == config.ModeAPI || cfg.Mode == config.ModeAll {
-		services = append(services, idleService("api"))
+		mux := http.NewServeMux()
+		health.NewHandler(2*time.Second, map[health.Dependency]health.Checker{
+			health.MongoDB: health.Pending(),
+			health.NATS:    health.Pending(),
+			health.Dex:     health.Pending(),
+		}).Routes(mux)
+		services = append(services, httpapi.New(cfg.HTTPAddress, mux, cfg.ShutdownTimeout))
 	}
 	if cfg.Mode == config.ModeWorker || cfg.Mode == config.ModeAll {
 		services = append(services, idleService("worker"))
