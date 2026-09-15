@@ -25,7 +25,7 @@
 | RH-M0-003 | Record Hub | `/healthz`、`/readyz` 与依赖探针 | DONE | 002 | readiness 区分 Mongo/NATS/Dex；响应不泄露地址、凭据或底层错误；适配器接入前 fail closed |
 | RH-M0-004 | Record Hub | OpenAPI-first 基线与错误 envelope | DONE | 001 | spec lint 已纳入 check；统一错误 envelope；Go/Java/TS client 可重复生成 |
 | RH-M0-005 | Record Hub | event envelope schema/fixture/verifier | DONE | 001 | valid/invalid fixture；大小、UTC 时间、未来偏移、版本、未知字段和尾随 JSON 测试 |
-| RH-M0-006 | Record Hub | CI 与依赖/SBOM/secret scan | TODO | 001 | clean checkout 全门禁通过 |
+| RH-M0-006 | Record Hub | CI 与依赖/SBOM/secret scan | DONE | 001 | GitHub Actions 与本地 `make ci`；govulncheck、CycloneDX SBOM、Git 历史及工作树 secret scan |
 
 ## 3. M1：本地基础设施与身份
 

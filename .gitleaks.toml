@@ -1,0 +1,11 @@
+title = "Record Hub secret scanning"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Generated build output and Git internals are scanned through their sources/history."
+paths = [
+  '''(^|/)\.git/''',
+  '''(^|/)build/'''
+]
