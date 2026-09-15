@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:record-hub:contract:event-envelope:v1",
+  "title": "Record Hub Event Envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "eventId",
+    "kind",
+    "eventType",
+    "schemaVersion",
+    "sourceSystem",
+    "tenantId",
+    "aggregateType",
+    "aggregateId",
+    "aggregateVersion",
+    "occurredAt",
+    "payload"
+  ],
+  "properties": {
+    "eventId": { "type": "string", "format": "uuid" },
+    "kind": { "enum": ["event", "command", "result"] },
+    "eventType": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 160,
+      "pattern": "^[a-z][a-z0-9.-]+$"
+    },
+    "schemaVersion": { "type": "integer", "minimum": 1 },
+    "sourceSystem": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "targetSystem": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "tenantId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "aggregateType": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "aggregateId": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "aggregateVersion": { "type": "integer", "minimum": 0 },
+    "correlationId": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "causationId": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "operationId": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "payload": { "type": "object" },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "maxLength": 1024 }
+    }
+  }
+}
+

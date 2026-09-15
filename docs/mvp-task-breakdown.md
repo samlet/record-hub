@@ -1,0 +1,182 @@
+# Record Hub MVP 任务分解
+
+- 状态：Planning
+- 设计：[mvp-design.md](mvp-design.md)
+- 主仓库：`/Users/xiaofeiwu/apps/record-hub`
+- 联合仓库：Approver、Fluxion、Bids
+
+## 1. 状态定义
+
+- `TODO`：未开始。
+- `IN_PROGRESS`：正在实现。
+- `PARTIAL`：核心存在，但验收、测试或文档不完整。
+- `DONE`：实现和验收证据完整。
+- `BLOCKED`：存在明确外部阻断。
+- `DEFERRED`：明确不属于本 MVP 完成条件。
+
+跨仓库任务分别提交，不制造跨仓库原子提交。每个联合验收记录各仓库 commit 和契约 hash。
+
+## 2. M0：工程与契约基线
+
+| ID | 仓库 | 任务 | 状态 | 依赖 | 验收 |
+| --- | --- | --- | --- | --- | --- |
+| RH-M0-001 | Record Hub | 初始化 Go 1.27 module、模块化目录和统一命令入口 | IN_PROGRESS | - | module path 已固定为 `github.com/samlet/record-hub`；build/test/lint 和命令入口待实现 |
+| RH-M0-002 | Record Hub | 配置加载、结构化日志、graceful shutdown | TODO | 001 | api/worker/all 三种模式；配置缺失 fail closed |
+| RH-M0-003 | Record Hub | `/healthz`、`/readyz` 与依赖探针 | TODO | 002 | readiness 区分 Mongo/NATS/Dex；health 不泄露配置 |
+| RH-M0-004 | Record Hub | OpenAPI-first 基线与错误 envelope | TODO | 001 | spec lint；Go server stub 与 Java/Go/TS client 可生成 |
+| RH-M0-005 | Record Hub | event envelope schema/fixture/verifier | TODO | 001 | valid/invalid、大小、时间、版本和未知字段测试 |
+| RH-M0-006 | Record Hub | CI 与依赖/SBOM/secret scan | TODO | 001 | clean checkout 全门禁通过 |
+
+## 3. M1：本地基础设施与身份
+
+| ID | 仓库 | 任务 | 状态 | 依赖 | 验收 |
+| --- | --- | --- | --- | --- | --- |
+| RH-M1-010 | Record Hub | MongoDB replica set 本地配置与初始化 | TODO | M0 | transaction、唯一索引、change stream smoke 通过 |
+| RH-M1-011 | Record Hub | NATS JetStream stream/consumer 初始化 | TODO | M0 | DOMAIN_EVENTS、DLQ、durable consumer 幂等创建 |
+| RH-M1-012 | Record Hub | NATS users/subject 权限 | TODO | 011 | 三生产者不能发布彼此 subject；RH 只订阅 allowlist |
+| RH-M1-013 | Record Hub | Dex 本地 issuer 与四个 Web client | TODO | M0 | discovery/JWKS/code+PKCE/redirect 负向测试 |
+| RH-M1-014 | Record Hub | Dex machine clients 与 token contract fixture | TODO | 013 | client credentials；固定 iss/sub/aud/exp/scope 实际形态 |
+| RH-M1-015 | Record Hub | OIDC verifier、JWKS cache 与 principal model | TODO | 013 | key rotation、错误 issuer/audience/expiry fail closed |
+| RH-M1-016 | Record Hub | Workspace membership 与角色授权骨架 | TODO | 015 | OWNER/EDITOR/VIEWER allow/deny 矩阵通过 |
+
+## 4. M2：Schema Registry
+
+| ID | 仓库 | 任务 | 状态 | 依赖 | 验收 |
+| --- | --- | --- | --- | --- | --- |
+| RH-M2-020 | Record Hub | SchemaDefinition persistence 与索引 | TODO | M1-010 | tenant/name/version 唯一；published immutable |
+| RH-M2-021 | Record Hub | Draft create/update/publish API | TODO | 020,M1-016 | idempotency、If-Match、审计和角色检查 |
+| RH-M2-022 | Record Hub | JSON Schema 2020-12 validation | TODO | 020 | 六种 MVP 字段类型与负向 fixture |
+| RH-M2-023 | Record Hub | compatibility checker | TODO | 022 | optional additive 兼容；删除/改名/收窄判 breaking |
+| RH-M2-024 | Record Hub | semanticTypes/Schema.org URI mapping | TODO | 020 | URI 规范化；不影响结构校验结果 |
+| RH-M2-025 | Record Hub | canonical JSON/content hash | TODO | 022 | Go/Java/TS fixture hash 一致 |
+| RH-M2-026 | Record Hub Web | Schema 列表、编辑、校验和发布 UI | TODO | 021 | 错误定位到字段路径；已发布只读 |
+
+## 5. M3：多维表格核心
+
+| ID | 仓库 | 任务 | 状态 | 依赖 | 验收 |
+| --- | --- | --- | --- | --- | --- |
+| RH-M3-030 | Record Hub | Workspace/TableDefinition persistence/API | TODO | M1-016,M2 | tenant scope、CUSTOM/PROJECTION 约束 |
+| RH-M3-031 | Record Hub | Record envelope、CRUD、schema validation | TODO | 030 | Idempotency-Key、recordVersion CAS、审计 |
+| RH-M3-032 | Record Hub | tag 与 typed relation | TODO | 031 | 去重、broken/forbidden relation 状态 |
+| RH-M3-033 | Record Hub | ViewDefinition、分页、排序、过滤 | TODO | 031 | 查询 allowlist、稳定 cursor、bounded page size |
+| RH-M3-034 | Record Hub | 动态字段索引策略 | TODO | 033 | 只允许管理员批准的 bounded indexes |
+| RH-M3-035 | Record Hub | Projection record 写保护 | TODO | 031 | 通用 POST/PATCH/DELETE 全部拒绝 |
+| RH-M3-036 | Record Hub Web | workspace/table/grid/record detail UI | TODO | 030-033 | 六种字段、tag、排序过滤、列显隐 |
+| RH-M3-037 | Record Hub Web | Projection 新鲜度和只读展示 | TODO | 035 | source/version/syncedAt/GAP 可见 |
+
+## 6. M4：JetStream 消费与投影
+
+| ID | 仓库 | 任务 | 状态 | 依赖 | 验收 |
+| --- | --- | --- | --- | --- | --- |
+| RH-M4-040 | Record Hub | NATS client、durable pull lifecycle | TODO | M1-011,M0-002 | reconnect、shutdown drain、explicit ACK |
+| RH-M4-041 | Record Hub | InboxEvent claim/payloadHash 冲突 | TODO | 040,M1-010 | duplicate success；same ID different payload rejected |
+| RH-M4-042 | Record Hub | 投影 handler registry | TODO | 041 | source/type/version 唯一注册；unknown fail closed |
+| RH-M4-043 | Record Hub | projection transaction/checkpoint/audit | TODO | 042,M3-035 | Mongo transaction 原子提交后 ACK |
+| RH-M4-044 | Record Hub | aggregate version duplicate/gap recovery | TODO | 043 | 落后忽略、跳跃 GAP、补齐恢复 |
+| RH-M4-045 | Record Hub | retry/backoff/MaxDeliver/DLQ | TODO | 043 | deterministic/transient 分类和安全错误 |
+| RH-M4-046 | Record Hub | 三种 summary schema/handlers | TODO | 042,M2 | allowlist、256 KiB bound、PII/敏感字段负向测试 |
+| RH-M4-047 | Record Hub | Operations events API/UI | TODO | 044,045 | 积压、失败、gap 可查；payload/secret 不泄露 |
+
+## 7. M5：三个业务系统生产者
+
+| ID | 仓库 | 任务 | 状态 | 依赖 | 验收 |
+| --- | --- | --- | --- | --- | --- |
+| RH-M5-050 | 双仓库 | Approver ApplicationSummary v1 契约镜像 | TODO | M0-005,M4-046 | schema/fixture/hash 一致 |
+| RH-M5-051 | Approver | Application summary Outbox 与事务写入 | TODO | 050 | 状态/安全摘要变化同事务；稳定 version/eventId |
+| RH-M5-052 | Approver | JetStream relay | TODO | 051,M1-012 | publish ack 后 sent；响应丢失原 ID 重发 |
+| RH-M5-053 | 双仓库 | Fluxion ProjectSummary v1 契约镜像 | TODO | M0-005,M4-046 | schema/fixture/hash 一致 |
+| RH-M5-054 | Fluxion | domain Outbox、Project 事务事件 | TODO | 053 | 不轮询 Temporal visibility；状态事务原子写 Outbox |
+| RH-M5-055 | Fluxion | JetStream relay | TODO | 054,M1-012 | lease/retry/dead、原 ID 重发 |
+| RH-M5-056 | 双仓库 | Bids TenderSummary v1 契约镜像 | TODO | M0-005,M4-046 | 不含投标/报价/联系人/文件 URL |
+| RH-M5-057 | Bids | 扩展现有 Outbox 产生 domain event | TODO | 056 | 与 Conductor/Finance command 分区隔离 |
+| RH-M5-058 | Bids | JetStream relay | TODO | 057,M1-012 | 复用 lease；subject 权限和响应丢失测试 |
+| RH-M5-059 | 四仓库 | 三投影联合 E2E | TODO | 052,055,058 | 三个真实事件出现在只读表，版本/时间正确 |
+
+## 8. M6：Workflow Binding
+
+| ID | 仓库 | 任务 | 状态 | 依赖 | 验收 |
+| --- | --- | --- | --- | --- | --- |
+| RH-M6-060 | Record Hub | snapshot persistence/API | TODO | M3,M2-025 | immutable、operation idempotency、hash |
+| RH-M6-061 | Record Hub | machine client workspace/purpose policy | TODO | 060,M1-014 | 跨 tenant/resource/purpose 拒绝 |
+| RH-M6-062 | Record Hub | Go client generation/binding facade | TODO | M0-004,060 | timeout/cancel/error mapping |
+| RH-M6-063 | Record Hub | Java client generation/binding facade | TODO | M0-004,060 | 无 Temporal/Spring 强依赖；Kotlin 可调用 |
+| RH-M6-064 | Fluxion | Temporal diagnostic Activity/Workflow | TODO | 063,M5-055 | history 仅 ref/hash；Activity retry 原 operation ID |
+| RH-M6-065 | Fluxion | Temporal replay/failure tests | TODO | 064 | snapshot success、timeout、duplicate、replay |
+| RH-M6-066 | Bids | Conductor diagnostic Worker/Workflow | TODO | 062,M5-058 | task output 仅 ref/hash；retry 幂等 |
+| RH-M6-067 | 三仓库 | 双引擎 Binding E2E | TODO | 065,066 | 相同 API 契约，Record Hub 重启后恢复 |
+
+## 9. M7：安全、可靠性与可观测性
+
+| ID | 仓库 | 任务 | 状态 | 依赖 | 验收 |
+| --- | --- | --- | --- | --- | --- |
+| RH-M7-070 | Record Hub | tenant/workspace/row/field 负向矩阵 | TODO | M3,M4,M6 | 用户与机器跨 scope 全拒绝 |
+| RH-M7-071 | 四仓库 | secret/PII/sensitive payload scan | TODO | M5 | fixtures、日志、events、API response 无泄露 |
+| RH-M7-072 | Record Hub | metrics 与 structured logging | TODO | M4 | 延迟、积压、重投、gap、DLQ、auth failure |
+| RH-M7-073 | Record Hub | Mongo commit/ACK loss 故障注入 | TODO | M4 | 重投无重复记录/版本/审计 |
+| RH-M7-074 | 四仓库 | NATS outage/outbox recovery | TODO | M5 | 业务事务继续；恢复后积压清空 |
+| RH-M7-075 | Record Hub | Dex/JWKS rotation/outage | TODO | M1 | cache 边界、过期 fail closed、恢复成功 |
+| RH-M7-076 | Record Hub | API/worker/Mongo/NATS 分进程重启 | TODO | M4,M6 | 无消息丢失，无永久 lease |
+| RH-M7-077 | Record Hub | bounded query/payload/rate limit | TODO | M3,M4 | 大页、深过滤、大消息和滥用受控 |
+
+## 10. M8：Web 与端到端验收
+
+| ID | 仓库 | 任务 | 状态 | 依赖 | 验收 |
+| --- | --- | --- | --- | --- | --- |
+| RH-M8-080 | Record Hub Web | Dex 登录、Session、退出 | TODO | M1-013 | state/nonce/PKCE、cookie flags、CSRF |
+| RH-M8-081 | Record Hub Web | workspace/table/schema 完整路径 | TODO | M2,M3,M8-080 | OWNER/EDITOR/VIEWER 浏览器矩阵 |
+| RH-M8-082 | Record Hub Web | 三投影与 Operations 页面 | TODO | M4,M5,M8-080 | freshness/gap/DLQ 安全展示 |
+| RH-M8-083 | 四仓库 | MVP happy-path E2E 脚本 | TODO | M5,M6,M8-081 | 一条命令重复执行结果一致 |
+| RH-M8-084 | 四仓库 | MVP failure-path E2E 脚本 | TODO | M7 | outage、duplicate、gap、bad token、bad subject |
+| RH-M8-085 | Record Hub | 本地运行与排障文档 | TODO | M8-083 | fresh machine 可按文档启动和验收 |
+| RH-M8-086 | Record Hub | DLQ/gap/credential rotation runbook | TODO | M7 | 恢复步骤只使用原 event/operation ID |
+| RH-M8-087 | 四仓库 | MVP 验收报告与 commit/hash 清单 | TODO | 083-086 | 证据、限制、遗留风险完整 |
+
+## 11. M9：明确延期
+
+| ID | 范围 | 任务 | 状态 | 进入条件 |
+| --- | --- | --- | --- | --- |
+| RH-M9-090 | Record Hub | 外部业务 Command Gateway | DEFERRED | 只读投影和 Binding 稳定 |
+| RH-M9-091 | 联合 | Fluxion/Bids 审批迁移 | DEFERRED | Approver connector 方案单独评审 |
+| RH-M9-092 | Record Hub | Storage Gateway | DEFERRED | 文件领域和权限模型冻结 |
+| RH-M9-093 | Record Hub | Functions/sandbox runtime | DEFERRED | 威胁模型与隔离方案通过 |
+| RH-M9-094 | Record Hub Web | Presence/Broadcast/协同光标 | DEFERRED | Realtime Gateway 容量方案通过 |
+| RH-M9-095 | Record Hub | GraphQL/通用查询语言 | DEFERRED | REST 权限和查询成本模型稳定 |
+| RH-M9-096 | Platform | 生产 HA、多地域、分片、PITR | DEFERRED | MVP 容量与 RPO/RTO 确定 |
+
+## 12. 推荐执行顺序
+
+```text
+M0
+ ├─> M1 ─> M2 ─> M3 ─> M4 ─> M5
+ │                    └───────> M6
+ └────────────────────────────> M7
+                         M5/M6/M7 ─> M8
+```
+
+详细顺序：
+
+```text
+M0-001..006
+-> M1-010..016
+-> M2-020..026
+-> M3-030..037
+-> M4-040..047
+-> M5-050..059
+-> M6-060..067
+-> M7-070..077
+-> M8-080..087
+```
+
+M5 的三个 producer 可以在契约冻结后并行，但联合 E2E 必须等 Record Hub projection handler 完成。M6 diagnostic workflow 不得提前改造真实业务流程。
+
+## 13. MVP 完成门槛
+
+以下条件必须同时满足：
+
+- M0-M8 全部 `DONE`；
+- 三个 source projection 均来自真实业务事务 Outbox；
+- Temporal 与 Conductor Binding 均有真实 engine E2E；
+- duplicate、gap、ACK loss、NATS outage、Mongo outage、Dex key rotation 均有自动化证据；
+- Bids 敏感字段和跨租户负向测试通过；
+- 不存在外部业务状态写回或跨系统事务承诺；
+- 本地 runbook 可从空环境重复搭建并完成验收。
