@@ -6,21 +6,21 @@
       "schemaId": "urn:record-hub:summary:application:v1",
       "schemaFile": "application-summary-v1.schema.json",
       "fixtureFile": "testdata/valid/application-summary-v1.json",
-      "schemaContentHash": "sha256:77b957960d1fd71a75d8659febb42c1e941a120ba71212a01562d60f17b0b0bf"
+      "schemaContentHash": "sha256:c7c269943d0d84c090a00c1c624fa5f08c1e994df82016c8dd26ba3d16f621ae"
     },
     {
       "kind": "project",
       "schemaId": "urn:record-hub:summary:project:v1",
       "schemaFile": "project-summary-v1.schema.json",
       "fixtureFile": "testdata/valid/project-summary-v1.json",
-      "schemaContentHash": "sha256:07a245eb4c472cef26dd0e7ce32ec15d3278a4f6f633221157d97372659d17b4"
+      "schemaContentHash": "sha256:311dbb7d1c9b3841cacd0ada034fba1077c494841b24baaca18a19ffe196a398"
     },
     {
       "kind": "tender",
       "schemaId": "urn:record-hub:summary:tender:v1",
       "schemaFile": "tender-summary-v1.schema.json",
       "fixtureFile": "testdata/valid/tender-summary-v1.json",
-      "schemaContentHash": "sha256:b4b314d9f83d5ce4ab7d2a882ea677b2765adca2dfc29798930e61567bbf79a3"
+      "schemaContentHash": "sha256:024524fa5b60f8a8deac700bf19745c121f450439532ba22d7ab0f882cad1fff"
     }
   ]
 }
