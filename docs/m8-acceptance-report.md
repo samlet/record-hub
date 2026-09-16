@@ -68,7 +68,10 @@ make dex-smoke
 `make m7-native-restart`、`make m7-native-nats-recovery` 以及
 `./scripts/verify-m6-bindings.sh` 已通过。默认 `RECORD_HUB_M8_LOCAL_LIVE=1` 仍走 Docker；要连接本机进程请使用
 `RECORD_HUB_M8_RUNTIME=native`。Dex live gate 尚未执行，因为当前运行的 Dex 是其他
-项目配置。`make secret-scan` 仍依赖 Docker gitleaks 镜像。
+项目配置。`make generate-clients` 已尝试但因本机 Docker daemon 未运行而标记为
+`SKIPPED`；OpenAPI lint、现有 Go/Java/TypeScript contract tests 与 SDK tests 均通过，
+恢复 Docker 后仍需重跑生成器并确认无未提交 diff。`make secret-scan` 同样依赖 Docker
+gitleaks 镜像。
 
 ## 推送的关键 commit/hash
 
