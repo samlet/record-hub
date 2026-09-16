@@ -100,8 +100,8 @@
 | RH-M6-061 | Record Hub | machine client workspace/purpose policy | DONE | 060,M1-014 | 精确 issuer/subject/audience/tenant/workspace/resource/purpose allowlist；跨 scope、purpose、resource、audience 均拒绝；不伪造 Dex password grant |
 | RH-M6-062 | Record Hub | Go client generation/binding facade | DONE | M0-004,060 | `sdk/go/recordhub` context-aware HTTP facade；bounded response、Idempotency-Key、timeout/cancel、typed API error |
 | RH-M6-063 | Record Hub | Java client generation/binding facade | DONE | M0-004,060 | `sdk/java` Java 17+/Kotlin-callable facade；无 Temporal/Spring 强依赖；typed snapshot/error 与 timeout |
-| RH-M6-064 | Fluxion | Temporal diagnostic Activity/Workflow | TODO | 063,M5-055 | history 仅 ref/hash；Activity retry 原 operation ID |
-| RH-M6-065 | Fluxion | Temporal replay/failure tests | TODO | 064 | snapshot success、timeout、duplicate、replay |
+| RH-M6-064 | Fluxion | Temporal diagnostic Activity/Workflow | DONE | 063,M5-055 | history 仅 ref/hash；Activity retry 原 operation ID |
+| RH-M6-065 | Fluxion | Temporal replay/failure tests | DONE | 064 | snapshot success、timeout、duplicate、replay |
 | RH-M6-066 | Bids | Conductor diagnostic Worker/Workflow | TODO | 062,M5-058 | task output 仅 ref/hash；retry 幂等 |
 | RH-M6-067 | 三仓库 | 双引擎 Binding E2E | TODO | 065,066 | 相同 API 契约，Record Hub 重启后恢复 |
 

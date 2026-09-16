@@ -1,7 +1,24 @@
-# M6 第一批验收记录：Workflow Binding 基础
+# M6 Workflow Binding 验收记录
 
-本批完成 M6-060～063：Record Hub 的不可变 snapshot、机器身份策略，以及 Go/Java/Kotlin
-调用 facade。Temporal Activity、Conductor Worker 和双引擎 E2E 属于后续批次。
+Record Hub 基础能力（M6-060～063）与 Fluxion Temporal 适配（M6-064～065）已完成；Bids
+Conductor Worker 和双引擎 E2E 留在后续批次。
+
+## Fluxion Temporal 适配（M6-064～065）
+
+Fluxion 提交 `6d496b0` 已推送到 Gitee。`ProjectDiagnosticWorkflow` 通过
+`ProjectDiagnosticBindingActivity` 使用公共 snapshot API，固定 `fluxion:PROJECT:{id}` 和
+`urn:record-hub:summary:project:v1`，重试复用同一 operation ID；Activity 只返回 snapshot
+引用/版本/hash 及 PII-free `type/status/currentStage/version` 安全摘要，原始动态记录不会进入
+Temporal history。Fluxion `docs/m6-acceptance.md` 记录了实现与测试细节。
+
+Fluxion 验收命令：
+
+```bash
+cd /Users/xiaofeiwu/portals/fluxion/server
+./gradlew test
+```
+
+覆盖成功、超时重试、重复 operation、history 字段隔离和 `Worker.replayWorkflowExecution`。
 
 ## 已交付
 
