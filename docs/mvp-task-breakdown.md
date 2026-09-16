@@ -123,13 +123,13 @@
 | ID | 仓库 | 任务 | 状态 | 依赖 | 验收 |
 | --- | --- | --- | --- | --- | --- |
 | RH-M8-080 | Record Hub Web | Dex 登录、Session、退出 | DONE | M1-013 | state/nonce/PKCE、cookie flags、CSRF |
-| RH-M8-081 | Record Hub Web | workspace/table/schema 完整路径 | DONE | M2,M3,M8-080 | OWNER/EDITOR/VIEWER 浏览器矩阵 |
+| RH-M8-081 | Record Hub Web | workspace/table/schema 完整路径 | PARTIAL | M2,M3,M8-080 | Go BFF 资源路由与会话/CSRF gate 完成；真实 Web UI 浏览器矩阵待补 |
 | RH-M8-082 | Record Hub Web | 三投影与 Operations 页面 | DONE | M4,M5,M8-080 | freshness/gap/DLQ 安全展示 |
 | RH-M8-083 | 四仓库 | MVP happy-path E2E 脚本 | PARTIAL | M5,M6,M8-081 | 代码级 gate 可重复；真实浏览器/API 联合 E2E 待 M8-085 拓扑 |
 | RH-M8-084 | 四仓库 | MVP failure-path E2E 脚本 | PARTIAL | M7 | 代码级负向 gate 通过；真实 outage/duplicate/bad token E2E 待 M8-085/086 |
 | RH-M8-085 | Record Hub | 本地运行与排障文档 | PARTIAL | M8-083 | fresh machine 代码级/依赖 smoke 可按文档执行；完整浏览器/API 仍需受监督拓扑 |
 | RH-M8-086 | Record Hub | DLQ/gap/credential rotation runbook | PARTIAL | M7 | 恢复步骤只使用原 event/operation ID；真实 outage/轮换待受监督拓扑 |
-| RH-M8-087 | 四仓库 | MVP 验收报告与 commit/hash 清单 | TODO | 083-086 | 证据、限制、遗留风险完整 |
+| RH-M8-087 | 四仓库 | MVP 验收报告与 commit/hash 清单 | PARTIAL | 083-086 | 报告与 hash 清单完成；live 依赖与 Web UI 遗留风险已明确 |
 
 ## 11. M9：明确延期
 

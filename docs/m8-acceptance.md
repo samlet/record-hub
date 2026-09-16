@@ -58,6 +58,9 @@ GAP、DLQ、ACK loss、NATS/Mongo/Dex 和 Session secret 的边界；DLQ 摘要�
 恢复只能回到 source Outbox/原 subject 使用原 event ID。真实故障注入和滚动轮换仍保持
 `PARTIAL`，直到受监督拓扑完成。
 
+M8-087 汇总报告位于 [m8-acceptance-report.md](m8-acceptance-report.md)，包含四仓库
+commit/hash、可重复 gate、live 限制和遗留风险；因此 M8-087 也保持 `PARTIAL`。
+
 ## 本地启动
 
 先启动 Dex 并生成本地 secret：
