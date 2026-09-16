@@ -29,9 +29,19 @@
 
 | 批次 | 状态 | 范围 |
 | --- | --- | --- |
-| P2-1 Operable Data | TODO | Schema diff/migration、source/mapping registry、projection rebuild、SLO |
+| P2-1 Operable Data | IN_PROGRESS | Schema diff/migration、source/mapping registry、projection rebuild、SLO |
 | P2-2 Realtime Read Feed | TODO | SSE、cursor、背压、撤权和配额 |
 | P2-3 Controlled Command | TODO | policy、receipt、owner Inbox、单一低风险 command |
 | P2-4 Approval/Beta | TODO | Approver connector/试点、备份恢复、升级回滚、Beta 准入 |
 
 P2-0-005 的运行说明见 [deploy/local/isolated/README.md](../deploy/local/isolated/README.md)。
+
+## P2-1 当前任务
+
+| ID | 任务 | 状态 | 验收 |
+| --- | --- | --- | --- |
+| P2-1-001 | Schema compatibility diff API | DONE | `POST /api/v1/schemas/{schemaId}/compatibility` 以 OWNER 权限比较已发布版本和候选 JSON Schema，返回排序稳定的 JSON Pointer/path、kind、message；正向、breaking、非法对象和 Editor 拒绝测试通过 |
+| P2-1-002 | Explicit migration plan | TODO | breaking diff 必须关联 migration plan，支持 dry-run、影响计数、失败样本上限、取消和审计 |
+| P2-1-003 | Source/mapping registry | TODO | source/event/mapping 版本化、canonical hash、fixture 和发布审批；runtime 仅运行已发布版本 |
+| P2-1-004 | Projection rebuild operation | TODO | staging generation、校验、原子读指针切换、取消/失败恢复和 operation receipt |
+| P2-1-005 | Query cost and SLO baseline | TODO | 查询/投影成本边界、lag/backlog 指标、阈值和告警证据 |
