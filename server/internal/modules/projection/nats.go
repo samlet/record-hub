@@ -9,6 +9,7 @@ import (
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
+	"github.com/samlet/record-hub/server/internal/observability"
 )
 
 var ErrInvalidConsumerConfig = errors.New("invalid projection consumer configuration")
@@ -163,6 +164,7 @@ type PullRunner struct {
 	config   PullRunnerConfig
 	handler  MessageHandler
 	dlq      DeadLetterPublisher
+	metrics  *observability.Registry
 }
 
 func NewPullRunner(provider ConsumerProvider, config PullRunnerConfig, handler MessageHandler) (*PullRunner, error) {
@@ -179,6 +181,15 @@ func NewPullRunner(provider ConsumerProvider, config PullRunnerConfig, handler M
 func (runner *PullRunner) WithDeadLetterPublisher(publisher DeadLetterPublisher) *PullRunner {
 	if runner != nil {
 		runner.dlq = publisher
+	}
+	return runner
+}
+
+// WithMetrics attaches low-cardinality worker metrics. It is optional so the
+// pull runner remains usable by focused tests and embedded consumers.
+func (runner *PullRunner) WithMetrics(registry *observability.Registry) *PullRunner {
+	if runner != nil {
+		runner.metrics = registry
 	}
 	return runner
 }
@@ -288,6 +299,12 @@ func (runner *PullRunner) retryMessage(ctx context.Context, message jetstream.Ms
 	if metadata, err := message.Metadata(); err == nil && metadata != nil && metadata.NumDelivered > 0 {
 		attempts = metadata.NumDelivered
 	}
+	if runner.metrics != nil && attempts > 1 {
+		runner.metrics.IncCounter("record_hub_projection_redeliveries_total", observability.Labels{"consumer": runner.config.Durable})
+	}
+	if runner.metrics != nil && errors.Is(handlerErr, ErrProjectionVersionGap) {
+		runner.metrics.IncCounter("record_hub_projection_gaps_total", observability.Labels{"consumer": runner.config.Durable})
+	}
 	if class == ErrorDeterministic || attempts >= uint64(runner.config.MaxDeliver) {
 		if runner.dlq == nil {
 			return message.NakWithDelay(runner.retryDelay(attempts))
@@ -297,6 +314,9 @@ func (runner *PullRunner) retryMessage(ctx context.Context, message jetstream.Ms
 		cancel()
 		if publishErr != nil {
 			return publishErr
+		}
+		if runner.metrics != nil {
+			runner.metrics.IncCounter("record_hub_projection_dlq_total", observability.Labels{"consumer": runner.config.Durable})
 		}
 		return message.TermWithReason(safeMessage)
 	}

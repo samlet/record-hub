@@ -12,6 +12,7 @@ import (
 	"github.com/samlet/record-hub/server/internal/config"
 	"github.com/samlet/record-hub/server/internal/health"
 	"github.com/samlet/record-hub/server/internal/httpapi"
+	"github.com/samlet/record-hub/server/internal/observability"
 )
 
 // Service is one long-running process responsibility.
@@ -33,12 +34,14 @@ func New(cfg config.Config, logger *slog.Logger) *App {
 	services := make([]Service, 0, 2)
 	if cfg.Mode == config.ModeAPI || cfg.Mode == config.ModeAll {
 		mux := http.NewServeMux()
+		metrics := observability.NewRegistry()
+		mux.Handle("/metrics", metrics.Handler())
 		health.NewHandler(2*time.Second, map[health.Dependency]health.Checker{
 			health.MongoDB: health.Pending(),
 			health.NATS:    health.Pending(),
 			health.Dex:     health.Pending(),
 		}).Routes(mux)
-		services = append(services, httpapi.New(cfg.HTTPAddress, mux, cfg.ShutdownTimeout))
+		services = append(services, httpapi.New(cfg.HTTPAddress, observability.HTTPMiddleware(metrics, mux), cfg.ShutdownTimeout))
 	}
 	if cfg.Mode == config.ModeWorker || cfg.Mode == config.ModeAll {
 		services = append(services, idleService("worker"))

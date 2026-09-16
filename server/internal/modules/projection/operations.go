@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/samlet/record-hub/server/internal/modules/identity"
+	"github.com/samlet/record-hub/server/internal/observability"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
@@ -105,6 +106,15 @@ type OperationsService struct {
 	reader     OperationsReader
 	authorizer *identity.Authorizer
 	clock      func() time.Time
+	metrics    *observability.Registry
+}
+
+// WithMetrics records bounded backlog gauges for the selected consumer.
+func (service *OperationsService) WithMetrics(registry *observability.Registry) *OperationsService {
+	if service != nil {
+		service.metrics = registry
+	}
+	return service
 }
 
 func NewOperationsService(reader OperationsReader, authorizer *identity.Authorizer) *OperationsService {
@@ -140,6 +150,11 @@ func (service *OperationsService) Snapshot(ctx context.Context, principal identi
 	}
 	if err := snapshot.Validate(); err != nil {
 		return OperationsSnapshot{}, fmt.Errorf("operations snapshot: %w", err)
+	}
+	if service.metrics != nil {
+		labels := observability.Labels{"consumer": query.Consumer}
+		service.metrics.SetGauge("record_hub_projection_backlog", float64(snapshot.Inbox.Processing), labels)
+		service.metrics.SetGauge("record_hub_projection_failures", float64(snapshot.Inbox.Failed+snapshot.Inbox.Rejected), labels)
 	}
 	return snapshot, nil
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
+	"github.com/samlet/record-hub/server/internal/observability"
 )
 
 type fakeConsumerProvider struct {
@@ -203,6 +204,7 @@ func TestPullRunnerPublishesDeterministicFailureToDLQ(t *testing.T) {
 	message := &fakeMessage{}
 	provider := &fakeConsumerProvider{consumer: &fakeConsumer{batches: []jetstream.MessageBatch{messageBatch(message)}}}
 	publisher := &fakeDeadLetterPublisher{}
+	metrics := observability.NewRegistry()
 	runner, err := NewPullRunner(provider, testRunnerConfig(), func(context.Context, jetstream.Msg) error {
 		return DeterministicError(errors.New("contains secret details"), "payload schema rejected")
 	})
@@ -210,6 +212,7 @@ func TestPullRunnerPublishesDeterministicFailureToDLQ(t *testing.T) {
 		t.Fatal(err)
 	}
 	runner.WithDeadLetterPublisher(publisher)
+	runner.WithMetrics(metrics)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		for message.terms.Load() == 0 {
@@ -223,12 +226,16 @@ func TestPullRunnerPublishesDeterministicFailureToDLQ(t *testing.T) {
 	if publisher.letters.Load() != 1 || message.naks.Load() != 0 || message.terms.Load() != 1 || publisher.last.Reason != "payload schema rejected" || strings.Contains(publisher.last.Reason, "secret") {
 		t.Fatalf("DLQ letters=%d naks=%d terms=%d letter=%#v", publisher.letters.Load(), message.naks.Load(), message.terms.Load(), publisher.last)
 	}
+	if body := metrics.Render(); !strings.Contains(body, `record_hub_projection_dlq_total{consumer="record-hub-test-v1"} 1.000000`) {
+		t.Fatalf("DLQ metric missing: %s", body)
+	}
 }
 
 func TestPullRunnerDeadLettersAfterMaxDeliver(t *testing.T) {
 	message := &fakeMessage{delivered: 5}
 	provider := &fakeConsumerProvider{consumer: &fakeConsumer{batches: []jetstream.MessageBatch{messageBatch(message)}}}
 	publisher := &fakeDeadLetterPublisher{}
+	metrics := observability.NewRegistry()
 	config := testRunnerConfig()
 	config.MaxDeliver = 5
 	runner, err := NewPullRunner(provider, config, func(context.Context, jetstream.Msg) error {
@@ -238,6 +245,7 @@ func TestPullRunnerDeadLettersAfterMaxDeliver(t *testing.T) {
 		t.Fatal(err)
 	}
 	runner.WithDeadLetterPublisher(publisher)
+	runner.WithMetrics(metrics)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		for message.terms.Load() == 0 {
@@ -250,5 +258,8 @@ func TestPullRunnerDeadLettersAfterMaxDeliver(t *testing.T) {
 	}
 	if publisher.letters.Load() != 1 || message.terms.Load() != 1 || publisher.last.Attempts != 5 {
 		t.Fatalf("max deliver DLQ letters=%d terms=%d letter=%#v", publisher.letters.Load(), message.terms.Load(), publisher.last)
+	}
+	if body := metrics.Render(); !strings.Contains(body, `record_hub_projection_redeliveries_total{consumer="record-hub-test-v1"} 1.000000`) {
+		t.Fatalf("redelivery metric missing: %s", body)
 	}
 }

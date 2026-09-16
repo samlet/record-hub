@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/samlet/record-hub/server/internal/modules/identity"
+	"github.com/samlet/record-hub/server/internal/observability"
 )
 
 type memoryOperationsReader struct {
@@ -75,6 +76,20 @@ func TestOperationsServiceAuthorizesScopedReadAndReturnsSafeSnapshot(t *testing.
 		if _, err := unauthorizedService.Snapshot(context.Background(), unauthorizedPrincipal, OperationsQuery{TenantID: "tenant-1", WorkspaceID: "workspace-1", Consumer: "record-hub-approver-v1"}); !errors.Is(err, identity.ErrForbidden) {
 			t.Fatalf("role %q operations access error = %v", role, err)
 		}
+	}
+}
+
+func TestOperationsServiceUpdatesBoundedBacklogMetrics(t *testing.T) {
+	reader := &memoryOperationsReader{snapshot: validOperationsSnapshot()}
+	service, principal := operationsService(t, reader, identity.RoleViewer)
+	metrics := observability.NewRegistry()
+	service.WithMetrics(metrics)
+	if _, err := service.Snapshot(context.Background(), principal, OperationsQuery{TenantID: "tenant-1", WorkspaceID: "workspace-1", Consumer: "record-hub-approver-v1"}); err != nil {
+		t.Fatal(err)
+	}
+	body := metrics.Render()
+	if !strings.Contains(body, `record_hub_projection_backlog{consumer="record-hub-approver-v1"} 2.000000`) || !strings.Contains(body, `record_hub_projection_failures{consumer="record-hub-approver-v1"} 2.000000`) {
+		t.Fatalf("backlog metrics missing: %s", body)
 	}
 }
 

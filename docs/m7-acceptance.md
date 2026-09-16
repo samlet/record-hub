@@ -35,6 +35,21 @@ M7-071 的跨仓库安全 payload gate：
 operations/API 脱敏测试；它只使用 deterministic fake，不把未启动的 MongoDB、NATS、Temporal、
 Conductor 或 Dex 伪报成 live E2E。
 
+## M7-072 metrics 与 structured logging
+
+Record Hub API 暴露 `/metrics`，使用无外部依赖的 Prometheus text format registry；HTTP middleware
+记录请求总数、状态码、认证失败和延迟，OperationsService 记录 projection backlog/failure
+gauge，PullRunner 记录 redelivery、version gap 和 DLQ 成功投递。所有 label 只使用 method、
+status、consumer 等有界维度，不使用 tenant/record/event/token/payload。
+
+结构化日志仍由 `server/internal/logging` 统一输出 JSON；业务错误保持安全摘要，原始 payload
+与凭据不进入日志。metrics 与 middleware 的并发、顺序、路径脱敏测试位于
+`server/internal/observability/metrics_test.go`。
+
+```bash
+go test ./server/internal/observability ./server/internal/app ./server/internal/modules/projection
+```
+
 ## 边界说明
 
 binding 只接受 `system:type:id` 的稳定引用和已经由 projection/record owner 过滤后的 JSON
