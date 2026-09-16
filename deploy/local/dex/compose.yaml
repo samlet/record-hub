@@ -19,7 +19,7 @@ services:
       interval: 2s
       timeout: 3s
       retries: 30
-      start_period: 3s
+      start_period: 10s
     volumes:
       - ./config.yaml:/etc/dex/config.yaml:ro
       - dex-data:/var/dex
