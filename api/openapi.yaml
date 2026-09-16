@@ -9,6 +9,7 @@ servers:
 tags:
   - name: System
   - name: Identity
+  - name: Records
 paths:
   /healthz:
     get:
@@ -56,6 +57,113 @@ paths:
                 $ref: "#/components/schemas/Principal"
         "401":
           $ref: "#/components/responses/Unauthorized"
+  /api/v1/workspaces:
+    get:
+      tags: [Records]
+      operationId: listWorkspaces
+      summary: List workspaces created by the authenticated principal
+      parameters:
+        - $ref: "#/components/parameters/TenantIdQuery"
+      responses:
+        "200":
+          description: Workspaces visible to the principal.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [Records]
+      operationId: createWorkspace
+      summary: Create a workspace
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceCreateRequest"
+      responses:
+        "201":
+          description: Workspace created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workspace"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/v1/workspaces/{workspaceId}/tables:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceId"
+    get:
+      tags: [Records]
+      operationId: listTables
+      summary: List tables in a workspace
+      parameters:
+        - $ref: "#/components/parameters/TenantIdQuery"
+      responses:
+        "200":
+          description: Tables visible to the principal.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TableList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Records]
+      operationId: createTable
+      summary: Create a custom or projection table
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TableCreateRequest"
+      responses:
+        "201":
+          description: Table created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TableDefinition"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/v1/workspaces/{workspaceId}/tables/{tableId}:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceId"
+      - $ref: "#/components/parameters/TableId"
+    get:
+      tags: [Records]
+      operationId: getTable
+      summary: Get one table definition
+      parameters:
+        - $ref: "#/components/parameters/TenantIdQuery"
+      responses:
+        "200":
+          description: Table definition.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TableDefinition"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /api/v1/schemas:
     post:
       tags: [Schema]
@@ -190,6 +298,12 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: The requested resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
     PreconditionRequired:
       description: The expected revision is missing.
       content:
@@ -197,6 +311,31 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
   parameters:
+    TenantIdQuery:
+      name: tenantId
+      in: query
+      required: true
+      description: Tenant scope for the request.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+    WorkspaceId:
+      name: workspaceId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+    TableId:
+      name: tableId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
     SchemaId:
       name: schemaId
       in: path
@@ -322,6 +461,149 @@ components:
         role:
           type: string
           enum: [OWNER, EDITOR, VIEWER]
+    WorkspaceCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [tenantId, id, name]
+      properties:
+        tenantId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        id:
+          type: string
+          minLength: 1
+          maxLength: 128
+        name:
+          type: string
+          minLength: 1
+          maxLength: 128
+    Workspace:
+      type: object
+      additionalProperties: false
+      required: [id, tenantId, name, version, createdBy, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        name:
+          type: string
+        version:
+          type: integer
+          minimum: 1
+        createdBy:
+          $ref: "#/components/schemas/IdentityKey"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    WorkspaceList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Workspace"
+    TableCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [tenantId, id, name, kind, schemaId, schemaVersion]
+      properties:
+        tenantId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        id:
+          type: string
+          minLength: 1
+          maxLength: 128
+        name:
+          type: string
+          minLength: 1
+          maxLength: 128
+        kind:
+          type: string
+          enum: [CUSTOM, PROJECTION]
+        schemaId:
+          type: string
+          minLength: 1
+          maxLength: 256
+        schemaVersion:
+          type: integer
+          minimum: 1
+        sourcePolicy:
+          $ref: "#/components/schemas/SourcePolicy"
+    SourcePolicy:
+      type: object
+      additionalProperties: false
+      required: [system, type]
+      properties:
+        system:
+          type: string
+          minLength: 1
+          maxLength: 64
+        type:
+          type: string
+          minLength: 1
+          maxLength: 128
+        allowFields:
+          type: array
+          maxItems: 64
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 128
+    TableDefinition:
+      type: object
+      additionalProperties: false
+      required: [id, tenantId, workspaceId, name, kind, schemaId, schemaVersion, version, createdBy, updatedBy, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        workspaceId:
+          type: string
+        name:
+          type: string
+        kind:
+          type: string
+          enum: [CUSTOM, PROJECTION]
+        schemaId:
+          type: string
+        schemaVersion:
+          type: integer
+          minimum: 1
+        sourcePolicy:
+          $ref: "#/components/schemas/SourcePolicy"
+        version:
+          type: integer
+          minimum: 1
+        createdBy:
+          $ref: "#/components/schemas/IdentityKey"
+        updatedBy:
+          $ref: "#/components/schemas/IdentityKey"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    TableList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TableDefinition"
     SchemaDraftRequest:
       type: object
       additionalProperties: false

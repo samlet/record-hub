@@ -197,6 +197,11 @@ PATCH  /api/v1/records/{recordId}
 DELETE /api/v1/records/{recordId}
 ```
 
+首个 table slice 已固定资源契约：table 必须引用一个已发布的 schema 版本；`CUSTOM` 表不得
+携带 `sourcePolicy`，`PROJECTION` 表必须声明 source system/type，且只保存 allowlisted
+字段。所有 table 查询都显式携带 tenant/workspace scope，Mongo 以租户、workspace、table
+ID 和 workspace 内名称建立唯一约束。
+
 PATCH/DELETE 必须携带 record version；冲突返回 `409 RECORD_VERSION_CONFLICT`。Projection record 的写操作返回 `409 PROJECTION_READ_ONLY`。
 
 ### 7.4 Binding

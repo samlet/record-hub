@@ -1,4 +1,4 @@
-.PHONY: build test lint openapi-lint generate-clients dependency-scan sbom secret-scan mongo-up mongo-smoke mongo-down schema-persistence-smoke nats-up nats-init nats-smoke nats-permissions-smoke nats-down dex-env dex-up dex-smoke dex-down check ci clean
+.PHONY: build test lint openapi-lint generate-clients dependency-scan sbom secret-scan mongo-up mongo-smoke mongo-down schema-persistence-smoke records-persistence-smoke nats-up nats-init nats-smoke nats-permissions-smoke nats-down dex-env dex-up dex-smoke dex-down check ci clean
 
 BUILD_DIR := build
 BINARY := $(BUILD_DIR)/record-hub
@@ -37,6 +37,9 @@ mongo-smoke:
 
 schema-persistence-smoke:
 	go test ./server/internal/modules/schema -run TestMongo -count=1 -v
+
+records-persistence-smoke:
+	go test ./server/internal/modules/records -run TestMongo -count=1 -v
 
 mongo-down:
 	docker compose -f deploy/local/mongodb/compose.yaml down

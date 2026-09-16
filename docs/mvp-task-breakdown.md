@@ -55,7 +55,7 @@
 
 | ID | 仓库 | 任务 | 状态 | 依赖 | 验收 |
 | --- | --- | --- | --- | --- | --- |
-| RH-M3-030 | Record Hub | Workspace/TableDefinition persistence/API | TODO | M1-016,M2 | tenant scope、CUSTOM/PROJECTION 约束 |
+| RH-M3-030 | Record Hub | Workspace/TableDefinition persistence/API | DONE | M1-016,M2 | tenant/workspace scope；Mongo unique indexes；published schema reference；CUSTOM/PROJECTION sourcePolicy 约束；OWNER 创建、成员只读访问 |
 | RH-M3-031 | Record Hub | Record envelope、CRUD、schema validation | TODO | 030 | Idempotency-Key、recordVersion CAS、审计 |
 | RH-M3-032 | Record Hub | tag 与 typed relation | TODO | 031 | 去重、broken/forbidden relation 状态 |
 | RH-M3-033 | Record Hub | ViewDefinition、分页、排序、过滤 | TODO | 031 | 查询 allowlist、稳定 cursor、bounded page size |
