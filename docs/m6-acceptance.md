@@ -1,7 +1,24 @@
 # M6 Workflow Binding 验收记录
 
-Record Hub 基础能力（M6-060～063）与 Fluxion Temporal 适配（M6-064～065）已完成；Bids
-Conductor Worker 和双引擎 E2E 留在后续批次。
+Record Hub 基础能力（M6-060～063）、Fluxion Temporal 适配（M6-064～065）与 Bids
+Conductor Worker（M6-066）已完成；双引擎 E2E 留在后续批次。
+
+## Bids Conductor 适配（M6-066）
+
+Bids 提交 `616e7fd` 已推送到 Gitee。新增独立 Workflow
+`bids_record_hub_tender_diagnostic` v1 与 SIMPLE task
+`bids_record_hub_tender_snapshot_v1`，Worker 通过公共 Binding API 固定
+`bids:TENDER:{id}` / `urn:record-hub:summary:tender:v1`，以稳定 operation ID 重试。task
+output 只含 snapshot 引用、版本、hash、replay 标记和安全摘要，不含 `data`、联系人、报价或文件。
+
+Bids 验收命令：
+
+```bash
+cd /Users/xiaofeiwu/apps/bids/backend
+go test ./...
+```
+
+覆盖 Conductor 定义、HTTP 契约、同 operation ID 重复调用和 4xx 非重试映射。
 
 ## Fluxion Temporal 适配（M6-064～065）
 
