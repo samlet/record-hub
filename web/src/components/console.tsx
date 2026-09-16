@@ -42,6 +42,8 @@ export function Console() {
     filterField: "",
     filterOperator: "eq" as ViewFilter["operator"],
     filterValue: "",
+    sortField: "",
+    sortDirection: "asc" as "asc" | "desc",
   });
   const [tab, setTab] = useState<Tab>("records");
   const [consumer, setConsumer] = useState(consumerOptions[0][0]);
@@ -378,7 +380,14 @@ export function Console() {
                           },
                         ]
                       : [],
-                    sorts: [],
+                    sorts: viewForm.sortField
+                      ? [
+                          {
+                            field: viewForm.sortField,
+                            direction: viewForm.sortDirection,
+                          },
+                        ]
+                      : [],
                   });
                   setViews((current) => [...current, created.body]);
                   setViewId(created.body.id);
@@ -389,6 +398,8 @@ export function Console() {
                     filterField: "",
                     filterOperator: "eq",
                     filterValue: "",
+                    sortField: "",
+                    sortDirection: "asc",
                   });
                 })
               }
@@ -596,6 +607,8 @@ function RecordsPanel(props: {
     filterField: string;
     filterOperator: ViewFilter["operator"];
     filterValue: string;
+    sortField: string;
+    sortDirection: "asc" | "desc";
   };
   setViewForm: (value: {
     id: string;
@@ -604,6 +617,8 @@ function RecordsPanel(props: {
     filterField: string;
     filterOperator: ViewFilter["operator"];
     filterValue: string;
+    sortField: string;
+    sortDirection: "asc" | "desc";
   }) => void;
   selectedTable?: TableDefinition;
   records: RecordItem[];
@@ -836,6 +851,27 @@ function RecordsPanel(props: {
                 setViewForm({ ...viewForm, filterValue: event.target.value })
               }
             />
+          </div>
+          <div className="filter-row">
+            <input
+              placeholder="排序字段（可选）"
+              value={viewForm.sortField}
+              onChange={(event) =>
+                setViewForm({ ...viewForm, sortField: event.target.value })
+              }
+            />
+            <select
+              value={viewForm.sortDirection}
+              onChange={(event) =>
+                setViewForm({
+                  ...viewForm,
+                  sortDirection: event.target.value as "asc" | "desc",
+                })
+              }
+            >
+              <option value="asc">升序</option>
+              <option value="desc">降序</option>
+            </select>
           </div>
           <button className="secondary-button" disabled={!tableId}>
             创建视图
