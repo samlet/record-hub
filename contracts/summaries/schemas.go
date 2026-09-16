@@ -23,7 +23,7 @@ const (
 
 var ErrUnknownKind = errors.New("unknown summary kind")
 
-//go:embed *.schema.json
+//go:embed *.schema.json manifest.json testdata/valid/*.json
 var schemaFS embed.FS
 
 // Schema returns a copy of the Draft 2020-12 schema for kind.
@@ -58,4 +58,24 @@ func SchemaID(kind Kind) (string, error) {
 	default:
 		return "", ErrUnknownKind
 	}
+}
+
+// Fixture returns a copy of the canonical safe payload fixture for kind.
+func Fixture(kind Kind) ([]byte, error) {
+	filename := ""
+	switch kind {
+	case Application:
+		filename = "testdata/valid/application-summary-v1.json"
+	case Project:
+		filename = "testdata/valid/project-summary-v1.json"
+	case Tender:
+		filename = "testdata/valid/tender-summary-v1.json"
+	default:
+		return nil, ErrUnknownKind
+	}
+	raw, err := schemaFS.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+	return append([]byte(nil), raw...), nil
 }

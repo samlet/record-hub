@@ -1,0 +1,8 @@
+{
+  "applicationId": "app-123",
+  "title": "Safety review",
+  "status": "IN_REVIEW",
+  "processRef": "workflow-456",
+  "updatedAt": "2026-09-15T15:30:00Z",
+  "version": 7
+}

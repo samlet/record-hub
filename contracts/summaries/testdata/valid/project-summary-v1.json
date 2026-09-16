@@ -1,0 +1,9 @@
+{
+  "projectId": "project-123",
+  "type": "engineering",
+  "status": "ACTIVE",
+  "currentStage": "IMPLEMENTATION",
+  "workflowRef": "workflow-789",
+  "updatedAt": "2026-09-15T15:30:00Z",
+  "version": 3
+}

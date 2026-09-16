@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "contracts": [
+    {
+      "kind": "application",
+      "schemaId": "urn:record-hub:summary:application:v1",
+      "schemaFile": "application-summary-v1.schema.json",
+      "fixtureFile": "testdata/valid/application-summary-v1.json",
+      "schemaContentHash": "sha256:77b957960d1fd71a75d8659febb42c1e941a120ba71212a01562d60f17b0b0bf"
+    },
+    {
+      "kind": "project",
+      "schemaId": "urn:record-hub:summary:project:v1",
+      "schemaFile": "project-summary-v1.schema.json",
+      "fixtureFile": "testdata/valid/project-summary-v1.json",
+      "schemaContentHash": "sha256:07a245eb4c472cef26dd0e7ce32ec15d3278a4f6f633221157d97372659d17b4"
+    },
+    {
+      "kind": "tender",
+      "schemaId": "urn:record-hub:summary:tender:v1",
+      "schemaFile": "tender-summary-v1.schema.json",
+      "fixtureFile": "testdata/valid/tender-summary-v1.json",
+      "schemaContentHash": "sha256:b4b314d9f83d5ce4ab7d2a882ea677b2765adca2dfc29798930e61567bbf79a3"
+    }
+  ]
+}

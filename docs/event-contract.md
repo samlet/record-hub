@@ -92,3 +92,8 @@ aggregateVersion > currentVersion + 1   -> gap/pause/recover
 - 验证错误不包含原始 payload，避免把敏感内容带入日志或 DLQ。
 
 共享 schema、可执行 verifier 和跨语言输入 fixture 位于 `contracts/eventenvelope`。
+
+三个低敏 summary 契约的 Record Hub 镜像位于 `contracts/summaries`，包含 Draft 2020-12
+schema、canonical safe fixture 和 `manifest.json` 中的 `schemaContentHash`。生产者仓库在
+M5-050 必须复制这些文件并用各自语言校验相同 hash；Record Hub handler 只接受对应的
+`sourceSystem/eventType/schemaVersion` 精确组合。

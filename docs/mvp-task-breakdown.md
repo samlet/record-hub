@@ -81,7 +81,7 @@
 
 | ID | 仓库 | 任务 | 状态 | 依赖 | 验收 |
 | --- | --- | --- | --- | --- | --- |
-| RH-M5-050 | 双仓库 | Approver ApplicationSummary v1 契约镜像 | TODO | M0-005,M4-046 | schema/fixture/hash 一致 |
+| RH-M5-050 | 双仓库 | Approver ApplicationSummary v1 契约镜像 | TODO | M0-005,M4-046 | Record Hub 已提供 schema/fixture/hash manifest；Approver 权威镜像与跨语言 hash 校验待完成 |
 | RH-M5-051 | Approver | Application summary Outbox 与事务写入 | TODO | 050 | 状态/安全摘要变化同事务；稳定 version/eventId |
 | RH-M5-052 | Approver | JetStream relay | TODO | 051,M1-012 | publish ack 后 sent；响应丢失原 ID 重发 |
 | RH-M5-053 | 双仓库 | Fluxion ProjectSummary v1 契约镜像 | TODO | M0-005,M4-046 | schema/fixture/hash 一致 |

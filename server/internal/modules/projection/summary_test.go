@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	"github.com/samlet/record-hub/contracts/eventenvelope"
+	"github.com/samlet/record-hub/contracts/summaries"
+	"github.com/samlet/record-hub/server/internal/modules/schema"
 )
 
 func TestSummaryHandlersAcceptOnlyTheirV1SafePayloads(t *testing.T) {
@@ -226,6 +228,27 @@ func TestRegisterSummaryHandlersUsesExactKeys(t *testing.T) {
 func TestSummaryHandlerRejectsUnknownKind(t *testing.T) {
 	if _, err := NewSummaryHandler("unknown"); !errors.Is(err, ErrSummaryKindUnknown) {
 		t.Fatalf("unknown kind error = %v", err)
+	}
+}
+
+func TestSummarySchemaContentHashesMatchManifest(t *testing.T) {
+	expected := map[summaries.Kind]string{
+		summaries.Application: "sha256:77b957960d1fd71a75d8659febb42c1e941a120ba71212a01562d60f17b0b0bf",
+		summaries.Project:     "sha256:07a245eb4c472cef26dd0e7ce32ec15d3278a4f6f633221157d97372659d17b4",
+		summaries.Tender:      "sha256:b4b314d9f83d5ce4ab7d2a882ea677b2765adca2dfc29798930e61567bbf79a3",
+	}
+	for kind, want := range expected {
+		raw, err := summaries.Schema(kind)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, err := schema.SchemaContentHash(raw, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got != want {
+			t.Fatalf("%s schema content hash = %s, want %s", kind, got, want)
+		}
 	}
 }
 

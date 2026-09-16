@@ -1,0 +1,9 @@
+{
+  "tenderId": "tender-123",
+  "buyerOrganization": "Example Buyer",
+  "name": "Cloud services",
+  "status": "OPEN",
+  "template": "standard-v2",
+  "updatedAt": "2026-09-15T15:30:00Z",
+  "version": 4
+}
