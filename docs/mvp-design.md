@@ -373,6 +373,12 @@ MVP 单消息上限暂定 256 KiB；压测后才能提高。
 
 Operations 页只展示安全错误、consumer、event ID、aggregate reference、delivery count 和状态，不展示 token、原始敏感 payload 或连接凭据。
 
+M4-047 API 为 `GET /api/v1/operations/events`，必须带 `tenantId`、`workspaceId` 和一个
+durable `consumer`，查询最多返回 100 个 checkpoint。响应只包含 Inbox 各状态计数、最早
+processing 时间和 checkpoint 的 aggregate/version/status 元数据；Mongo 查询使用固定字段
+投影，绝不选择或解码 Inbox payload。页面 `/operations/events` 只渲染这些安全字段，通过
+普通刷新获取最新快照。
+
 MVP 更新采用普通 HTTP 刷新或轻量 SSE；不实现 Presence/Broadcast。
 
 ## 13. 可靠性与失败矩阵

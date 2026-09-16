@@ -10,6 +10,7 @@ tags:
   - name: System
   - name: Identity
   - name: Records
+  - name: Operations
 paths:
   /healthz:
     get:
@@ -37,6 +38,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ReadinessResponse"
+  /api/v1/operations/events:
+    get:
+      tags: [Operations]
+      operationId: getProjectionOperations
+      summary: Read bounded projection backlog and checkpoint health
+      parameters:
+        - $ref: "#/components/parameters/TenantIdQuery"
+        - $ref: "#/components/parameters/WorkspaceIdQuery"
+        - $ref: "#/components/parameters/ConsumerQuery"
+        - $ref: "#/components/parameters/LimitQuery"
+      responses:
+        "200":
+          description: Safe counts and checkpoint metadata without event payloads.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectionOperationsSnapshot"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "503":
           description: One or more required dependencies are not ready.
           content:
@@ -624,6 +648,15 @@ components:
         type: integer
         minimum: 1
         maximum: 100
+    ConsumerQuery:
+      name: consumer
+      in: query
+      required: true
+      description: One durable projection consumer name.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 256
     SchemaId:
       name: schemaId
       in: path
@@ -734,6 +767,80 @@ components:
         status:
           type: string
           enum: [ready, not_ready]
+    ProjectionOperationsSnapshot:
+      type: object
+      additionalProperties: false
+      required: [tenantId, workspaceId, consumer, inbox, checkpoints, generatedAt]
+      properties:
+        tenantId:
+          type: string
+        workspaceId:
+          type: string
+        consumer:
+          type: string
+        inbox:
+          $ref: "#/components/schemas/InboxOperationsSummary"
+        checkpoints:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/ProjectionCheckpoint"
+        generatedAt:
+          type: string
+          format: date-time
+    InboxOperationsSummary:
+      type: object
+      additionalProperties: false
+      required: [processing, applied, rejected, failed]
+      properties:
+        processing:
+          type: integer
+          format: int64
+          minimum: 0
+        applied:
+          type: integer
+          format: int64
+          minimum: 0
+        rejected:
+          type: integer
+          format: int64
+          minimum: 0
+        failed:
+          type: integer
+          format: int64
+          minimum: 0
+        oldestProcessingAt:
+          type: string
+          format: date-time
+    ProjectionCheckpoint:
+      type: object
+      additionalProperties: false
+      required: [tenantId, workspaceId, consumer, sourceSystem, aggregateType, aggregateId, sourceVersion, lastEventId, syncedAt, status]
+      properties:
+        tenantId:
+          type: string
+        workspaceId:
+          type: string
+        consumer:
+          type: string
+        sourceSystem:
+          type: string
+        aggregateType:
+          type: string
+        aggregateId:
+          type: string
+        sourceVersion:
+          type: integer
+          format: int64
+          minimum: 0
+        lastEventId:
+          type: string
+        syncedAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [CURRENT, GAP, FAILED]
     Principal:
       type: object
       additionalProperties: false
