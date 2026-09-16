@@ -294,6 +294,10 @@ record-hub-bids-projection-v1
 Handler registry 按 `sourceSystem/eventType/schemaVersion` 精确匹配，注册键全局唯一；不允许
 按 source 或 event type 回退匹配，未注册事件直接 fail closed，避免未知事件误写投影。
 
+`MongoProjectionRepository.Apply` 将 Inbox 从 `PROCESSING` 原子推进到 `APPLIED`，并在同一
+Mongo session 中 upsert projection record、checkpoint 和 audit；任一步失败都会 abort，已
+`APPLIED` 的同一事件只返回幂等成功，不重复写副作用。
+
 MVP 单消息上限暂定 256 KiB；压测后才能提高。
 
 ## 10. 三个生产者接入
