@@ -107,6 +107,17 @@ Mongo/NATS 的真实进程重启还需要本地 replica set、JetStream 和业�
 在受控环境记录 backlog、lease 和 event ID；当前只完成 API/worker process smoke，因此
 M7-076 保持 `PARTIAL`，不把 idle worker 当成完整业务 worker 验收。
 
+## M7-077 bounded query/payload/rate limit
+
+现有记录、view、operations、Inbox 和 summary envelope 均有上限；binding 请求体限制为
+2 MiB，projection envelope 限制为 256 KiB，列表/operations/index 查询限制为 1–100 或
+每表 16 个 index。API 进程额外启用 process-wide fixed-window limiter（120 requests/min），
+不按 IP、tenant 或 token 建立无界状态；超限返回安全的 `429 RATE_LIMITED` 和 `Retry-After`。
+
+```bash
+./scripts/verify-m7-bounds.sh
+```
+
 ## 边界说明
 
 binding 只接受 `system:type:id` 的稳定引用和已经由 projection/record owner 过滤后的 JSON

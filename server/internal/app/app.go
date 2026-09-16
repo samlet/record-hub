@@ -41,7 +41,9 @@ func New(cfg config.Config, logger *slog.Logger) *App {
 			health.NATS:    health.Pending(),
 			health.Dex:     health.Pending(),
 		}).Routes(mux)
-		services = append(services, httpapi.New(cfg.HTTPAddress, observability.HTTPMiddleware(metrics, mux), cfg.ShutdownTimeout))
+		limiter := observability.NewRateLimiter(120, time.Minute)
+		handler := observability.HTTPMiddleware(metrics, observability.RateLimitMiddleware(limiter, mux))
+		services = append(services, httpapi.New(cfg.HTTPAddress, handler, cfg.ShutdownTimeout))
 	}
 	if cfg.Mode == config.ModeWorker || cfg.Mode == config.ModeAll {
 		services = append(services, idleService("worker"))

@@ -254,3 +254,15 @@ func TestBindingHTTPHandlerFailsClosedWhenServiceIsMissing(t *testing.T) {
 		t.Fatalf("missing service = %d %s", response.Code, response.Body.String())
 	}
 }
+
+func TestBindingHTTPHandlerRejectsOversizedBody(t *testing.T) {
+	handler := NewHTTPHandler(newBindingService(memoryRecordReader{record: validSourceRecord()}, newMemorySnapshotStore()))
+	body := strings.Repeat("x", 2<<20+1)
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/bindings/snapshots", strings.NewReader(body)).WithContext(identity.WithPrincipal(context.Background(), bindingUser()))
+	request.Header.Set("Idempotency-Key", "m7-oversized")
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if response.Code != http.StatusRequestEntityTooLarge || !strings.Contains(response.Body.String(), "REQUEST_TOO_LARGE") {
+		t.Fatalf("oversized binding body = %d %s", response.Code, response.Body.String())
+	}
+}
