@@ -100,3 +100,16 @@ Envelope 字段由服务控制。用户只能编辑 Schema 和权限允许的 `d
 - 常用 tag、投影状态和同步时间索引。
 
 任意动态字段索引必须由受控的 View/Index Policy 创建，不能由用户无限制创建索引。
+
+## 6. Canonical JSON 与 Schema content hash
+
+Canonical JSON 使用以下跨语言规则：
+
+- 输入必须是单一、合法 UTF-8 JSON，重复对象 key 和尾随值直接拒绝；
+- 对象 key 按 UTF-8 byte order 排序，array 顺序不变；
+- string 保留 UTF-8，只对 JSON 必需字符和 U+0000—U+001F 转义；
+- number 以任意精度十进制解析，输出无 exponent、无无意义前导/尾随零的 plain decimal，`-0` 统一为 `0`；
+- decimal scale 具有业务含义时，值必须先按 schema 规范化为定长字符串，不能经过 binary float；
+- Schema content hash 对 `{jsonSchema, semanticTypes}` 的 canonical bytes 计算 SHA-256，并使用 `sha256:<lowercase hex>` 表示。
+
+跨语言 fixture 位于 `server/internal/modules/schema/testdata/schema-content-hash.json`；Java、Go、TypeScript 实现必须产生其中同一个 `expectedHash`。

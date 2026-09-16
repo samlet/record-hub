@@ -1,0 +1,19 @@
+{
+  "description": "Cross-language fixture: Java, Go, and TypeScript implementations must produce expectedHash.",
+  "schema": {
+    "type": "object",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+      "amount": { "type": "string", "pattern": "^-?[0-9]+\\.[0-9]{2}$" },
+      "active": { "type": "boolean" },
+      "count": { "type": "integer" }
+    },
+    "additionalProperties": false
+  },
+  "semanticTypes": [
+    "urn:record-hub:finance:Amount",
+    "http://www.schema.org/MonetaryAmount/",
+    "https://schema.org/MonetaryAmount"
+  ],
+  "expectedHash": "sha256:7a1dca475249e651365fa9a1285702c041897ec14e0814b5a269c10179d05725"
+}

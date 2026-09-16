@@ -48,7 +48,7 @@
 | RH-M2-022 | Record Hub | JSON Schema 2020-12 validation | DONE | 020 | 强制 Draft 2020-12；text/number/boolean/date-time/enum/reference 正负 fixture；非法 UTF-8/尾随 JSON 拒绝 |
 | RH-M2-023 | Record Hub | compatibility checker | DONE | 022 | optional additive、required 放宽、integer→number/enum 扩展兼容；删除/改名/type/required/enum/约束收窄判 breaking |
 | RH-M2-024 | Record Hub | semanticTypes/Schema.org URI mapping | DONE | 020 | Schema.org HTTPS canonicalization、HTTPS custom URI/URN、排序去重；不影响结构校验结果 |
-| RH-M2-025 | Record Hub | canonical JSON/content hash | TODO | 022 | Go/Java/TS fixture hash 一致 |
+| RH-M2-025 | Record Hub | canonical JSON/content hash | DONE | 022 | 确定性 UTF-8 key/number/string 规则、重复 key 拒绝、semanticTypes 规范化；Go/Java/TS 共享 fixture/expected hash |
 | RH-M2-026 | Record Hub Web | Schema 列表、编辑、校验和发布 UI | TODO | 021 | 错误定位到字段路径；已发布只读 |
 
 ## 5. M3：多维表格核心
