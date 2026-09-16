@@ -83,6 +83,34 @@ func TestRecordsHTTPRecordCRUDContract(t *testing.T) {
 	}
 }
 
+func TestRecordsHTTPViewAndQueryContract(t *testing.T) {
+	principal := identity.Principal{Kind: identity.PrincipalUser, Issuer: "https://issuer.example", Subject: "owner"}
+	definition := recordSchemaDefinition(t)
+	tables := &memoryTableRepository{values: map[string]TableDefinition{"tenant-1:workspace-1:table-1": {ID: "table-1", TenantID: "tenant-1", WorkspaceID: "workspace-1", Name: "Custom", Kind: TableKindCustom, SchemaID: definition.SchemaID, SchemaVersion: 1}}}
+	recordStore := &memoryRecordRepository{values: make(map[string]Record)}
+	viewStore := &memoryViewRepository{views: make(map[string]ViewDefinition)}
+	service := NewRecordService(nil, tables, memorySchemaReader{definition: definition}, identity.NewAuthorizer(serviceMembershipReader{membership: identity.WorkspaceMembership{TenantID: "tenant-1", WorkspaceID: "workspace-1", Identity: principal.IdentityKey(), Role: identity.RoleOwner, Status: identity.MembershipActive}}), recordStore, &memoryRecordReceipts{values: make(map[string]RecordReceipt)}, &memoryRecordAudit{}).WithViewRepository(viewStore)
+	handler := NewHTTPHandler(service)
+	createRecord := doRecordsRequestWithHeaders(handler, &principal, http.MethodPost, "/api/v1/tables/table-1/records", `{"tenantId":"tenant-1","workspaceId":"workspace-1","id":"record-1","data":{"title":"hello","count":1}}`, map[string]string{"Idempotency-Key": "view-record-1"})
+	if createRecord.Code != http.StatusCreated {
+		t.Fatalf("record setup status=%d body=%s", createRecord.Code, createRecord.Body.String())
+	}
+	viewStore.records = []Record{recordStore.values["tenant-1:workspace-1:record-1"]}
+	viewBody := `{"tenantId":"tenant-1","workspaceId":"workspace-1","id":"view-1","name":"Hello","columns":["title"],"filters":[{"field":"title","operator":"contains","value":"hello"}],"sorts":[{"field":"updatedAt","direction":"desc"}]}`
+	created := doRecordsRequest(handler, &principal, http.MethodPost, "/api/v1/tables/table-1/views", viewBody)
+	if created.Code != http.StatusCreated {
+		t.Fatalf("view create status=%d body=%s", created.Code, created.Body.String())
+	}
+	listed := doRecordsRequest(handler, &principal, http.MethodGet, "/api/v1/tables/table-1/views?tenantId=tenant-1&workspaceId=workspace-1", "")
+	if listed.Code != http.StatusOK || !strings.Contains(listed.Body.String(), `"view-1"`) {
+		t.Fatalf("view list status=%d body=%s", listed.Code, listed.Body.String())
+	}
+	page := doRecordsRequest(handler, &principal, http.MethodGet, "/api/v1/tables/table-1/records?tenantId=tenant-1&workspaceId=workspace-1&viewId=view-1&limit=1", "")
+	if page.Code != http.StatusOK || !strings.Contains(page.Body.String(), `"record-1"`) {
+		t.Fatalf("view records status=%d body=%s", page.Code, page.Body.String())
+	}
+}
+
 func doRecordsRequest(handler http.Handler, principal *identity.Principal, method, path, body string) *httptest.ResponseRecorder {
 	return doRecordsRequestWithHeaders(handler, principal, method, path, body, nil)
 }

@@ -167,6 +167,31 @@ paths:
   /api/v1/tables/{tableId}/records:
     parameters:
       - $ref: "#/components/parameters/TableId"
+    get:
+      tags: [Records]
+      operationId: listRecords
+      summary: List records through a bounded view query
+      parameters:
+        - $ref: "#/components/parameters/TenantIdQuery"
+        - $ref: "#/components/parameters/WorkspaceIdQuery"
+        - $ref: "#/components/parameters/ViewIdQuery"
+        - $ref: "#/components/parameters/CursorQuery"
+        - $ref: "#/components/parameters/LimitQuery"
+      responses:
+        "200":
+          description: A bounded page of records.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecordPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
     post:
       tags: [Records]
       operationId: createRecord
@@ -190,6 +215,52 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Record"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/v1/tables/{tableId}/views:
+    parameters:
+      - $ref: "#/components/parameters/TableId"
+    get:
+      tags: [Records]
+      operationId: listViews
+      summary: List views for a table
+      parameters:
+        - $ref: "#/components/parameters/TenantIdQuery"
+        - $ref: "#/components/parameters/WorkspaceIdQuery"
+      responses:
+        "200":
+          description: Views visible to the principal.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ViewList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Records]
+      operationId: createView
+      summary: Create a bounded filter and sort view
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ViewCreateRequest"
+      responses:
+        "201":
+          description: View created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ViewDefinition"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -484,6 +555,29 @@ components:
         type: string
         minLength: 1
         maxLength: 128
+    ViewIdQuery:
+      name: viewId
+      in: query
+      required: false
+      schema:
+        type: string
+        maxLength: 128
+    CursorQuery:
+      name: cursor
+      in: query
+      required: false
+      description: Opaque stable cursor returned by a previous page.
+      schema:
+        type: string
+        maxLength: 2048
+    LimitQuery:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
     SchemaId:
       name: schemaId
       in: path
@@ -764,6 +858,128 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TableDefinition"
+    ViewCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [tenantId, workspaceId, id, name]
+      properties:
+        tenantId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        workspaceId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        id:
+          type: string
+          minLength: 1
+          maxLength: 128
+        name:
+          type: string
+          minLength: 1
+          maxLength: 128
+        columns:
+          type: array
+          maxItems: 128
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 128
+        filters:
+          type: array
+          maxItems: 16
+          items:
+            $ref: "#/components/schemas/ViewFilter"
+        sorts:
+          type: array
+          maxItems: 4
+          items:
+            $ref: "#/components/schemas/ViewSort"
+    ViewFilter:
+      type: object
+      additionalProperties: false
+      required: [field, operator, value]
+      properties:
+        field:
+          type: string
+          pattern: "^[A-Za-z][A-Za-z0-9_.-]{0,127}$"
+        operator:
+          type: string
+          enum: [eq, ne, contains, in, gt, gte, lt, lte]
+        value: {}
+    ViewSort:
+      type: object
+      additionalProperties: false
+      required: [field, direction]
+      properties:
+        field:
+          type: string
+          pattern: "^[A-Za-z][A-Za-z0-9_.-]{0,127}$"
+        direction:
+          type: string
+          enum: [asc, desc]
+    ViewDefinition:
+      type: object
+      additionalProperties: false
+      required: [id, tenantId, workspaceId, tableId, name, columns, filters, sorts, version, createdBy, updatedBy, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        workspaceId:
+          type: string
+        tableId:
+          type: string
+        name:
+          type: string
+        columns:
+          type: array
+          items:
+            type: string
+        filters:
+          type: array
+          items:
+            $ref: "#/components/schemas/ViewFilter"
+        sorts:
+          type: array
+          items:
+            $ref: "#/components/schemas/ViewSort"
+        version:
+          type: integer
+          minimum: 1
+        createdBy:
+          $ref: "#/components/schemas/IdentityKey"
+        updatedBy:
+          $ref: "#/components/schemas/IdentityKey"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ViewList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ViewDefinition"
+    RecordPage:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Record"
+        nextCursor:
+          type: string
     RecordCreateRequest:
       type: object
       additionalProperties: false

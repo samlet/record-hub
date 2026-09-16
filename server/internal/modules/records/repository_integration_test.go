@@ -89,10 +89,17 @@ func TestMongoWorkspaceAndTablePersistence(t *testing.T) {
 	if _, err := service.CreateRecord(ctx, principal, recordInput); err != nil {
 		t.Fatal(err)
 	}
+	secondInput := recordInput
+	secondInput.ID = "record-mongo-2"
+	secondInput.IdempotencyKey = "record-create-mongo-2"
+	secondInput.Data = mustRecordData(t, `{"title":"hello again"}`)
+	if _, err := service.CreateRecord(ctx, principal, secondInput); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := service.CreateRecord(ctx, principal, recordInput); err != nil {
 		t.Fatalf("record idempotent replay: %v", err)
 	}
-	updated, err := service.UpdateRecord(ctx, principal, RecordInput{TenantID: workspace.TenantID, WorkspaceID: workspace.ID, TableID: recordTable.ID, ID: recordInput.ID, Data: mustRecordData(t, `{"title":"updated"}`), IdempotencyKey: "record-update-mongo"}, 1)
+	updated, err := service.UpdateRecord(ctx, principal, RecordInput{TenantID: workspace.TenantID, WorkspaceID: workspace.ID, TableID: recordTable.ID, ID: recordInput.ID, Data: mustRecordData(t, `{"title":"hello updated"}`), IdempotencyKey: "record-update-mongo"}, 1)
 	if err != nil || updated.RecordVersion != 2 {
 		t.Fatalf("record update = %#v, %v", updated, err)
 	}
@@ -108,6 +115,19 @@ func TestMongoWorkspaceAndTablePersistence(t *testing.T) {
 	}
 	if _, err := repository.GetRecord(ctx, workspace.TenantID, workspace.ID, failingInput.ID); !errors.Is(err, ErrRecordNotFound) {
 		t.Fatalf("record audit failure left record behind: %v", err)
+	}
+	view := ViewDefinition{ID: "view-mongo", TenantID: workspace.TenantID, WorkspaceID: workspace.ID, TableID: recordTable.ID, Name: "Hello", Filters: []ViewFilter{{Field: "title", Operator: FilterContains, Value: "hello"}}, Sorts: []ViewSort{{Field: "title", Direction: SortAscending}}, Version: 1, CreatedBy: creator, UpdatedBy: creator, CreatedAt: now, UpdatedAt: now}
+	if err := repository.CreateView(ctx, view); err != nil {
+		t.Fatal(err)
+	}
+	service.WithViewRepository(repository)
+	page, err := service.ListRecords(ctx, principal, workspace.TenantID, workspace.ID, recordTable.ID, view.ID, "", 1)
+	if err != nil || len(page.Items) != 1 || page.NextCursor == "" {
+		t.Fatalf("first view page = %#v, %v", page, err)
+	}
+	nextPage, err := service.ListRecords(ctx, principal, workspace.TenantID, workspace.ID, recordTable.ID, view.ID, page.NextCursor, 1)
+	if err != nil || len(nextPage.Items) != 1 || nextPage.Items[0].ID == page.Items[0].ID {
+		t.Fatalf("second view page = %#v, %v", nextPage, err)
 	}
 	if _, err := service.DeleteRecord(ctx, principal, RecordDeleteInput{TenantID: workspace.TenantID, WorkspaceID: workspace.ID, TableID: recordTable.ID, RecordID: recordInput.ID, IdempotencyKey: "record-delete-mongo"}, 2); err != nil {
 		t.Fatal(err)

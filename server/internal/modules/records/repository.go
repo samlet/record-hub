@@ -2,8 +2,11 @@ package records
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/samlet/record-hub/server/internal/modules/identity"
@@ -25,12 +28,16 @@ var (
 	ErrIdempotencyKeyRequired = errors.New("idempotency key is required")
 	ErrIdempotencyConflict    = errors.New("idempotency key was used with different input")
 	ErrReceiptNotFound        = errors.New("idempotency receipt not found")
+	ErrViewNotFound           = errors.New("view not found")
+	ErrViewExists             = errors.New("view already exists")
+	ErrInvalidCursor          = errors.New("invalid record cursor")
 )
 
 const (
 	workspaceCollectionName = "workspaces"
 	tableCollectionName     = "table_definitions"
 	recordCollectionName    = "records"
+	viewCollectionName      = "view_definitions"
 )
 
 type WorkspaceRepository interface {
@@ -52,15 +59,23 @@ type RecordRepository interface {
 	DeleteRecord(context.Context, string, string, string, int64) error
 }
 
+type ViewRepository interface {
+	CreateView(context.Context, ViewDefinition) error
+	GetView(context.Context, string, string, string, string) (ViewDefinition, error)
+	ListViews(context.Context, string, string, string) ([]ViewDefinition, error)
+	ListRecords(context.Context, string, string, string, ViewDefinition, string, int) (RecordPage, error)
+}
+
 type MongoRepository struct {
 	workspaces *mongo.Collection
 	tables     *mongo.Collection
 	records    *mongo.Collection
+	views      *mongo.Collection
 	clock      func() time.Time
 }
 
 func NewMongoRepository(database *mongo.Database) *MongoRepository {
-	return &MongoRepository{workspaces: database.Collection(workspaceCollectionName), tables: database.Collection(tableCollectionName), records: database.Collection(recordCollectionName), clock: time.Now}
+	return &MongoRepository{workspaces: database.Collection(workspaceCollectionName), tables: database.Collection(tableCollectionName), records: database.Collection(recordCollectionName), views: database.Collection(viewCollectionName), clock: time.Now}
 }
 
 func (repository *MongoRepository) EnsureIndexes(ctx context.Context) error {
@@ -79,11 +94,17 @@ func (repository *MongoRepository) EnsureIndexes(ctx context.Context) error {
 	}
 	if _, err := repository.records.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "workspaceId", Value: 1}, {Key: "tableId", Value: 1}, {Key: "_id", Value: 1}}, Options: options.Index().SetName("record_tenant_workspace_table_id_unique").SetUnique(true)},
-		{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "source.system", Value: 1}, {Key: "source.type", Value: 1}, {Key: "source.id", Value: 1}}, Options: options.Index().SetName("record_source_unique").SetUnique(true).SetSparse(true)},
+		{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "source.system", Value: 1}, {Key: "source.type", Value: 1}, {Key: "source.id", Value: 1}}, Options: options.Index().SetName("record_source_unique").SetUnique(true).SetPartialFilterExpression(bson.D{{Key: "source.system", Value: bson.D{{Key: "$exists", Value: true}}}, {Key: "source.type", Value: bson.D{{Key: "$exists", Value: true}}}, {Key: "source.id", Value: bson.D{{Key: "$exists", Value: true}}}})},
 		{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "schemaId", Value: 1}, {Key: "schemaVersion", Value: 1}}, Options: options.Index().SetName("record_tenant_schema")},
 		{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "workspaceId", Value: 1}, {Key: "tableId", Value: 1}, {Key: "tags", Value: 1}}, Options: options.Index().SetName("record_table_tags")},
 	}); err != nil {
 		return fmt.Errorf("create record indexes: %w", err)
+	}
+	if _, err := repository.views.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "workspaceId", Value: 1}, {Key: "tableId", Value: 1}, {Key: "_id", Value: 1}}, Options: options.Index().SetName("view_tenant_workspace_table_id_unique").SetUnique(true)},
+		{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "workspaceId", Value: 1}, {Key: "tableId", Value: 1}, {Key: "name", Value: 1}}, Options: options.Index().SetName("view_table_name_unique").SetUnique(true)},
+	}); err != nil {
+		return fmt.Errorf("create view indexes: %w", err)
 	}
 	return nil
 }
@@ -251,4 +272,231 @@ func (repository *MongoRepository) DeleteRecord(ctx context.Context, tenantID, w
 		return ErrRecordVersionConflict
 	}
 	return ErrRecordVersionConflict
+}
+
+func (repository *MongoRepository) CreateView(ctx context.Context, view ViewDefinition) error {
+	if err := view.Validate(); err != nil {
+		return err
+	}
+	if _, err := repository.views.InsertOne(ctx, view); err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			return ErrViewExists
+		}
+		return fmt.Errorf("insert view: %w", err)
+	}
+	return nil
+}
+
+func (repository *MongoRepository) GetView(ctx context.Context, tenantID, workspaceID, tableID, viewID string) (ViewDefinition, error) {
+	var view ViewDefinition
+	err := repository.views.FindOne(ctx, bson.D{{Key: "tenantId", Value: tenantID}, {Key: "workspaceId", Value: workspaceID}, {Key: "tableId", Value: tableID}, {Key: "_id", Value: viewID}}).Decode(&view)
+	if errors.Is(err, mongo.ErrNoDocuments) {
+		return ViewDefinition{}, ErrViewNotFound
+	}
+	if err != nil {
+		return ViewDefinition{}, fmt.Errorf("find view: %w", err)
+	}
+	return view, nil
+}
+
+func (repository *MongoRepository) ListViews(ctx context.Context, tenantID, workspaceID, tableID string) ([]ViewDefinition, error) {
+	cursor, err := repository.views.Find(ctx, bson.D{{Key: "tenantId", Value: tenantID}, {Key: "workspaceId", Value: workspaceID}, {Key: "tableId", Value: tableID}}, options.Find().SetSort(bson.D{{Key: "name", Value: 1}, {Key: "_id", Value: 1}}).SetLimit(100))
+	if err != nil {
+		return nil, fmt.Errorf("list views: %w", err)
+	}
+	defer cursor.Close(ctx)
+	var views []ViewDefinition
+	if err := cursor.All(ctx, &views); err != nil {
+		return nil, fmt.Errorf("decode views: %w", err)
+	}
+	return views, nil
+}
+
+func (repository *MongoRepository) ListRecords(ctx context.Context, tenantID, workspaceID, tableID string, view ViewDefinition, cursorValue string, limit int) (RecordPage, error) {
+	if limit < 1 || limit > 100 {
+		return RecordPage{}, errors.New("record page limit must be between 1 and 100")
+	}
+	filter := bson.D{{Key: "tenantId", Value: tenantID}, {Key: "workspaceId", Value: workspaceID}, {Key: "tableId", Value: tableID}}
+	viewFilters, err := mongoViewFilters(view.Filters)
+	if err != nil {
+		return RecordPage{}, err
+	}
+	filter = append(filter, viewFilters...)
+	sorts := viewSorts(view.Sorts)
+	if cursorValue != "" {
+		decoded, err := decodeRecordCursor(cursorValue)
+		if err != nil {
+			return RecordPage{}, err
+		}
+		if len(decoded.Values) != len(sorts) {
+			return RecordPage{}, ErrInvalidCursor
+		}
+		orConditions := bson.A{}
+		for index := range sorts {
+			andConditions := bson.D{}
+			for previous := 0; previous < index; previous++ {
+				andConditions = append(andConditions, bson.E{Key: viewMongoField(sorts[previous].Field), Value: decoded.Values[previous]})
+			}
+			op := "$gt"
+			if sorts[index].Direction == SortDescending {
+				op = "$lt"
+			}
+			andConditions = append(andConditions, bson.E{Key: viewMongoField(sorts[index].Field), Value: bson.D{{Key: op, Value: decoded.Values[index]}}})
+			orConditions = append(orConditions, andConditions)
+		}
+		filter = append(filter, bson.E{Key: "$or", Value: orConditions})
+	}
+	cursor, err := repository.records.Find(ctx, filter, options.Find().SetSort(mongoSort(sorts)).SetLimit(int64(limit+1)))
+	if err != nil {
+		return RecordPage{}, fmt.Errorf("list records: %w", err)
+	}
+	defer cursor.Close(ctx)
+	var records []Record
+	if err := cursor.All(ctx, &records); err != nil {
+		return RecordPage{}, fmt.Errorf("decode records: %w", err)
+	}
+	page := RecordPage{Items: records}
+	if len(records) > limit {
+		page.Items = records[:limit]
+		page.NextCursor, err = encodeRecordCursor(page.Items[len(page.Items)-1], sorts)
+		if err != nil {
+			return RecordPage{}, err
+		}
+	}
+	return page, nil
+}
+
+type recordCursor struct {
+	Values bson.A `bson:"values"`
+}
+
+func encodeRecordCursor(record Record, sorts []ViewSort) (string, error) {
+	values := make(bson.A, len(sorts))
+	for index, sort := range sorts {
+		values[index] = recordSortValue(record, sort.Field)
+	}
+	payload, err := bson.Marshal(recordCursor{Values: values})
+	if err != nil {
+		return "", fmt.Errorf("encode record cursor: %w", err)
+	}
+	return base64.RawURLEncoding.EncodeToString(payload), nil
+}
+
+func decodeRecordCursor(value string) (recordCursor, error) {
+	payload, err := base64.RawURLEncoding.DecodeString(value)
+	if err != nil {
+		return recordCursor{}, ErrInvalidCursor
+	}
+	var cursor recordCursor
+	if err := bson.Unmarshal(payload, &cursor); err != nil || len(cursor.Values) == 0 {
+		return recordCursor{}, ErrInvalidCursor
+	}
+	return cursor, nil
+}
+
+func viewSorts(sorts []ViewSort) []ViewSort {
+	result := append([]ViewSort(nil), sorts...)
+	for _, sort := range result {
+		if sort.Field == "id" || sort.Field == "_id" {
+			return result
+		}
+	}
+	result = append(result, ViewSort{Field: "id", Direction: SortAscending})
+	return result
+}
+
+func mongoSort(sorts []ViewSort) bson.D {
+	result := make(bson.D, 0, len(sorts))
+	for _, sort := range sorts {
+		direction := 1
+		if sort.Direction == SortDescending {
+			direction = -1
+		}
+		result = append(result, bson.E{Key: viewMongoField(sort.Field), Value: direction})
+	}
+	return result
+}
+
+func mongoViewFilters(filters []ViewFilter) (bson.D, error) {
+	conditions := make(map[string]bson.D)
+	for _, filter := range filters {
+		if err := validateFilter(filter); err != nil {
+			return nil, err
+		}
+		path := viewMongoField(filter.Field)
+		operator := "$eq"
+		value := filter.Value
+		switch filter.Operator {
+		case FilterEqual:
+		case FilterNotEqual:
+			operator = "$ne"
+		case FilterContains:
+			operator = "$regex"
+			value = regexp.QuoteMeta(value.(string))
+		case FilterIn:
+			operator = "$in"
+		case FilterGreater:
+			operator = "$gt"
+		case FilterAtLeast:
+			operator = "$gte"
+		case FilterLess:
+			operator = "$lt"
+		case FilterAtMost:
+			operator = "$lte"
+		default:
+			return nil, fmt.Errorf("unsupported view filter operator %q", filter.Operator)
+		}
+		if _, ok := conditions[path]; !ok {
+			conditions[path] = bson.D{}
+		}
+		conditions[path] = append(conditions[path], bson.E{Key: operator, Value: value})
+	}
+	result := make(bson.D, 0, len(conditions))
+	for path, operators := range conditions {
+		if len(operators) == 1 && operators[0].Key == "$eq" {
+			result = append(result, bson.E{Key: path, Value: operators[0].Value})
+		} else {
+			result = append(result, bson.E{Key: path, Value: operators})
+		}
+	}
+	return result, nil
+}
+
+func viewMongoField(field string) string {
+	switch field {
+	case "id", "_id":
+		return "_id"
+	case "recordVersion", "schemaVersion", "createdAt", "updatedAt", "tags":
+		return field
+	default:
+		return "data." + strings.TrimPrefix(field, "data.")
+	}
+}
+
+func recordSortValue(record Record, field string) interface{} {
+	switch field {
+	case "id", "_id":
+		return record.ID
+	case "recordVersion":
+		return record.RecordVersion
+	case "schemaVersion":
+		return record.SchemaVersion
+	case "createdAt":
+		return record.CreatedAt
+	case "updatedAt":
+		return record.UpdatedAt
+	case "tags":
+		return record.Tags
+	default:
+		parts := strings.Split(strings.TrimPrefix(field, "data."), ".")
+		value := record.Data.Lookup(parts...)
+		if value.IsZero() {
+			return nil
+		}
+		var result interface{}
+		if err := value.Unmarshal(&result); err != nil {
+			return nil
+		}
+		return result
+	}
 }

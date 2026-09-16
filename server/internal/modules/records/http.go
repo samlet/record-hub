@@ -30,9 +30,16 @@ type RecordHTTPService interface {
 	DeleteRecord(context.Context, identity.Principal, RecordDeleteInput, int64) (Record, error)
 }
 
+type ViewHTTPService interface {
+	CreateView(context.Context, identity.Principal, ViewInput) (ViewDefinition, error)
+	ListViews(context.Context, identity.Principal, string, string, string) ([]ViewDefinition, error)
+	ListRecords(context.Context, identity.Principal, string, string, string, string, string, int) (RecordPage, error)
+}
+
 type HTTPService interface {
 	MutationService
 	RecordHTTPService
+	ViewHTTPService
 }
 
 type HTTPHandler struct {
@@ -51,6 +58,9 @@ func NewHTTPHandler(service MutationService) http.Handler {
 	mux.HandleFunc("GET /api/v1/records/{recordID}", handler.getRecord)
 	mux.HandleFunc("PATCH /api/v1/records/{recordID}", handler.updateRecord)
 	mux.HandleFunc("DELETE /api/v1/records/{recordID}", handler.deleteRecord)
+	mux.HandleFunc("POST /api/v1/tables/{tableID}/views", handler.createView)
+	mux.HandleFunc("GET /api/v1/tables/{tableID}/views", handler.listViews)
+	mux.HandleFunc("GET /api/v1/tables/{tableID}/records", handler.listRecords)
 	return mux
 }
 
@@ -78,6 +88,16 @@ type recordRequest struct {
 	Data        json.RawMessage  `json:"data"`
 	Tags        []string         `json:"tags"`
 	Relations   []RecordRelation `json:"relations"`
+}
+
+type viewRequest struct {
+	TenantID    string       `json:"tenantId"`
+	WorkspaceID string       `json:"workspaceId"`
+	ID          string       `json:"id"`
+	Name        string       `json:"name"`
+	Columns     []string     `json:"columns"`
+	Filters     []ViewFilter `json:"filters"`
+	Sorts       []ViewSort   `json:"sorts"`
 }
 
 func (handler *HTTPHandler) createWorkspace(writer http.ResponseWriter, request *http.Request) {
@@ -270,6 +290,83 @@ func (handler *HTTPHandler) deleteRecord(writer http.ResponseWriter, request *ht
 	writeRecord(writer, http.StatusOK, record)
 }
 
+func (handler *HTTPHandler) createView(writer http.ResponseWriter, request *http.Request) {
+	principal, ok := identity.PrincipalFromContext(request.Context())
+	if !ok {
+		writeError(writer, http.StatusUnauthorized, "AUTHENTICATION_REQUIRED", "Authentication is required.")
+		return
+	}
+	service, ok := handler.viewService(writer)
+	if !ok {
+		return
+	}
+	var input viewRequest
+	if !decodeJSON(writer, request, &input) {
+		return
+	}
+	view, err := service.CreateView(request.Context(), principal, ViewInput{TenantID: input.TenantID, WorkspaceID: input.WorkspaceID, TableID: request.PathValue("tableID"), ID: input.ID, Name: input.Name, Columns: input.Columns, Filters: input.Filters, Sorts: input.Sorts})
+	if err != nil {
+		writeRecordsError(writer, err)
+		return
+	}
+	writeJSON(writer, http.StatusCreated, view)
+}
+
+func (handler *HTTPHandler) listViews(writer http.ResponseWriter, request *http.Request) {
+	principal, ok := identity.PrincipalFromContext(request.Context())
+	if !ok {
+		writeError(writer, http.StatusUnauthorized, "AUTHENTICATION_REQUIRED", "Authentication is required.")
+		return
+	}
+	service, ok := handler.viewService(writer)
+	if !ok {
+		return
+	}
+	views, err := service.ListViews(request.Context(), principal, request.URL.Query().Get("tenantId"), request.URL.Query().Get("workspaceId"), request.PathValue("tableID"))
+	if err != nil {
+		writeRecordsError(writer, err)
+		return
+	}
+	writeJSON(writer, http.StatusOK, map[string]interface{}{"items": views})
+}
+
+func (handler *HTTPHandler) listRecords(writer http.ResponseWriter, request *http.Request) {
+	principal, ok := identity.PrincipalFromContext(request.Context())
+	if !ok {
+		writeError(writer, http.StatusUnauthorized, "AUTHENTICATION_REQUIRED", "Authentication is required.")
+		return
+	}
+	service, ok := handler.viewService(writer)
+	if !ok {
+		return
+	}
+	query := request.URL.Query()
+	limit := 50
+	if value := query.Get("limit"); value != "" {
+		parsed, err := strconv.Atoi(value)
+		if err != nil {
+			writeError(writer, http.StatusBadRequest, "INVALID_REQUEST", "limit must be an integer between 1 and 100.")
+			return
+		}
+		limit = parsed
+	}
+	page, err := service.ListRecords(request.Context(), principal, query.Get("tenantId"), query.Get("workspaceId"), request.PathValue("tableID"), query.Get("viewId"), query.Get("cursor"), limit)
+	if err != nil {
+		writeRecordsError(writer, err)
+		return
+	}
+	items := make([]recordResponse, 0, len(page.Items))
+	for _, record := range page.Items {
+		response, responseErr := recordResponseFrom(record)
+		if responseErr != nil {
+			writeError(writer, http.StatusInternalServerError, "RESPONSE_ENCODING_FAILED", "Response could not be encoded.")
+			return
+		}
+		items = append(items, response)
+	}
+	writeJSON(writer, http.StatusOK, map[string]interface{}{"items": items, "nextCursor": page.NextCursor})
+}
+
 func (input recordRequest) recordInput(request *http.Request, tableID, recordID string) (RecordInput, error) {
 	if recordID == "" {
 		recordID = input.ID
@@ -296,6 +393,15 @@ func (handler *HTTPHandler) recordService(writer http.ResponseWriter) (RecordHTT
 	return service, true
 }
 
+func (handler *HTTPHandler) viewService(writer http.ResponseWriter) (ViewHTTPService, bool) {
+	service, ok := handler.service.(ViewHTTPService)
+	if !ok || service == nil {
+		writeError(writer, http.StatusNotImplemented, "VIEW_API_UNAVAILABLE", "The view API is not configured.")
+		return nil, false
+	}
+	return service, true
+}
+
 func parseRecordIfMatch(value string) (int64, bool) {
 	value = strings.TrimSpace(value)
 	if len(value) >= 2 && value[0] == '"' && value[len(value)-1] == '"' {
@@ -306,16 +412,23 @@ func parseRecordIfMatch(value string) (int64, bool) {
 }
 
 func writeRecord(writer http.ResponseWriter, status int, record Record) {
-	data, err := bson.MarshalExtJSON(record.Data, false, false)
+	response, err := recordResponseFrom(record)
 	if err != nil {
 		writeError(writer, http.StatusInternalServerError, "RESPONSE_ENCODING_FAILED", "Response could not be encoded.")
 		return
 	}
-	response := recordResponse{ID: record.ID, TenantID: record.TenantID, WorkspaceID: record.WorkspaceID, TableID: record.TableID, SchemaID: record.SchemaID, SchemaVersion: record.SchemaVersion, Source: record.Source, RecordVersion: record.RecordVersion, Tags: record.Tags, Data: json.RawMessage(data), Relations: record.Relations, Projection: record.Projection, CreatedBy: record.CreatedBy, UpdatedBy: record.UpdatedBy, CreatedAt: record.CreatedAt.UTC().Format(time.RFC3339Nano), UpdatedAt: record.UpdatedAt.UTC().Format(time.RFC3339Nano)}
 	writer.Header().Set("Content-Type", "application/json")
 	writer.Header().Set("ETag", strconv.Quote(strconv.FormatInt(record.RecordVersion, 10)))
 	writer.WriteHeader(status)
 	_ = json.NewEncoder(writer).Encode(response)
+}
+
+func recordResponseFrom(record Record) (recordResponse, error) {
+	data, err := bson.MarshalExtJSON(record.Data, false, false)
+	if err != nil {
+		return recordResponse{}, err
+	}
+	return recordResponse{ID: record.ID, TenantID: record.TenantID, WorkspaceID: record.WorkspaceID, TableID: record.TableID, SchemaID: record.SchemaID, SchemaVersion: record.SchemaVersion, Source: record.Source, RecordVersion: record.RecordVersion, Tags: record.Tags, Data: json.RawMessage(data), Relations: record.Relations, Projection: record.Projection, CreatedBy: record.CreatedBy, UpdatedBy: record.UpdatedBy, CreatedAt: record.CreatedAt.UTC().Format(time.RFC3339Nano), UpdatedAt: record.UpdatedAt.UTC().Format(time.RFC3339Nano)}, nil
 }
 
 type recordResponse struct {
@@ -374,6 +487,12 @@ func writeRecordsError(writer http.ResponseWriter, err error) {
 		writeError(writer, http.StatusNotFound, "RECORD_NOT_FOUND", "The record was not found.")
 	case errors.Is(err, ErrRecordVersionConflict):
 		writeError(writer, http.StatusConflict, "RECORD_VERSION_CONFLICT", "The record version is stale.")
+	case errors.Is(err, ErrViewExists):
+		writeError(writer, http.StatusConflict, "VIEW_ALREADY_EXISTS", "The view already exists.")
+	case errors.Is(err, ErrViewNotFound):
+		writeError(writer, http.StatusNotFound, "VIEW_NOT_FOUND", "The view was not found.")
+	case errors.Is(err, ErrInvalidCursor):
+		writeError(writer, http.StatusBadRequest, "INVALID_CURSOR", "The record cursor is invalid or expired.")
 	case errors.Is(err, ErrIdempotencyKeyRequired):
 		writeError(writer, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key is required.")
 	case errors.Is(err, ErrIdempotencyConflict):

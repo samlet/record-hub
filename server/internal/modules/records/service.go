@@ -30,6 +30,7 @@ type Service struct {
 	records    RecordRepository
 	receipts   RecordReceiptStore
 	audit      audit.Writer
+	views      ViewRepository
 }
 
 func NewService(workspaces WorkspaceRepository, tables TableRepository, schemas SchemaReader, authorizer *identity.Authorizer) *Service {
@@ -41,6 +42,13 @@ func NewRecordService(workspaces WorkspaceRepository, tables TableRepository, sc
 	service.records = records
 	service.receipts = receipts
 	service.audit = auditWriter
+	return service
+}
+
+func (service *Service) WithViewRepository(views ViewRepository) *Service {
+	if service != nil {
+		service.views = views
+	}
 	return service
 }
 
@@ -128,6 +136,124 @@ func (service *Service) GetTable(ctx context.Context, principal identity.Princip
 		return TableDefinition{}, identity.ErrForbidden
 	}
 	return service.tables.GetTable(ctx, tenantID, workspaceID, tableID)
+}
+
+type ViewInput struct {
+	TenantID    string
+	WorkspaceID string
+	TableID     string
+	ID          string
+	Name        string
+	Columns     []string
+	Filters     []ViewFilter
+	Sorts       []ViewSort
+}
+
+func (service *Service) CreateView(ctx context.Context, principal identity.Principal, input ViewInput) (ViewDefinition, error) {
+	if err := service.viewDependencies(ctx, principal, input.TenantID, input.WorkspaceID, identity.ActionViewWrite); err != nil {
+		return ViewDefinition{}, err
+	}
+	table, err := service.tables.GetTable(ctx, input.TenantID, input.WorkspaceID, input.TableID)
+	if err != nil {
+		return ViewDefinition{}, err
+	}
+	definition, err := service.publishedSchema(ctx, input.TenantID, table.SchemaID, table.SchemaVersion)
+	if err != nil {
+		return ViewDefinition{}, err
+	}
+	if err := validateViewSchemaFields(input.Columns, input.Filters, input.Sorts, definition); err != nil {
+		return ViewDefinition{}, err
+	}
+	now := service.clock().UTC()
+	view := ViewDefinition{ID: strings.TrimSpace(input.ID), TenantID: strings.TrimSpace(input.TenantID), WorkspaceID: strings.TrimSpace(input.WorkspaceID), TableID: strings.TrimSpace(input.TableID), Name: strings.TrimSpace(input.Name), Columns: append([]string(nil), input.Columns...), Filters: append([]ViewFilter(nil), input.Filters...), Sorts: append([]ViewSort(nil), input.Sorts...), Version: 1, CreatedBy: principal.IdentityKey(), UpdatedBy: principal.IdentityKey(), CreatedAt: now, UpdatedAt: now}
+	if err := view.Validate(); err != nil {
+		return ViewDefinition{}, err
+	}
+	if err := service.views.CreateView(ctx, view); err != nil {
+		return ViewDefinition{}, err
+	}
+	return view, nil
+}
+
+func (service *Service) ListViews(ctx context.Context, principal identity.Principal, tenantID, workspaceID, tableID string) ([]ViewDefinition, error) {
+	if err := service.viewDependencies(ctx, principal, tenantID, workspaceID, identity.ActionViewRead); err != nil {
+		return nil, err
+	}
+	return service.views.ListViews(ctx, tenantID, workspaceID, tableID)
+}
+
+func (service *Service) ListRecords(ctx context.Context, principal identity.Principal, tenantID, workspaceID, tableID, viewID, cursor string, limit int) (RecordPage, error) {
+	if err := service.recordDependencies(ctx, principal, tenantID, workspaceID, identity.ActionRecordRead); err != nil {
+		return RecordPage{}, err
+	}
+	if service.views == nil {
+		return RecordPage{}, identity.ErrForbidden
+	}
+	if limit < 1 || limit > 100 {
+		return RecordPage{}, errors.New("record page limit must be between 1 and 100")
+	}
+	var view ViewDefinition
+	var err error
+	if viewID != "" {
+		view, err = service.views.GetView(ctx, tenantID, workspaceID, tableID, viewID)
+		if err != nil {
+			return RecordPage{}, err
+		}
+	} else {
+		view = ViewDefinition{TenantID: tenantID, WorkspaceID: workspaceID, TableID: tableID, Sorts: []ViewSort{{Field: "id", Direction: SortAscending}}}
+	}
+	return service.views.ListRecords(ctx, tenantID, workspaceID, tableID, view, cursor, limit)
+}
+
+func (service *Service) viewDependencies(ctx context.Context, principal identity.Principal, tenantID, workspaceID string, action identity.Action) error {
+	if service == nil || service.views == nil {
+		return identity.ErrForbidden
+	}
+	return service.authorize(ctx, principal, tenantID, workspaceID, action)
+}
+
+func validateViewSchemaFields(columns []string, filters []ViewFilter, sorts []ViewSort, definition schema.Definition) error {
+	allowed := map[string]struct{}{"id": {}, "recordVersion": {}, "schemaVersion": {}, "createdAt": {}, "updatedAt": {}, "tags": {}}
+	jsonSchema := mustExtJSON(definition.JSONSchema)
+	var document map[string]interface{}
+	if err := json.Unmarshal(jsonSchema, &document); err == nil {
+		if properties, ok := document["properties"].(map[string]interface{}); ok && len(properties) > 0 {
+			allowed = map[string]struct{}{"id": {}, "recordVersion": {}, "schemaVersion": {}, "createdAt": {}, "updatedAt": {}, "tags": {}}
+			for field := range properties {
+				allowed[field] = struct{}{}
+			}
+		}
+	}
+	for _, field := range columns {
+		if err := assertViewFieldAllowed(field, allowed); err != nil {
+			return fmt.Errorf("view column: %w", err)
+		}
+	}
+	for _, filter := range filters {
+		if err := assertViewFieldAllowed(filter.Field, allowed); err != nil {
+			return fmt.Errorf("view filter: %w", err)
+		}
+	}
+	for _, sort := range sorts {
+		if err := assertViewFieldAllowed(sort.Field, allowed); err != nil {
+			return fmt.Errorf("view sort: %w", err)
+		}
+	}
+	return nil
+}
+
+func assertViewFieldAllowed(field string, allowed map[string]struct{}) error {
+	field = strings.TrimSpace(field)
+	if _, ok := allowed[field]; ok {
+		return nil
+	}
+	if strings.HasPrefix(field, "data.") {
+		field = strings.TrimPrefix(field, "data.")
+	}
+	if _, ok := allowed[field]; !ok {
+		return fmt.Errorf("field %q is not allowed by the published schema", field)
+	}
+	return nil
 }
 
 type RecordInput struct {

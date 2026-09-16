@@ -211,6 +211,11 @@ Relation 只保存 typed target（`system`、`type`、`id`）和 relation type�
 解析结果标记为 `CURRENT`、`BROKEN` 或 `FORBIDDEN`。`FORBIDDEN` 关系清除内部解析 ID，
 防止越权侧信道。
 
+ViewDefinition 只允许受控字段、`eq/ne/contains/in/gt/gte/lt/lte` 操作符和最多四个
+排序键；schema 声明了 `properties` 时，columns/filter/sort 只能引用这些属性或有限的
+envelope 字段。记录查询使用 1--100 的 bounded page size，cursor 编码排序键并自动追加
+`id` 作为稳定 tie-breaker，不暴露 Mongo 查询表达式。
+
 PATCH/DELETE 必须携带 record version；冲突返回 `409 RECORD_VERSION_CONFLICT`。Projection record 的写操作返回 `409 PROJECTION_READ_ONLY`。
 
 ### 7.4 Binding
