@@ -64,6 +64,21 @@ Inbox 的 `(consumer,eventId)` 去重，四类文档数量和 recordVersion 必�
 伪报真实 Mongo 故障注入通过。启动本地 replica set 后设置
 `RECORD_HUB_M7_MONGO_LIVE=1` 执行 live gate。
 
+## M7-074 NATS outage/outbox recovery
+
+四个仓库的确定性 gate 已覆盖：Record Hub durable pull 在 Fetch/handler 错误后重新取得
+consumer，失败消息 NAK 或进入 DLQ；Approver、Fluxion、Bids 的 summary relay 在 publish
+ACK loss 后保留同一 outbox/event ID，等待 lease/retry。业务事务与 relay 解耦，故障期间不会
+要求业务事务同步依赖 NATS。
+
+```bash
+./scripts/verify-m7-nats-recovery.sh
+```
+
+该脚本不会停止当前本地进程。NATS 宕机、恢复和 backlog 清空的真实场景需要在本地 Mongo/
+PostgreSQL/NATS 全部启动后执行；设置 `RECORD_HUB_M7_NATS_LIVE=1` 会追加 NATS connectivity
+smoke，但当前环境尚未完成真实 outage/recovery，因此 M7-074 保持 `PARTIAL`。
+
 ## 边界说明
 
 binding 只接受 `system:type:id` 的稳定引用和已经由 projection/record owner 过滤后的 JSON
