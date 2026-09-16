@@ -56,6 +56,72 @@ func TestLoadRuntimeDependencyConfig(t *testing.T) {
 	}
 }
 
+func TestLoadBindingMachinePolicies(t *testing.T) {
+	const issuer = "http://127.0.0.1:15557/workload"
+	env := map[string]string{
+		"RECORD_HUB_MODE":                "api",
+		"RECORD_HUB_HTTP_ADDRESS":        "127.0.0.1:18080",
+		"RECORD_HUB_OIDC_ISSUER":         issuer,
+		"RECORD_HUB_OIDC_AUDIENCE":       "record-hub-api",
+		"RECORD_HUB_OIDC_PRINCIPAL_KIND": "service",
+		"RECORD_HUB_BINDING_MACHINE_POLICIES": `[
+			{"issuer":"http://127.0.0.1:15557/workload","subject":"fluxion-to-record-hub","audience":"record-hub-api","tenantId":"tenant-1","workspaceId":"workspace-1","purpose":"diagnostic","resourceSystem":"fluxion","resourceType":"PROJECT"}
+		]`,
+	}
+	cfg, err := load(mapLookup(env))
+	if err != nil {
+		t.Fatalf("load() error = %v", err)
+	}
+	if len(cfg.BindingMachinePolicies) != 1 || cfg.BindingMachinePolicies[0].Subject != "fluxion-to-record-hub" {
+		t.Fatalf("machine policies = %+v", cfg.BindingMachinePolicies)
+	}
+}
+
+func TestLoadRejectsUnsafeBindingMachinePolicies(t *testing.T) {
+	base := map[string]string{
+		"RECORD_HUB_MODE":                "api",
+		"RECORD_HUB_HTTP_ADDRESS":        "127.0.0.1:18080",
+		"RECORD_HUB_OIDC_ISSUER":         "https://workload.example.test",
+		"RECORD_HUB_OIDC_AUDIENCE":       "record-hub-api",
+		"RECORD_HUB_OIDC_PRINCIPAL_KIND": "service",
+	}
+	tests := []struct {
+		name string
+		raw  string
+		want string
+	}{
+		{name: "empty", raw: `[]`, want: "at least one"},
+		{name: "wildcard", raw: `[{"issuer":"https://workload.example.test","subject":"*","audience":"record-hub-api","tenantId":"tenant-1","workspaceId":"workspace-1","purpose":"diagnostic","resourceSystem":"fluxion","resourceType":"PROJECT"}]`, want: "without wildcards"},
+		{name: "wrong issuer", raw: `[{"issuer":"https://other.example.test","subject":"fluxion","audience":"record-hub-api","tenantId":"tenant-1","workspaceId":"workspace-1","purpose":"diagnostic","resourceSystem":"fluxion","resourceType":"PROJECT"}]`, want: "issuer must match"},
+		{name: "wrong audience", raw: `[{"issuer":"https://workload.example.test","subject":"fluxion","audience":"other-api","tenantId":"tenant-1","workspaceId":"workspace-1","purpose":"diagnostic","resourceSystem":"fluxion","resourceType":"PROJECT"}]`, want: "audience must match"},
+		{name: "unknown field", raw: `[{"issuer":"https://workload.example.test","subject":"fluxion","audience":"record-hub-api","tenantId":"tenant-1","workspaceId":"workspace-1","purpose":"diagnostic","resourceSystem":"fluxion","resourceType":"PROJECT","allowAll":true}]`, want: "unknown field"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			env := make(map[string]string, len(base)+1)
+			for key, value := range base {
+				env[key] = value
+			}
+			env["RECORD_HUB_BINDING_MACHINE_POLICIES"] = tt.raw
+			_, err := load(mapLookup(env))
+			if err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("load() error = %v, want containing %q", err, tt.want)
+			}
+		})
+	}
+}
+
+func TestLoadRejectsMachinePoliciesWithoutServiceOIDC(t *testing.T) {
+	_, err := load(mapLookup(map[string]string{
+		"RECORD_HUB_MODE":                     "api",
+		"RECORD_HUB_HTTP_ADDRESS":             "127.0.0.1:18080",
+		"RECORD_HUB_BINDING_MACHINE_POLICIES": `[{"issuer":"https://issuer","subject":"service","audience":"api","tenantId":"tenant","workspaceId":"workspace","purpose":"diagnostic","resourceSystem":"fluxion","resourceType":"PROJECT"}]`,
+	}))
+	if err == nil || !strings.Contains(err.Error(), "requires bearer OIDC") {
+		t.Fatalf("load() error = %v", err)
+	}
+}
+
 func TestLoadRejectsInvalidProjectionWorkspaceMap(t *testing.T) {
 	tests := []struct {
 		name string

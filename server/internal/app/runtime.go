@@ -98,7 +98,23 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 	schemaService := schema.NewService(schemaRepo, authorizer, schemaReceipts, auditWriter)
 	recordService := records.NewRecordService(recordRepo, recordRepo, schemaRepo, authorizer, recordRepo, recordReceipts, auditWriter).WithViewRepository(recordRepo).WithIndexRepository(recordRepo)
 	snapshotStore := binding.NewMongoSnapshotStore(database)
-	bindingService := binding.NewService(binding.NewMongoRecordReader(recordRepo), snapshotStore, authorizer, nil)
+	var machineAuthorizer binding.PolicyAuthorizer
+	if len(cfg.BindingMachinePolicies) > 0 {
+		policies := make([]binding.MachinePolicy, 0, len(cfg.BindingMachinePolicies))
+		for _, policy := range cfg.BindingMachinePolicies {
+			policies = append(policies, binding.MachinePolicy{
+				Identity:       identity.IdentityKey{Issuer: policy.Issuer, Subject: policy.Subject},
+				Audience:       policy.Audience,
+				TenantID:       policy.TenantID,
+				WorkspaceID:    policy.WorkspaceID,
+				Purpose:        policy.Purpose,
+				ResourceSystem: policy.ResourceSystem,
+				ResourceType:   policy.ResourceType,
+			})
+		}
+		machineAuthorizer = binding.NewStaticMachinePolicyAuthorizer(policies...)
+	}
+	bindingService := binding.NewService(binding.NewMongoRecordReader(recordRepo), snapshotStore, authorizer, machineAuthorizer)
 	operationsService := projection.NewOperationsService(projection.NewMongoProjectionRepository(database), authorizer).WithMetrics(metrics)
 	deps.records = records.NewHTTPHandler(recordService)
 	deps.schema = schema.NewHTTPHandler(schemaService)

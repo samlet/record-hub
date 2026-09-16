@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"os"
@@ -46,6 +47,20 @@ type WebAuthConfig struct {
 	AllowInsecureEndpoints bool
 }
 
+// BindingMachinePolicyConfig is one exact service-to-binding authorization.
+// Wildcards are intentionally unsupported: every workload, scope, purpose,
+// and resource tuple must be registered explicitly.
+type BindingMachinePolicyConfig struct {
+	Issuer         string `json:"issuer"`
+	Subject        string `json:"subject"`
+	Audience       string `json:"audience"`
+	TenantID       string `json:"tenantId"`
+	WorkspaceID    string `json:"workspaceId"`
+	Purpose        string `json:"purpose"`
+	ResourceSystem string `json:"resourceSystem"`
+	ResourceType   string `json:"resourceType"`
+}
+
 // Config contains process-level runtime configuration.
 type Config struct {
 	Mode            Mode
@@ -74,6 +89,7 @@ type Config struct {
 	OIDCAudience            string
 	OIDCPrincipalKind       string
 	OIDCAllowInsecureIssuer bool
+	BindingMachinePolicies  []BindingMachinePolicyConfig
 	Web                     WebAuthConfig
 }
 
@@ -173,6 +189,14 @@ func load(lookup lookupEnv) (Config, error) {
 			errs = append(errs, errors.New("RECORD_HUB_OIDC_PRINCIPAL_KIND must be user or service"))
 		}
 	}
+	if value, present := optional(lookup, "RECORD_HUB_BINDING_MACHINE_POLICIES"); present {
+		policies, err := parseBindingMachinePolicies(value, cfg)
+		if err != nil {
+			errs = append(errs, err)
+		} else {
+			cfg.BindingMachinePolicies = policies
+		}
+	}
 
 	if enabled, present, err := optionalBool(lookup, "RECORD_HUB_WEB_ENABLED"); err != nil {
 		errs = append(errs, err)
@@ -190,6 +214,60 @@ func load(lookup lookupEnv) (Config, error) {
 		return Config{}, errors.Join(errs...)
 	}
 	return cfg, nil
+}
+
+func parseBindingMachinePolicies(raw string, cfg Config) ([]BindingMachinePolicyConfig, error) {
+	if cfg.OIDCIssuer == "" || cfg.OIDCAudience == "" || cfg.OIDCPrincipalKind != "service" {
+		return nil, errors.New("RECORD_HUB_BINDING_MACHINE_POLICIES requires bearer OIDC with principal kind service")
+	}
+	decoder := json.NewDecoder(strings.NewReader(raw))
+	decoder.DisallowUnknownFields()
+	var policies []BindingMachinePolicyConfig
+	if err := decoder.Decode(&policies); err != nil {
+		return nil, fmt.Errorf("RECORD_HUB_BINDING_MACHINE_POLICIES must be a JSON array of exact policies: %w", err)
+	}
+	var trailing interface{}
+	if err := decoder.Decode(&trailing); err == nil {
+		return nil, errors.New("RECORD_HUB_BINDING_MACHINE_POLICIES must contain one JSON array")
+	} else if !errors.Is(err, io.EOF) {
+		return nil, errors.New("RECORD_HUB_BINDING_MACHINE_POLICIES must contain one valid JSON array")
+	}
+	if policies == nil || len(policies) == 0 {
+		return nil, errors.New("RECORD_HUB_BINDING_MACHINE_POLICIES must contain at least one policy")
+	}
+	if len(policies) > 128 {
+		return nil, errors.New("RECORD_HUB_BINDING_MACHINE_POLICIES exceeds the 128-policy limit")
+	}
+	seen := make(map[string]struct{}, len(policies))
+	for index := range policies {
+		policy := &policies[index]
+		policy.Issuer = strings.TrimSpace(policy.Issuer)
+		policy.Subject = strings.TrimSpace(policy.Subject)
+		policy.Audience = strings.TrimSpace(policy.Audience)
+		policy.TenantID = strings.TrimSpace(policy.TenantID)
+		policy.WorkspaceID = strings.TrimSpace(policy.WorkspaceID)
+		policy.Purpose = strings.TrimSpace(policy.Purpose)
+		policy.ResourceSystem = strings.TrimSpace(policy.ResourceSystem)
+		policy.ResourceType = strings.TrimSpace(policy.ResourceType)
+		fields := []string{policy.Issuer, policy.Subject, policy.Audience, policy.TenantID, policy.WorkspaceID, policy.Purpose, policy.ResourceSystem, policy.ResourceType}
+		for _, field := range fields {
+			if field == "" || strings.Contains(field, "*") {
+				return nil, fmt.Errorf("RECORD_HUB_BINDING_MACHINE_POLICIES[%d] requires non-empty exact fields without wildcards", index)
+			}
+		}
+		if policy.Issuer != cfg.OIDCIssuer {
+			return nil, fmt.Errorf("RECORD_HUB_BINDING_MACHINE_POLICIES[%d].issuer must match RECORD_HUB_OIDC_ISSUER", index)
+		}
+		if policy.Audience != cfg.OIDCAudience {
+			return nil, fmt.Errorf("RECORD_HUB_BINDING_MACHINE_POLICIES[%d].audience must match RECORD_HUB_OIDC_AUDIENCE", index)
+		}
+		key := strings.Join(fields, "\x00")
+		if _, exists := seen[key]; exists {
+			return nil, fmt.Errorf("RECORD_HUB_BINDING_MACHINE_POLICIES[%d] duplicates an earlier policy", index)
+		}
+		seen[key] = struct{}{}
+	}
+	return policies, nil
 }
 
 func loadWebConfig(lookup lookupEnv, cfg *WebAuthConfig, errs *[]error) {
