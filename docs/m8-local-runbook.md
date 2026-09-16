@@ -185,6 +185,17 @@ worker 只接受三种已注册的 summary event；workspace scope 按
 make m5-runtime-smoke
 ```
 
+监督式启动三个 producer relay 并验证真实 Outbox → JetStream → projection 链路（需要
+本机 PostgreSQL、Conductor、MongoDB 和 NATS；脚本只创建临时 producer 数据库）：
+
+```bash
+RECORD_HUB_M5_SUPERVISED_LIVE=1 make m5-supervised-live
+```
+
+该 gate 启动 Approver API、Fluxion API、Bids worker 与 Record Hub all-mode；业务系统的
+HTTP/UI 变更入口不在本 gate 中调用，测试数据直接写入各自事务 Outbox，因此不会伪称为
+完整业务 UI E2E。成功后脚本自动停止自己启动的进程并删除临时数据库。
+
 验证 Record Hub 自身重启恢复（事件会在进程停止期间留在 JetStream，并在重启后按原
 event ID 幂等处理；脚本只会创建带时间租户名的测试记录）：
 
