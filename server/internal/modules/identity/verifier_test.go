@@ -134,6 +134,25 @@ func TestOIDCVerifierRejectsInvalidClaims(t *testing.T) {
 	}
 }
 
+func TestOIDCVerifierNonceBinding(t *testing.T) {
+	issuer := newTestIssuer(t)
+	key := generateRSAKey(t)
+	issuer.publish(key, "key-1")
+	verifier, err := NewOIDCVerifier(context.Background(), OIDCVerifierConfig{
+		Issuer: issuer.server.URL, Audience: testAudience, PrincipalKind: PrincipalUser, AllowInsecureIssuer: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rawToken := signTokenWithNonce(t, key, "key-1", issuer.server.URL, testAudience, "nonce-123", time.Now().Add(time.Hour))
+	if _, err := verifier.VerifyNonce(context.Background(), rawToken, "nonce-123"); err != nil {
+		t.Fatalf("matching nonce rejected: %v", err)
+	}
+	if _, err := verifier.VerifyNonce(context.Background(), rawToken, "different"); !errors.Is(err, ErrInvalidToken) {
+		t.Fatalf("mismatching nonce error = %v", err)
+	}
+}
+
 func TestOIDCVerifierConfigFailsClosed(t *testing.T) {
 	tests := []OIDCVerifierConfig{
 		{},
@@ -159,6 +178,10 @@ func generateRSAKey(t *testing.T) *rsa.PrivateKey {
 }
 
 func signToken(t *testing.T, key *rsa.PrivateKey, keyID, issuer, audience string, expiry time.Time) string {
+	return signTokenWithNonce(t, key, keyID, issuer, audience, "", expiry)
+}
+
+func signTokenWithNonce(t *testing.T, key *rsa.PrivateKey, keyID, issuer, audience, nonce string, expiry time.Time) string {
 	t.Helper()
 	signer, err := jose.NewSigner(
 		jose.SigningKey{Algorithm: jose.RS256, Key: key},
@@ -167,19 +190,23 @@ func signToken(t *testing.T, key *rsa.PrivateKey, keyID, issuer, audience string
 	if err != nil {
 		t.Fatal(err)
 	}
+	claims := map[string]interface{}{
+		"email":              "developer@example.test",
+		"email_verified":     true,
+		"name":               "Developer",
+		"preferred_username": "developer",
+		"groups":             []string{"record-hub-developers"},
+	}
+	if nonce != "" {
+		claims["nonce"] = nonce
+	}
 	raw, err := jwt.Signed(signer).Claims(jwt.Claims{
 		Issuer:   issuer,
 		Subject:  "user-123",
 		Audience: jwt.Audience{audience},
 		IssuedAt: jwt.NewNumericDate(time.Now().Add(-time.Minute)),
 		Expiry:   jwt.NewNumericDate(expiry),
-	}).Claims(map[string]interface{}{
-		"email":              "developer@example.test",
-		"email_verified":     true,
-		"name":               "Developer",
-		"preferred_username": "developer",
-		"groups":             []string{"record-hub-developers"},
-	}).Serialize()
+	}).Claims(claims).Serialize()
 	if err != nil {
 		t.Fatal(err)
 	}

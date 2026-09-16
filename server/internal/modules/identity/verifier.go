@@ -17,6 +17,14 @@ type TokenVerifier interface {
 	Verify(context.Context, string) (Principal, error)
 }
 
+// NonceVerifier authenticates an OIDC ID token and binds it to the nonce that
+// was generated for the browser's authorization request. The extra method is
+// intentionally separate from TokenVerifier because bearer-token callers do
+// not have an authorization-request nonce to validate.
+type NonceVerifier interface {
+	VerifyNonce(context.Context, string, string) (Principal, error)
+}
+
 type OIDCVerifierConfig struct {
 	Issuer              string
 	Audience            string
@@ -57,6 +65,19 @@ func NewOIDCVerifier(ctx context.Context, cfg OIDCVerifierConfig) (*OIDCVerifier
 }
 
 func (v *OIDCVerifier) Verify(ctx context.Context, rawToken string) (Principal, error) {
+	return v.verify(ctx, rawToken, "")
+}
+
+// VerifyNonce verifies an ID token and requires the nonce claim to match the
+// value generated for the corresponding authorization request.
+func (v *OIDCVerifier) VerifyNonce(ctx context.Context, rawToken, expectedNonce string) (Principal, error) {
+	if strings.TrimSpace(expectedNonce) == "" {
+		return Principal{}, fmt.Errorf("%w: nonce is required", ErrInvalidToken)
+	}
+	return v.verify(ctx, rawToken, expectedNonce)
+}
+
+func (v *OIDCVerifier) verify(ctx context.Context, rawToken, expectedNonce string) (Principal, error) {
 	if strings.TrimSpace(rawToken) == "" {
 		return Principal{}, ErrInvalidToken
 	}
@@ -74,9 +95,13 @@ func (v *OIDCVerifier) Verify(ctx context.Context, rawToken string) (Principal, 
 		Name              string   `json:"name"`
 		PreferredUsername string   `json:"preferred_username"`
 		Groups            []string `json:"groups"`
+		Nonce             string   `json:"nonce"`
 	}
 	if err := verified.Claims(&claims); err != nil {
 		return Principal{}, fmt.Errorf("%w: decode claims", ErrInvalidToken)
+	}
+	if expectedNonce != "" && claims.Nonce != expectedNonce {
+		return Principal{}, fmt.Errorf("%w: nonce mismatch", ErrInvalidToken)
 	}
 
 	return Principal{

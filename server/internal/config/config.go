@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -21,6 +22,28 @@ const (
 )
 
 const defaultShutdownTimeout = 10 * time.Second
+const defaultWebSessionTTL = 8 * time.Hour
+
+// WebAuthConfig contains the optional browser/BFF OIDC boundary. It is kept
+// separate from API bearer-token configuration so a Web client secret can
+// never be accidentally reused as a service credential.
+type WebAuthConfig struct {
+	Enabled                bool
+	Issuer                 string
+	Audience               string
+	AuthorizationEndpoint  string
+	TokenEndpoint          string
+	ClientID               string
+	ClientSecret           string
+	RedirectURL            string
+	SuccessRedirectURL     string
+	PostLogoutRedirectURL  string
+	Scope                  string
+	SessionSecret          string
+	SessionTTL             time.Duration
+	SecureCookies          bool
+	AllowInsecureEndpoints bool
+}
 
 // Config contains process-level runtime configuration.
 type Config struct {
@@ -28,6 +51,7 @@ type Config struct {
 	HTTPAddress     string
 	LogLevel        slog.Level
 	ShutdownTimeout time.Duration
+	Web             WebAuthConfig
 }
 
 // Load reads configuration from the process environment and fails closed when
@@ -80,10 +104,67 @@ func load(lookup lookupEnv) (Config, error) {
 		}
 	}
 
+	if enabled, present, err := optionalBool(lookup, "RECORD_HUB_WEB_ENABLED"); err != nil {
+		errs = append(errs, err)
+	} else if present {
+		cfg.Web.Enabled = enabled
+	}
+	if cfg.Web.Enabled {
+		if cfg.Mode != ModeAPI && cfg.Mode != ModeAll {
+			errs = append(errs, errors.New("RECORD_HUB_WEB_ENABLED requires RECORD_HUB_MODE=api or all"))
+		}
+		loadWebConfig(lookup, &cfg.Web, &errs)
+	}
+
 	if len(errs) > 0 {
 		return Config{}, errors.Join(errs...)
 	}
 	return cfg, nil
+}
+
+func loadWebConfig(lookup lookupEnv, cfg *WebAuthConfig, errs *[]error) {
+	value := func(key string) string {
+		v, ok := required(lookup, key)
+		if !ok {
+			*errs = append(*errs, fmt.Errorf("%s is required when RECORD_HUB_WEB_ENABLED=true", key))
+		}
+		return v
+	}
+	cfg.Issuer = value("RECORD_HUB_WEB_ISSUER")
+	cfg.Audience = value("RECORD_HUB_WEB_AUDIENCE")
+	cfg.AuthorizationEndpoint = value("RECORD_HUB_WEB_AUTHORIZATION_ENDPOINT")
+	cfg.TokenEndpoint = value("RECORD_HUB_WEB_TOKEN_ENDPOINT")
+	cfg.ClientID = value("RECORD_HUB_WEB_CLIENT_ID")
+	cfg.ClientSecret = value("RECORD_HUB_WEB_CLIENT_SECRET")
+	cfg.RedirectURL = value("RECORD_HUB_WEB_REDIRECT_URL")
+	cfg.SessionSecret = value("RECORD_HUB_WEB_SESSION_SECRET")
+	if len(cfg.SessionSecret) < 32 {
+		*errs = append(*errs, errors.New("RECORD_HUB_WEB_SESSION_SECRET must contain at least 32 bytes"))
+	}
+	cfg.SuccessRedirectURL, _ = optional(lookup, "RECORD_HUB_WEB_SUCCESS_REDIRECT_URL")
+	cfg.PostLogoutRedirectURL, _ = optional(lookup, "RECORD_HUB_WEB_POST_LOGOUT_REDIRECT_URL")
+	cfg.Scope, _ = optional(lookup, "RECORD_HUB_WEB_SCOPE")
+	cfg.SessionTTL = defaultWebSessionTTL
+	if raw, present := optional(lookup, "RECORD_HUB_WEB_SESSION_TTL"); present {
+		duration, err := time.ParseDuration(raw)
+		if err != nil || duration <= 0 || duration > 24*time.Hour {
+			*errs = append(*errs, fmt.Errorf("RECORD_HUB_WEB_SESSION_TTL must be between 1 second and 24 hours; got %q", raw))
+		} else {
+			cfg.SessionTTL = duration
+		}
+	}
+	if value, present, err := optionalBool(lookup, "RECORD_HUB_WEB_SECURE_COOKIES"); err != nil {
+		*errs = append(*errs, err)
+	} else if present {
+		cfg.SecureCookies = value
+	} else {
+		*errs = append(*errs, errors.New("RECORD_HUB_WEB_SECURE_COOKIES is required when RECORD_HUB_WEB_ENABLED=true"))
+	}
+	if value, present, err := optionalBool(lookup, "RECORD_HUB_WEB_ALLOW_INSECURE_ENDPOINTS"); err != nil {
+		*errs = append(*errs, err)
+	} else if present {
+		cfg.AllowInsecureEndpoints = value
+	}
 }
 
 func required(lookup lookupEnv, key string) (string, bool) {
@@ -96,6 +177,18 @@ func optional(lookup lookupEnv, key string) (string, bool) {
 	value, ok := lookup(key)
 	value = strings.TrimSpace(value)
 	return value, ok && value != ""
+}
+
+func optionalBool(lookup lookupEnv, key string) (bool, bool, error) {
+	value, present := optional(lookup, key)
+	if !present {
+		return false, false, nil
+	}
+	parsed, err := strconv.ParseBool(value)
+	if err != nil {
+		return false, true, fmt.Errorf("%s must be true or false; got %q", key, value)
+	}
+	return parsed, true, nil
 }
 
 func validateAddress(address string) error {

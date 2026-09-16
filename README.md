@@ -44,6 +44,7 @@ HTTP 契约以 [`api/openapi.yaml`](api/openapi.yaml) 为准。`make generate-cl
 - [事件与 JetStream 契约](docs/event-contract.md)
 - [Workflow Binding 与事务语义](docs/workflow-binding.md)
 - [M6 Workflow Binding 第一批验收](docs/m6-acceptance.md)
+- [M8-080 Web/OIDC 第一批验收](docs/m8-acceptance.md)
 - [认证、授权与租户隔离](docs/security-auth.md)
 - [实施路线](docs/roadmap.md)
 - [参考资料](docs/references.md)

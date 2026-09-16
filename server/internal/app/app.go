@@ -12,7 +12,9 @@ import (
 	"github.com/samlet/record-hub/server/internal/config"
 	"github.com/samlet/record-hub/server/internal/health"
 	"github.com/samlet/record-hub/server/internal/httpapi"
+	"github.com/samlet/record-hub/server/internal/modules/identity"
 	"github.com/samlet/record-hub/server/internal/observability"
+	"github.com/samlet/record-hub/server/internal/web"
 )
 
 // Service is one long-running process responsibility.
@@ -41,8 +43,50 @@ func New(cfg config.Config, logger *slog.Logger) *App {
 			health.NATS:    health.Pending(),
 			health.Dex:     health.Pending(),
 		}).Routes(mux)
+		var webMiddleware func(http.Handler) http.Handler
+		if cfg.Web.Enabled {
+			sessions, err := web.NewSessionManager([]byte(cfg.Web.SessionSecret), cfg.Web.SessionTTL, cfg.Web.SecureCookies)
+			if err != nil {
+				services = append(services, failedService{err: fmt.Errorf("configure web session: %w", err)})
+			} else {
+				verifier := web.NewLazyNonceVerifier(identity.OIDCVerifierConfig{
+					Issuer:              cfg.Web.Issuer,
+					Audience:            cfg.Web.Audience,
+					PrincipalKind:       identity.PrincipalUser,
+					AllowInsecureIssuer: cfg.Web.AllowInsecureEndpoints,
+				})
+				exchanger := web.HTTPCodeExchanger{
+					TokenEndpoint:         cfg.Web.TokenEndpoint,
+					ClientID:              cfg.Web.ClientID,
+					ClientSecret:          cfg.Web.ClientSecret,
+					RedirectURL:           cfg.Web.RedirectURL,
+					AllowInsecureEndpoint: cfg.Web.AllowInsecureEndpoints,
+					Verifier:              verifier,
+				}
+				auth, err := web.NewHandler(web.Config{
+					AuthorizationEndpoint:  cfg.Web.AuthorizationEndpoint,
+					ClientID:               cfg.Web.ClientID,
+					RedirectURL:            cfg.Web.RedirectURL,
+					SuccessRedirectURL:     cfg.Web.SuccessRedirectURL,
+					PostLogoutRedirectURL:  cfg.Web.PostLogoutRedirectURL,
+					Scope:                  cfg.Web.Scope,
+					AllowInsecureEndpoints: cfg.Web.AllowInsecureEndpoints,
+					SecureCookies:          cfg.Web.SecureCookies,
+					SessionTTL:             cfg.Web.SessionTTL,
+				}, sessions, exchanger.Exchange)
+				if err != nil {
+					services = append(services, failedService{err: fmt.Errorf("configure web auth: %w", err)})
+				} else {
+					auth.Routes(mux)
+					webMiddleware = auth.Middleware
+				}
+			}
+		}
 		limiter := observability.NewRateLimiter(120, time.Minute)
 		handler := observability.HTTPMiddleware(metrics, observability.RateLimitMiddleware(limiter, mux))
+		if webMiddleware != nil {
+			handler = webMiddleware(handler)
+		}
 		services = append(services, httpapi.New(cfg.HTTPAddress, handler, cfg.ShutdownTimeout))
 	}
 	if cfg.Mode == config.ModeWorker || cfg.Mode == config.ModeAll {
@@ -50,6 +94,13 @@ func New(cfg config.Config, logger *slog.Logger) *App {
 	}
 	return newWithServices(logger, cfg.ShutdownTimeout, services...)
 }
+
+// failedService turns an invalid optional subsystem configuration into a
+// visible startup failure while retaining App's historical constructor API.
+type failedService struct{ err error }
+
+func (s failedService) Name() string              { return "configuration" }
+func (s failedService) Run(context.Context) error { return s.err }
 
 func newWithServices(logger *slog.Logger, timeout time.Duration, services ...Service) *App {
 	return &App{logger: logger, shutdownTimeout: timeout, services: services}

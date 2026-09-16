@@ -54,3 +54,5 @@ staticClients:
     secretEnv: DEX_RECORD_HUB_WEB_SECRET
     redirectURIs:
       - http://127.0.0.1:3004/auth/callback
+      # Optional direct Go BFF route (RECORD_HUB_WEB_ENABLED=true).
+      - http://127.0.0.1:8080/auth/callback

@@ -122,7 +122,7 @@
 
 | ID | 仓库 | 任务 | 状态 | 依赖 | 验收 |
 | --- | --- | --- | --- | --- | --- |
-| RH-M8-080 | Record Hub Web | Dex 登录、Session、退出 | TODO | M1-013 | state/nonce/PKCE、cookie flags、CSRF |
+| RH-M8-080 | Record Hub Web | Dex 登录、Session、退出 | DONE | M1-013 | state/nonce/PKCE、cookie flags、CSRF |
 | RH-M8-081 | Record Hub Web | workspace/table/schema 完整路径 | TODO | M2,M3,M8-080 | OWNER/EDITOR/VIEWER 浏览器矩阵 |
 | RH-M8-082 | Record Hub Web | 三投影与 Operations 页面 | TODO | M4,M5,M8-080 | freshness/gap/DLQ 安全展示 |
 | RH-M8-083 | 四仓库 | MVP happy-path E2E 脚本 | TODO | M5,M6,M8-081 | 一条命令重复执行结果一致 |
