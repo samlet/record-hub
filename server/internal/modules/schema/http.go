@@ -21,6 +21,10 @@ type MutationService interface {
 	Publish(context.Context, identity.Principal, DraftInput, int64) (Definition, error)
 }
 
+type ReadService interface {
+	GetDefinition(context.Context, identity.Principal, string, string, string, int64) (Definition, error)
+}
+
 type HTTPHandler struct {
 	service MutationService
 }
@@ -29,9 +33,34 @@ func NewHTTPHandler(service MutationService) http.Handler {
 	handler := &HTTPHandler{service: service}
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /api/v1/schemas", handler.create)
+	mux.HandleFunc("GET /api/v1/schemas/{schemaID}", handler.get)
 	mux.HandleFunc("PUT /api/v1/schemas/{schemaID}/draft", handler.update)
 	mux.HandleFunc("POST /api/v1/schemas/{schemaID}/publish", handler.publish)
 	return mux
+}
+
+func (handler *HTTPHandler) get(writer http.ResponseWriter, request *http.Request) {
+	principal, ok := identity.PrincipalFromContext(request.Context())
+	if !ok {
+		writeAPIError(writer, http.StatusUnauthorized, "AUTHENTICATION_REQUIRED", "Authentication is required.")
+		return
+	}
+	version, err := strconv.ParseInt(strings.TrimSpace(request.URL.Query().Get("version")), 10, 64)
+	if err != nil || version < 1 {
+		writeAPIError(writer, http.StatusBadRequest, "INVALID_REQUEST", "version must be a positive integer.")
+		return
+	}
+	service, ok := handler.service.(ReadService)
+	if !ok || service == nil {
+		writeAPIError(writer, http.StatusNotImplemented, "SCHEMA_READ_UNAVAILABLE", "The schema read API is not configured.")
+		return
+	}
+	definition, err := service.GetDefinition(request.Context(), principal, request.URL.Query().Get("tenantId"), request.URL.Query().Get("workspaceId"), request.PathValue("schemaID"), version)
+	if err != nil {
+		writeSchemaError(writer, err)
+		return
+	}
+	writeDefinition(writer, http.StatusOK, definition)
 }
 
 type mutationRequest struct {
@@ -212,6 +241,8 @@ func writeSchemaError(writer http.ResponseWriter, err error) {
 		writeAPIError(writer, http.StatusUnauthorized, "AUTHENTICATION_REQUIRED", "Authentication is required.")
 	case errors.Is(err, identity.ErrForbidden):
 		writeAPIError(writer, http.StatusForbidden, "FORBIDDEN", "The principal is not authorized for this workspace.")
+	case errors.Is(err, ErrNotFound):
+		writeAPIError(writer, http.StatusNotFound, "SCHEMA_NOT_FOUND", "The schema version was not found.")
 	case errors.Is(err, ErrIdempotencyKeyRequired):
 		writeAPIError(writer, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key is required.")
 	case errors.Is(err, ErrIdempotencyConflict):

@@ -53,6 +53,13 @@ func TestSchemaHTTPMutationContract(t *testing.T) {
 	if afterPublish := doSchemaRequest(handler, &principal, http.MethodPut, "/api/v1/schemas/urn%3Arecord-hub%3Atest%3Ahttp/draft", updateBody, map[string]string{"Idempotency-Key": "update-after-publish-http", "If-Match": `"3"`}); afterPublish.Code != http.StatusConflict {
 		t.Fatalf("published update status = %d", afterPublish.Code)
 	}
+	read := doSchemaRequest(handler, &principal, http.MethodGet, "/api/v1/schemas/urn%3Arecord-hub%3Atest%3Ahttp?tenantId=tenant-1&workspaceId=workspace-1&version=1", "", nil)
+	if read.Code != http.StatusOK || read.Header().Get("ETag") != `"3"` || !strings.Contains(read.Body.String(), `"status":"PUBLISHED"`) {
+		t.Fatalf("read response status=%d etag=%q body=%s", read.Code, read.Header().Get("ETag"), read.Body.String())
+	}
+	if invalid := doSchemaRequest(handler, &principal, http.MethodGet, "/api/v1/schemas/x?tenantId=tenant-1&workspaceId=workspace-1", "", nil); invalid.Code != http.StatusBadRequest {
+		t.Fatalf("missing version status = %d", invalid.Code)
+	}
 }
 
 func TestSchemaHTTPRejectsMalformedAndUnauthorizedRequests(t *testing.T) {

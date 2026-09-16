@@ -535,6 +535,34 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+  /api/v1/schemas/{schemaId}:
+    get:
+      tags: [Schema]
+      operationId: getSchema
+      summary: Get one schema version visible to the workspace
+      parameters:
+        - $ref: "#/components/parameters/SchemaId"
+        - $ref: "#/components/parameters/TenantIdQuery"
+        - $ref: "#/components/parameters/WorkspaceIdQuery"
+        - $ref: "#/components/parameters/VersionQuery"
+      responses:
+        "200":
+          description: Schema definition.
+          headers:
+            ETag:
+              $ref: "#/components/headers/RevisionETag"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SchemaDefinition"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /api/v1/schemas/{schemaId}/draft:
     put:
       tags: [Schema]
@@ -730,6 +758,13 @@ components:
         type: integer
         minimum: 1
         maximum: 100
+    VersionQuery:
+      name: version
+      in: query
+      required: true
+      schema:
+        type: integer
+        minimum: 1
     ConsumerQuery:
       name: consumer
       in: query

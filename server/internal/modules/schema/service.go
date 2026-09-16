@@ -71,6 +71,23 @@ type DraftInput struct {
 	IdempotencyKey string
 }
 
+// GetDefinition returns one schema version after applying the same workspace
+// membership boundary as the mutation endpoints. Schema reads are allowed for
+// viewers so the Web console can render a table's schema without granting
+// editing capability.
+func (service *Service) GetDefinition(ctx context.Context, principal identity.Principal, tenantID, workspaceID, schemaID string, version int64) (Definition, error) {
+	if service == nil || service.registry == nil || service.authorizer == nil {
+		return Definition{}, identity.ErrForbidden
+	}
+	if tenantID == "" || workspaceID == "" || schemaID == "" || version < 1 {
+		return Definition{}, ErrNotFound
+	}
+	if _, err := service.authorizer.Authorize(ctx, principal, tenantID, workspaceID, identity.ActionSchemaRead); err != nil {
+		return Definition{}, err
+	}
+	return service.registry.Get(ctx, tenantID, schemaID, version)
+}
+
 func (service *Service) CreateDraft(ctx context.Context, principal identity.Principal, input DraftInput) (Definition, error) {
 	if err := service.authorize(ctx, principal, input.TenantID, input.WorkspaceID); err != nil {
 		return Definition{}, err
