@@ -1,6 +1,6 @@
 # Record Hub MVP 验收报告（M8-087）
 
-日期：2026-09-16
+日期：2026-09-17
 
 ## 结论
 
@@ -67,9 +67,9 @@ make dex-smoke
 | 仓库 | 关键提交（均与 upstream HEAD 一致） |
 | --- | --- |
 | Record Hub | `af23b54` Web OIDC Session/CSRF；`9f28dc3` 资源路由；`bceb7b6` Operations consumer/scope；`0fd5859` M8 happy gate；`a4d8ce4` M8 failure gate；`37ce631` local runbook；`67f184a` recovery/rotation runbook |
-| Approver | `fa1cb54` ApplicationSummary contract；`75a682b` summary Outbox/Record Hub relay |
-| Fluxion | `4fb5cfb` ProjectSummary contract；`6ab93e1` summary relay；`6d496b0` Temporal diagnostic binding |
-| Bids | `c88f719` TenderSummary contract；`1c5792b` summary relay；`2282766` tenant correction；`616e7fd` Conductor diagnostic binding |
+| Approver | `fa1cb54` ApplicationSummary contract；`75a682b` summary Outbox/Record Hub relay；`4c5cec9` workspace metadata |
+| Fluxion | `4fb5cfb` ProjectSummary contract；`6ab93e1` summary relay；`6d496b0` Temporal diagnostic binding；`5f872de` workspace metadata |
+| Bids | `c88f719` TenderSummary contract；`1c5792b` summary relay；`2282766` tenant correction；`616e7fd` Conductor diagnostic binding；`21599a1` workspace metadata |
 
 列出的功能提交均已推送；四个仓库在本报告生成时工作树均 clean，且
 `HEAD == @{upstream}`（本报告提交本身不计入上面的功能 hash 列表）。
@@ -78,9 +78,9 @@ make dex-smoke
 
 1. `server/internal/app` 现在会在配置 Mongo/NATS URI 时实例化 Mongo repositories、
    records/schema/binding/Operations handlers 和三个 durable projection consumers；
-   未配置 URI 时仍保留 dependency-free contract boundary。生产事件目前没有顶层
-   workspaceId，需通过 metadata、受校验的 tenant→workspace map 或显式 fallback 配置，
-   不能隐式猜 scope。
+   未配置 URI 时仍保留 dependency-free contract boundary。Approver、Fluxion、Bids 的
+   新 summary 事件可通过各自环境变量写入 `metadata.workspaceId`；未配置的历史事件
+   仍需受校验的 tenant→workspace map 或显式 fallback，不能隐式猜 scope。
 2. `web/` Next.js 项目尚未落地，M2-026、M3-036、M3-037 的字段编辑、grid、tag、
    filter、projection freshness 浏览器路径未形成真实 UI 矩阵；M8-081 相应保持
    PARTIAL。

@@ -37,9 +37,14 @@ Homebrew 的 `mongodb-community@8.0` 默认使用单节点 replica set `rs0`。�
 ```bash
 export RECORD_HUB_MONGODB_URI='mongodb://127.0.0.1:27017/record_hub?replicaSet=rs0&directConnection=true'
 export RECORD_HUB_NATS_URL='nats://127.0.0.1:4222'
-# Producer contracts currently carry tenant scope but not workspace scope.
-# Set an explicit local fallback for the projection worker; new producers
-# should instead add metadata.workspaceId.
+# All three producers can emit metadata.workspaceId when these optional
+# variables are set. Keep the value aligned with the target Record Hub
+# workspace (or use different values when producers publish to different workspaces).
+export APPROVER_RECORD_HUB_WORKSPACE_ID='workspace-local'
+export FLUXION_RECORD_HUB_WORKSPACE_ID='workspace-local'
+export RECORD_HUB_WORKSPACE_ID='workspace-local'
+# Legacy events without metadata.workspaceId still need an explicit fallback
+# or tenant map while they drain from the outboxes.
 export RECORD_HUB_PROJECTION_WORKSPACE_ID='workspace-local'
 # Optional and preferred when multiple tenants share one projector:
 # export RECORD_HUB_PROJECTION_WORKSPACE_MAP='{"tenant-a":"workspace-a","tenant-b":"workspace-b"}'
@@ -155,6 +160,18 @@ export RECORD_HUB_NATS_URL='nats://127.0.0.1:4222'
 export RECORD_HUB_PROJECTION_WORKSPACE_ID=workspace-local
 ./build/record-hub serve
 ```
+
+启动三个 producer 时分别设置对应的 workspace 变量：
+
+```bash
+export APPROVER_RECORD_HUB_WORKSPACE_ID=workspace-local
+export FLUXION_RECORD_HUB_WORKSPACE_ID=workspace-local
+export RECORD_HUB_WORKSPACE_ID=workspace-local
+```
+
+它们只影响新写入的 summary envelope `metadata.workspaceId`，不改变业务系统的
+Temporal/Conductor workflow 或本地租户字段。未设置时保持旧行为，由 Record Hub 的
+tenant map 或显式 fallback 兼容历史事件。
 
 worker 只接受三种已注册的 summary event；workspace scope 按
 `metadata.workspaceId` → `RECORD_HUB_PROJECTION_WORKSPACE_MAP` →

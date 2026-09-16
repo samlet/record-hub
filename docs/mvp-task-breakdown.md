@@ -90,7 +90,7 @@
 | RH-M5-056 | 双仓库 | Bids TenderSummary v1 契约镜像 | DONE | M0-005,M4-046 | schema/fixture 一致；投标/报价/联系人/文件 URL 等敏感字段负向校验通过 |
 | RH-M5-057 | Bids | 扩展现有 Outbox 产生 domain event | DONE | 056 | 复用 `outbox_events`；`TENDER_SUMMARY_CHANGED` 与 Conductor/Finance command 分区隔离 |
 | RH-M5-058 | Bids | JetStream relay | DONE | 057,M1-012 | 复用 lease/retry/dead；专用 subject、`Msg-Id` 和 ACK-loss 测试通过 |
-| RH-M5-059 | 四仓库 | 三投影联合 E2E | PARTIAL | 052,055,058 | `scripts/verify-m5-producers.sh` 的跨语言契约 gate 与 `make m5-runtime-smoke` 的真实 API/all-mode、Mongo、JetStream 三源 projection gate 通过；真实三业务进程同时运行的 producer→relay→projection 仍待受监督拓扑 |
+| RH-M5-059 | 四仓库 | 三投影联合 E2E | PARTIAL | 052,055,058 | 三 producer 已支持可选 workspace 元数据（Approver/Fluxion/Bids 各自环境变量）；`scripts/verify-m5-producers.sh` 与 `make m5-runtime-smoke` 的跨语言/真实 API、Mongo、JetStream gate 通过；真实三业务进程同时运行的 producer→relay→projection 仍待受监督拓扑 |
 
 ## 8. M6：Workflow Binding
 

@@ -10,9 +10,9 @@ M5-050..058 的代码、契约和确定性联合验收已完成。三个业务�
 
 | 生产者 | 契约镜像 | Outbox/relay | 远端提交 |
 | --- | --- | --- | --- |
-| Approver | `application-summary-v1`；`sha256:c7c269943d0d84c090a00c1c624fa5f08c1e994df82016c8dd26ba3d16f621ae` | `APPLICATION_SUMMARY_CHANGED`；`events.approver.application.summary-changed.v1` | `fa1cb54`, `75a682b` |
-| Fluxion | `project-summary-v1`；`sha256:311dbb7d1c9b3841cacd0ada034fba1077c494841b24baaca18a19ffe196a398` | `PROJECT_SUMMARY_CHANGED`；`events.fluxion.project.summary-changed.v1` | `4fb5cfb`, `6ab93e1` |
-| Bids | `tender-summary-v1`；`sha256:024524fa5b60f8a8deac700bf19745c121f450439532ba22d7ab0f882cad1fff` | `TENDER_SUMMARY_CHANGED`；`events.bids.tender.summary-changed.v1` | `c88f719`, `1c5792b`, `2282766` |
+| Approver | `application-summary-v1`；`sha256:c7c269943d0d84c090a00c1c624fa5f08c1e994df82016c8dd26ba3d16f621ae` | `APPLICATION_SUMMARY_CHANGED`；`events.approver.application.summary-changed.v1` | `fa1cb54`, `75a682b`, `4c5cec9` |
+| Fluxion | `project-summary-v1`；`sha256:311dbb7d1c9b3841cacd0ada034fba1077c494841b24baaca18a19ffe196a398` | `PROJECT_SUMMARY_CHANGED`；`events.fluxion.project.summary-changed.v1` | `4fb5cfb`, `6ab93e1`, `5f872de` |
+| Bids | `tender-summary-v1`；`sha256:024524fa5b60f8a8deac700bf19745c121f450439532ba22d7ab0f882cad1fff` | `TENDER_SUMMARY_CHANGED`；`events.bids.tender.summary-changed.v1` | `c88f719`, `1c5792b`, `2282766`, `21599a1` |
 
 上述提交均已推送到各自远端（Approver/Fluxion/Bids 为 Gitee；Record Hub 为 GitHub）。Record Hub 的权威 manifest hash 修正提交为 `7592453`。
 
@@ -23,6 +23,9 @@ M5-050..058 的代码、契约和确定性联合验收已完成。三个业务�
 - Bids 复用现有 `outbox_events` 和 lease 机制，新增 `TENDER_SUMMARY_CHANGED` 专用事件类型；Conductor/Finance command 不会被 summary relay 领取。业务服务和 worker 的 tender 状态转换均接入事务摘要事件。
 - 三个 relay 均在 JetStream publish ACK 后标记 SENT；ACK 丢失会保留同一 outbox/event ID 重发，并通过 `Msg-Id` 支持幂等发布。
 - 三种 summary schema 均使用 Draft 2020-12、显式 allowlist 和 fixture；contract mirror 检查拒绝联系人、报价、投标金额及文件 URL 等敏感字段。
+- 三个 producer 均支持通过独立环境变量向新 summary envelope 写入可选的
+  `metadata.workspaceId`；未配置时不改变已有 envelope，Record Hub 仍可用 tenant map
+  或显式 fallback 兼容历史事件。
 
 ## 一键验收
 
