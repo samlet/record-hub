@@ -1,7 +1,7 @@
 # Record Hub Web Console
 
 The console is a small Next.js app that talks to the Go BFF through same-origin
-`/api` rewrites. The BFF remains the security boundary: the browser never gets
+`/api` and `/auth` rewrites. The BFF remains the security boundary: the browser never gets
 an OIDC client secret or bearer token.
 
 ## Local development
