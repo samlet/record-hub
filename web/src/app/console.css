@@ -23,6 +23,11 @@
   gap: 8px;
 }
 
+.danger-button {
+  color: var(--danger);
+  border-color: #edc5c1;
+}
+
 @media (max-width: 650px) {
   .load-row {
     align-items: stretch;

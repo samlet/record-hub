@@ -243,6 +243,37 @@ export const api = {
       `/api/v1/tables/${encodeURIComponent(tableId)}/records`,
       { method: "POST", body: JSON.stringify({ ...input, tableId }) },
     ),
+  updateRecord: (
+    recordId: string,
+    version: number,
+    input: {
+      tenantId: string;
+      workspaceId: string;
+      tableId: string;
+      id: string;
+      data: Record<string, unknown>;
+      tags: string[];
+    },
+  ) =>
+    request<RecordItem>(`/api/v1/records/${encodeURIComponent(recordId)}`, {
+      method: "PATCH",
+      headers: { "If-Match": `"${version}"` },
+      body: JSON.stringify(input),
+    }),
+  deleteRecord: (record: {
+    id: string;
+    recordVersion: number;
+    tenantId: string;
+    workspaceId: string;
+    tableId: string;
+  }) =>
+    request<RecordItem>(
+      `/api/v1/records/${encodeURIComponent(record.id)}?tenantId=${encodeURIComponent(record.tenantId)}&workspaceId=${encodeURIComponent(record.workspaceId)}&tableId=${encodeURIComponent(record.tableId)}`,
+      {
+        method: "DELETE",
+        headers: { "If-Match": `"${record.recordVersion}"` },
+      },
+    ),
   createSchema: (input: {
     tenantId: string;
     workspaceId: string;

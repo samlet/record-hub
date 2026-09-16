@@ -32,6 +32,7 @@ export function Console() {
   const [tables, setTables] = useState<TableDefinition[]>([]);
   const [tableId, setTableId] = useState("");
   const [records, setRecords] = useState<RecordItem[]>([]);
+  const [editingRecord, setEditingRecord] = useState<RecordItem | null>(null);
   const [views, setViews] = useState<ViewDefinition[]>([]);
   const [viewId, setViewId] = useState("");
   const [viewForm, setViewForm] = useState({
@@ -414,6 +415,55 @@ export function Console() {
                   setRecordForm({ id: "", tags: "", data: "{}" });
                 })
               }
+              editingRecord={editingRecord}
+              onEditRecord={(record) => {
+                setEditingRecord(record);
+                setRecordForm({
+                  id: record.id,
+                  tags: record.tags.join(", "),
+                  data: JSON.stringify(record.data, null, 2),
+                });
+              }}
+              onCancelEdit={() => {
+                setEditingRecord(null);
+                setRecordForm({ id: "", tags: "", data: "{}" });
+              }}
+              onUpdateRecord={(event) =>
+                submit(event, async () => {
+                  if (!editingRecord) return;
+                  const updated = await api.updateRecord(
+                    editingRecord.id,
+                    editingRecord.recordVersion,
+                    {
+                      tenantId,
+                      workspaceId,
+                      tableId,
+                      id: editingRecord.id,
+                      tags: recordForm.tags
+                        .split(",")
+                        .map((tag) => tag.trim())
+                        .filter(Boolean),
+                      data: JSON.parse(recordForm.data),
+                    },
+                  );
+                  setRecords((current) =>
+                    current.map((record) =>
+                      record.id === updated.body.id ? updated.body : record,
+                    ),
+                  );
+                  setEditingRecord(null);
+                  setRecordForm({ id: "", tags: "", data: "{}" });
+                })
+              }
+              onDeleteRecord={(record) =>
+                void run(async () => {
+                  if (!window.confirm(`删除记录 ${record.id}？`)) return;
+                  await api.deleteRecord(record);
+                  setRecords((current) =>
+                    current.filter((item) => item.id !== record.id),
+                  );
+                })
+              }
             />
           )}{" "}
           {tab === "schema" && (
@@ -558,6 +608,11 @@ function RecordsPanel(props: {
   }) => void;
   recordForm: { id: string; tags: string; data: string };
   setRecordForm: (value: { id: string; tags: string; data: string }) => void;
+  editingRecord: RecordItem | null;
+  onEditRecord: (record: RecordItem) => void;
+  onCancelEdit: () => void;
+  onUpdateRecord: (event: FormEvent) => void;
+  onDeleteRecord: (record: RecordItem) => void;
   onTableChange: (value: string) => void;
   onViewChange: (value: string) => void;
   onCreateView: (event: FormEvent) => void;
@@ -579,6 +634,11 @@ function RecordsPanel(props: {
     setTableForm,
     recordForm,
     setRecordForm,
+    editingRecord,
+    onEditRecord,
+    onCancelEdit,
+    onUpdateRecord,
+    onDeleteRecord,
     onTableChange,
     onViewChange,
     onCreateView,
@@ -660,12 +720,18 @@ function RecordsPanel(props: {
             创建表格
           </button>
         </form>
-        <form className="inline-form" onSubmit={onCreateRecord}>
-          <h3>添加记录</h3>
+        <form
+          className="inline-form"
+          onSubmit={editingRecord ? onUpdateRecord : onCreateRecord}
+        >
+          <h3>
+            {editingRecord ? `编辑记录 · ${editingRecord.id}` : "添加记录"}
+          </h3>
           <input
             required
             placeholder="record id"
             value={recordForm.id}
+            disabled={Boolean(editingRecord)}
             onChange={(event) =>
               setRecordForm({ ...recordForm, id: event.target.value })
             }
@@ -685,9 +751,20 @@ function RecordsPanel(props: {
               setRecordForm({ ...recordForm, data: event.target.value })
             }
           />
-          <button className="secondary-button" disabled={!tableId}>
-            写入记录
-          </button>
+          <div className="button-row">
+            <button className="secondary-button" disabled={!tableId}>
+              {editingRecord ? "保存修改" : "写入记录"}
+            </button>
+            {editingRecord && (
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={onCancelEdit}
+              >
+                取消
+              </button>
+            )}
+          </div>
         </form>
         <form className="inline-form" onSubmit={onCreateView}>
           <h3>新建视图</h3>
@@ -761,7 +838,11 @@ function RecordsPanel(props: {
               {selectedTable.schemaVersion}
             </span>
           </div>
-          <RecordGrid records={records} />
+          <RecordGrid
+            records={records}
+            onEdit={onEditRecord}
+            onDelete={onDeleteRecord}
+          />
         </>
       ) : (
         <div className="empty-state">请选择一个表格查看记录。</div>
@@ -770,7 +851,15 @@ function RecordsPanel(props: {
   );
 }
 
-function RecordGrid({ records }: { records: RecordItem[] }) {
+function RecordGrid({
+  records,
+  onEdit,
+  onDelete,
+}: {
+  records: RecordItem[];
+  onEdit: (record: RecordItem) => void;
+  onDelete: (record: RecordItem) => void;
+}) {
   if (records.length === 0)
     return (
       <div className="empty-state">
@@ -788,6 +877,7 @@ function RecordGrid({ records }: { records: RecordItem[] }) {
             <th>版本</th>
             <th>投影状态</th>
             <th>更新时间</th>
+            <th>操作</th>
           </tr>
         </thead>
         <tbody>
@@ -820,6 +910,22 @@ function RecordGrid({ records }: { records: RecordItem[] }) {
                 </span>
               </td>
               <td>{new Date(record.updatedAt).toLocaleString()}</td>
+              <td>
+                <div className="button-row">
+                  <button
+                    className="ghost-button"
+                    onClick={() => onEdit(record)}
+                  >
+                    编辑
+                  </button>
+                  <button
+                    className="ghost-button danger-button"
+                    onClick={() => onDelete(record)}
+                  >
+                    删除
+                  </button>
+                </div>
+              </td>
             </tr>
           ))}
         </tbody>
