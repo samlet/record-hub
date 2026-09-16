@@ -30,6 +30,7 @@ var (
 	ErrReceiptNotFound        = errors.New("idempotency receipt not found")
 	ErrViewNotFound           = errors.New("view not found")
 	ErrViewExists             = errors.New("view already exists")
+	ErrViewVersionConflict    = errors.New("view version conflict")
 	ErrInvalidCursor          = errors.New("invalid record cursor")
 	ErrIndexNotFound          = errors.New("index not found")
 	ErrIndexExists            = errors.New("index already exists")
@@ -67,6 +68,7 @@ type RecordRepository interface {
 type ViewRepository interface {
 	CreateView(context.Context, ViewDefinition) error
 	GetView(context.Context, string, string, string, string) (ViewDefinition, error)
+	UpdateView(context.Context, ViewDefinition, int64) (ViewDefinition, error)
 	ListViews(context.Context, string, string, string) ([]ViewDefinition, error)
 	ListRecords(context.Context, string, string, string, ViewDefinition, string, int) (RecordPage, error)
 }
@@ -329,6 +331,30 @@ func (repository *MongoRepository) GetView(ctx context.Context, tenantID, worksp
 		return ViewDefinition{}, fmt.Errorf("find view: %w", err)
 	}
 	return view, nil
+}
+
+func (repository *MongoRepository) UpdateView(ctx context.Context, view ViewDefinition, expectedVersion int64) (ViewDefinition, error) {
+	if err := view.Validate(); err != nil {
+		return ViewDefinition{}, err
+	}
+	filter := bson.D{{Key: "tenantId", Value: view.TenantID}, {Key: "workspaceId", Value: view.WorkspaceID}, {Key: "tableId", Value: view.TableID}, {Key: "_id", Value: view.ID}, {Key: "version", Value: expectedVersion}}
+	update := bson.D{{Key: "$set", Value: bson.D{{Key: "name", Value: view.Name}, {Key: "columns", Value: view.Columns}, {Key: "filters", Value: view.Filters}, {Key: "sorts", Value: view.Sorts}, {Key: "updatedBy", Value: view.UpdatedBy}, {Key: "updatedAt", Value: view.UpdatedAt}}}, {Key: "$inc", Value: bson.D{{Key: "version", Value: 1}}}}
+	var updated ViewDefinition
+	err := repository.views.FindOneAndUpdate(ctx, filter, update, options.FindOneAndUpdate().SetReturnDocument(options.After)).Decode(&updated)
+	if err == nil {
+		return updated, nil
+	}
+	if !errors.Is(err, mongo.ErrNoDocuments) {
+		return ViewDefinition{}, fmt.Errorf("update view: %w", err)
+	}
+	existing, lookupErr := repository.GetView(ctx, view.TenantID, view.WorkspaceID, view.TableID, view.ID)
+	if lookupErr != nil {
+		return ViewDefinition{}, lookupErr
+	}
+	if existing.Version != expectedVersion {
+		return ViewDefinition{}, ErrViewVersionConflict
+	}
+	return ViewDefinition{}, ErrViewVersionConflict
 }
 
 func (repository *MongoRepository) ListViews(ctx context.Context, tenantID, workspaceID, tableID string) ([]ViewDefinition, error) {

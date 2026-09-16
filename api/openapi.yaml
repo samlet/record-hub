@@ -368,6 +368,50 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+  /api/v1/tables/{tableId}/views/{viewId}:
+    parameters:
+      - $ref: "#/components/parameters/TableId"
+      - name: viewId
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 128
+    patch:
+      tags: [Records]
+      operationId: updateView
+      summary: Update a view with optimistic concurrency control
+      parameters:
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ViewUpdateRequest"
+      responses:
+        "200":
+          description: Updated view.
+          headers:
+            ETag:
+              $ref: "#/components/headers/RevisionETag"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ViewDefinition"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "428":
+          $ref: "#/components/responses/PreconditionRequired"
   /api/v1/tables/{tableId}/indexes:
     parameters:
       - $ref: "#/components/parameters/TableId"
@@ -1201,6 +1245,41 @@ components:
           type: string
           enum: [eq, ne, contains, in, gt, gte, lt, lte]
         value: {}
+    ViewUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [tenantId, workspaceId, name]
+      properties:
+        tenantId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        workspaceId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        name:
+          type: string
+          minLength: 1
+          maxLength: 128
+        columns:
+          type: array
+          maxItems: 128
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 128
+        filters:
+          type: array
+          maxItems: 16
+          items:
+            $ref: "#/components/schemas/ViewFilter"
+        sorts:
+          type: array
+          maxItems: 4
+          items:
+            $ref: "#/components/schemas/ViewSort"
     ViewSort:
       type: object
       additionalProperties: false

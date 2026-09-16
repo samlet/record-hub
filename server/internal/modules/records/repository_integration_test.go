@@ -121,6 +121,15 @@ func TestMongoWorkspaceAndTablePersistence(t *testing.T) {
 	if err := repository.CreateView(ctx, view); err != nil {
 		t.Fatal(err)
 	}
+	view.Name = "Hello updated"
+	view.UpdatedAt = time.Now().UTC()
+	updatedView, err := repository.UpdateView(ctx, view, 1)
+	if err != nil || updatedView.Version != 2 || updatedView.Name != "Hello updated" {
+		t.Fatalf("update view = %#v, %v", updatedView, err)
+	}
+	if _, err := repository.UpdateView(ctx, view, 1); !errors.Is(err, ErrViewVersionConflict) {
+		t.Fatalf("stale view update = %v", err)
+	}
 	service.WithViewRepository(repository).WithIndexRepository(repository)
 	page, err := service.ListRecords(ctx, principal, workspace.TenantID, workspace.ID, recordTable.ID, view.ID, "", 1)
 	if err != nil || len(page.Items) != 1 || page.NextCursor == "" {

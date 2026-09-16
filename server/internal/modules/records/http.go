@@ -32,6 +32,7 @@ type RecordHTTPService interface {
 
 type ViewHTTPService interface {
 	CreateView(context.Context, identity.Principal, ViewInput) (ViewDefinition, error)
+	UpdateView(context.Context, identity.Principal, ViewInput, int64) (ViewDefinition, error)
 	ListViews(context.Context, identity.Principal, string, string, string) ([]ViewDefinition, error)
 	ListRecords(context.Context, identity.Principal, string, string, string, string, string, int) (RecordPage, error)
 }
@@ -66,6 +67,7 @@ func NewHTTPHandler(service MutationService) http.Handler {
 	mux.HandleFunc("DELETE /api/v1/records/{recordID}", handler.deleteRecord)
 	mux.HandleFunc("POST /api/v1/tables/{tableID}/views", handler.createView)
 	mux.HandleFunc("GET /api/v1/tables/{tableID}/views", handler.listViews)
+	mux.HandleFunc("PATCH /api/v1/tables/{tableID}/views/{viewID}", handler.updateView)
 	mux.HandleFunc("GET /api/v1/tables/{tableID}/records", handler.listRecords)
 	mux.HandleFunc("POST /api/v1/tables/{tableID}/indexes", handler.createIndex)
 	mux.HandleFunc("GET /api/v1/tables/{tableID}/indexes", handler.listIndexes)
@@ -325,7 +327,34 @@ func (handler *HTTPHandler) createView(writer http.ResponseWriter, request *http
 		writeRecordsError(writer, err)
 		return
 	}
-	writeJSON(writer, http.StatusCreated, view)
+	writeView(writer, http.StatusCreated, view)
+}
+
+func (handler *HTTPHandler) updateView(writer http.ResponseWriter, request *http.Request) {
+	principal, ok := identity.PrincipalFromContext(request.Context())
+	if !ok {
+		writeError(writer, http.StatusUnauthorized, "AUTHENTICATION_REQUIRED", "Authentication is required.")
+		return
+	}
+	expectedVersion, ok := parseRecordIfMatch(request.Header.Get("If-Match"))
+	if !ok {
+		writeError(writer, http.StatusPreconditionRequired, "IF_MATCH_REQUIRED", "If-Match must contain the expected view version.")
+		return
+	}
+	service, ok := handler.viewService(writer)
+	if !ok {
+		return
+	}
+	var input viewRequest
+	if !decodeJSON(writer, request, &input) {
+		return
+	}
+	view, err := service.UpdateView(request.Context(), principal, ViewInput{TenantID: input.TenantID, WorkspaceID: input.WorkspaceID, TableID: request.PathValue("tableID"), ID: request.PathValue("viewID"), Name: input.Name, Columns: input.Columns, Filters: input.Filters, Sorts: input.Sorts}, expectedVersion)
+	if err != nil {
+		writeRecordsError(writer, err)
+		return
+	}
+	writeView(writer, http.StatusOK, view)
 }
 
 func (handler *HTTPHandler) listViews(writer http.ResponseWriter, request *http.Request) {
@@ -488,6 +517,13 @@ func writeRecord(writer http.ResponseWriter, status int, record Record) {
 	_ = json.NewEncoder(writer).Encode(response)
 }
 
+func writeView(writer http.ResponseWriter, status int, view ViewDefinition) {
+	writer.Header().Set("Content-Type", "application/json")
+	writer.Header().Set("ETag", strconv.Quote(strconv.FormatInt(view.Version, 10)))
+	writer.WriteHeader(status)
+	_ = json.NewEncoder(writer).Encode(view)
+}
+
 func recordResponseFrom(record Record) (recordResponse, error) {
 	data, err := bson.MarshalExtJSON(record.Data, false, false)
 	if err != nil {
@@ -556,6 +592,8 @@ func writeRecordsError(writer http.ResponseWriter, err error) {
 		writeError(writer, http.StatusConflict, "VIEW_ALREADY_EXISTS", "The view already exists.")
 	case errors.Is(err, ErrViewNotFound):
 		writeError(writer, http.StatusNotFound, "VIEW_NOT_FOUND", "The view was not found.")
+	case errors.Is(err, ErrViewVersionConflict):
+		writeError(writer, http.StatusConflict, "VIEW_VERSION_CONFLICT", "The view version is stale.")
 	case errors.Is(err, ErrIndexExists):
 		writeError(writer, http.StatusConflict, "INDEX_ALREADY_EXISTS", "The index already exists.")
 	case errors.Is(err, ErrIndexLimit):

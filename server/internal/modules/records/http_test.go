@@ -100,8 +100,17 @@ func TestRecordsHTTPViewAndQueryContract(t *testing.T) {
 	viewStore.records = []Record{recordStore.values["tenant-1:workspace-1:record-1"]}
 	viewBody := `{"tenantId":"tenant-1","workspaceId":"workspace-1","id":"view-1","name":"Hello","columns":["title"],"filters":[{"field":"title","operator":"contains","value":"hello"}],"sorts":[{"field":"updatedAt","direction":"desc"}]}`
 	created := doRecordsRequest(handler, &principal, http.MethodPost, "/api/v1/tables/table-1/views", viewBody)
-	if created.Code != http.StatusCreated {
-		t.Fatalf("view create status=%d body=%s", created.Code, created.Body.String())
+	if created.Code != http.StatusCreated || created.Header().Get("ETag") != `"1"` {
+		t.Fatalf("view create status=%d etag=%q body=%s", created.Code, created.Header().Get("ETag"), created.Body.String())
+	}
+	updateViewBody := `{"tenantId":"tenant-1","workspaceId":"workspace-1","name":"Hello updated","columns":["title","count"],"filters":[{"field":"title","operator":"contains","value":"hello"}],"sorts":[{"field":"count","direction":"desc"}]}`
+	updatedView := doRecordsRequestWithHeaders(handler, &principal, http.MethodPatch, "/api/v1/tables/table-1/views/view-1", updateViewBody, map[string]string{"If-Match": `"1"`})
+	if updatedView.Code != http.StatusOK || updatedView.Header().Get("ETag") != `"2"` || !strings.Contains(updatedView.Body.String(), `"Hello updated"`) {
+		t.Fatalf("view update status=%d etag=%q body=%s", updatedView.Code, updatedView.Header().Get("ETag"), updatedView.Body.String())
+	}
+	staleView := doRecordsRequestWithHeaders(handler, &principal, http.MethodPatch, "/api/v1/tables/table-1/views/view-1", updateViewBody, map[string]string{"If-Match": `"1"`})
+	if staleView.Code != http.StatusConflict || !strings.Contains(staleView.Body.String(), `VIEW_VERSION_CONFLICT`) {
+		t.Fatalf("stale view update status=%d body=%s", staleView.Code, staleView.Body.String())
 	}
 	listed := doRecordsRequest(handler, &principal, http.MethodGet, "/api/v1/tables/table-1/views?tenantId=tenant-1&workspaceId=workspace-1", "")
 	if listed.Code != http.StatusOK || !strings.Contains(listed.Body.String(), `"view-1"`) {

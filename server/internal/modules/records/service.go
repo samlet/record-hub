@@ -183,6 +183,40 @@ func (service *Service) CreateView(ctx context.Context, principal identity.Princ
 	return view, nil
 }
 
+func (service *Service) UpdateView(ctx context.Context, principal identity.Principal, input ViewInput, expectedVersion int64) (ViewDefinition, error) {
+	if err := service.viewDependencies(ctx, principal, input.TenantID, input.WorkspaceID, identity.ActionViewWrite); err != nil {
+		return ViewDefinition{}, err
+	}
+	if expectedVersion < 1 {
+		return ViewDefinition{}, ErrViewVersionConflict
+	}
+	table, err := service.tables.GetTable(ctx, input.TenantID, input.WorkspaceID, input.TableID)
+	if err != nil {
+		return ViewDefinition{}, err
+	}
+	definition, err := service.publishedSchema(ctx, input.TenantID, table.SchemaID, table.SchemaVersion)
+	if err != nil {
+		return ViewDefinition{}, err
+	}
+	if err := validateViewSchemaFields(input.Columns, input.Filters, input.Sorts, definition); err != nil {
+		return ViewDefinition{}, err
+	}
+	existing, err := service.views.GetView(ctx, input.TenantID, input.WorkspaceID, input.TableID, input.ID)
+	if err != nil {
+		return ViewDefinition{}, err
+	}
+	existing.Name = strings.TrimSpace(input.Name)
+	existing.Columns = append([]string(nil), input.Columns...)
+	existing.Filters = append([]ViewFilter(nil), input.Filters...)
+	existing.Sorts = append([]ViewSort(nil), input.Sorts...)
+	existing.UpdatedBy = principal.IdentityKey()
+	existing.UpdatedAt = service.clock().UTC()
+	if err := existing.Validate(); err != nil {
+		return ViewDefinition{}, err
+	}
+	return service.views.UpdateView(ctx, existing, expectedVersion)
+}
+
 func (service *Service) ListViews(ctx context.Context, principal identity.Principal, tenantID, workspaceID, tableID string) ([]ViewDefinition, error) {
 	if err := service.viewDependencies(ctx, principal, tenantID, workspaceID, identity.ActionViewRead); err != nil {
 		return nil, err

@@ -65,6 +65,29 @@ function parseFilterValue(raw: string): unknown {
   }
 }
 
+function filterValueDraft(value: unknown): string {
+  return typeof value === "string" ? value : (JSON.stringify(value) ?? "");
+}
+
+function formFromView(view: ViewDefinition): ViewForm {
+  return {
+    id: view.id,
+    name: view.name,
+    columns: view.columns.join(", "),
+    filters:
+      view.filters.length > 0
+        ? view.filters.map((filter) => ({
+            ...filter,
+            value: filterValueDraft(filter.value),
+          }))
+        : [{ field: "", operator: "eq", value: "" }],
+    sorts:
+      view.sorts.length > 0
+        ? view.sorts.map((sort) => ({ ...sort }))
+        : [{ field: "", direction: "asc" }],
+  };
+}
+
 export function Console() {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [tenantId, setTenantId] = useState("tenant-local");
@@ -77,6 +100,7 @@ export function Console() {
   const [editingRecord, setEditingRecord] = useState<RecordItem | null>(null);
   const [views, setViews] = useState<ViewDefinition[]>([]);
   const [viewId, setViewId] = useState("");
+  const [editingViewId, setEditingViewId] = useState("");
   const [viewForm, setViewForm] = useState<ViewForm>(emptyViewForm);
   const [tab, setTab] = useState<Tab>("records");
   const [consumer, setConsumer] = useState(consumerOptions[0][0]);
@@ -165,6 +189,8 @@ export function Console() {
       setViewId((current) =>
         next.some((item) => item.id === current) ? current : "",
       );
+      setEditingViewId("");
+      setViewForm(emptyViewForm());
     });
   }, [tenantId, workspaceId, tableId, authenticated]);
 
@@ -436,6 +462,7 @@ export function Console() {
               tables={tables}
               views={views}
               viewId={viewId}
+              editingViewId={editingViewId}
               viewForm={viewForm}
               setViewForm={setViewForm}
               selectedTable={selectedTable}
@@ -447,12 +474,21 @@ export function Console() {
               setRecordForm={setRecordForm}
               onTableChange={setTableId}
               onViewChange={setViewId}
+              onEditView={() => {
+                const selected = views.find((view) => view.id === viewId);
+                if (!selected) return;
+                setEditingViewId(selected.id);
+                setViewForm(formFromView(selected));
+              }}
+              onCancelViewEdit={() => {
+                setEditingViewId("");
+                setViewForm(emptyViewForm());
+              }}
               onCreateView={(event) =>
                 submit(event, async () => {
-                  const created = await api.createView(tableId, {
+                  const input = {
                     tenantId,
                     workspaceId,
-                    id: viewForm.id,
                     name: viewForm.name,
                     columns: viewForm.columns
                       .split(",")
@@ -468,9 +504,33 @@ export function Console() {
                     sorts: viewForm.sorts
                       .filter((sort) => sort.field.trim())
                       .map((sort) => ({ ...sort, field: sort.field.trim() })),
-                  });
-                  setViews((current) => [...current, created.body]);
-                  setViewId(created.body.id);
+                  };
+                  if (editingViewId) {
+                    const current = views.find(
+                      (view) => view.id === editingViewId,
+                    );
+                    if (!current) return;
+                    const updated = await api.updateView(
+                      tableId,
+                      current.id,
+                      current.version,
+                      input,
+                    );
+                    setViews((items) =>
+                      items.map((view) =>
+                        view.id === updated.body.id ? updated.body : view,
+                      ),
+                    );
+                    setViewId(updated.body.id);
+                  } else {
+                    const created = await api.createView(tableId, {
+                      ...input,
+                      id: viewForm.id,
+                    });
+                    setViews((current) => [...current, created.body]);
+                    setViewId(created.body.id);
+                  }
+                  setEditingViewId("");
                   setViewForm(emptyViewForm());
                 })
               }
@@ -670,6 +730,7 @@ function RecordsPanel(props: {
   tables: TableDefinition[];
   views: ViewDefinition[];
   viewId: string;
+  editingViewId: string;
   viewForm: ViewForm;
   setViewForm: (value: ViewForm) => void;
   selectedTable?: TableDefinition;
@@ -696,6 +757,8 @@ function RecordsPanel(props: {
   onDeleteRecord: (record: RecordItem) => void;
   onTableChange: (value: string) => void;
   onViewChange: (value: string) => void;
+  onEditView: () => void;
+  onCancelViewEdit: () => void;
   onCreateView: (event: FormEvent) => void;
   onCreateTable: (event: FormEvent) => void;
   onCreateRecord: (event: FormEvent) => void;
@@ -707,6 +770,7 @@ function RecordsPanel(props: {
     tables,
     views,
     viewId,
+    editingViewId,
     viewForm,
     setViewForm,
     selectedTable,
@@ -723,6 +787,8 @@ function RecordsPanel(props: {
     onDeleteRecord,
     onTableChange,
     onViewChange,
+    onEditView,
+    onCancelViewEdit,
     onCreateView,
     onCreateTable,
     onCreateRecord,
@@ -787,6 +853,14 @@ function RecordsPanel(props: {
             </option>
           ))}
         </select>
+        <button
+          type="button"
+          className="ghost-button"
+          disabled={!viewId}
+          onClick={onEditView}
+        >
+          编辑视图
+        </button>
         <select
           className="table-select"
           value={viewId}
@@ -888,11 +962,23 @@ function RecordsPanel(props: {
           </div>
         </form>
         <form className="inline-form" onSubmit={onCreateView}>
-          <h3>新建视图</h3>
+          <div className="view-builder-heading">
+            <h3>{editingViewId ? "编辑视图" : "新建视图"}</h3>
+            {editingViewId && (
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={onCancelViewEdit}
+              >
+                取消编辑
+              </button>
+            )}
+          </div>
           <input
             required
             placeholder="view id"
             value={viewForm.id}
+            disabled={Boolean(editingViewId)}
             onChange={(event) =>
               setViewForm({ ...viewForm, id: event.target.value })
             }
@@ -1098,7 +1184,7 @@ function RecordsPanel(props: {
             </div>
           ))}
           <button className="secondary-button" disabled={!tableId}>
-            创建视图
+            {editingViewId ? "保存视图" : "创建视图"}
           </button>
         </form>
       </div>

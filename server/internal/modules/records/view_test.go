@@ -2,6 +2,7 @@ package records
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/samlet/record-hub/server/internal/modules/identity"
@@ -26,6 +27,20 @@ func (repository *memoryViewRepository) GetView(_ context.Context, tenantID, wor
 	if !ok {
 		return ViewDefinition{}, ErrViewNotFound
 	}
+	return view, nil
+}
+
+func (repository *memoryViewRepository) UpdateView(_ context.Context, view ViewDefinition, expectedVersion int64) (ViewDefinition, error) {
+	key := view.TenantID + ":" + view.WorkspaceID + ":" + view.TableID + ":" + view.ID
+	current, ok := repository.views[key]
+	if !ok {
+		return ViewDefinition{}, ErrViewNotFound
+	}
+	if current.Version != expectedVersion {
+		return ViewDefinition{}, ErrViewVersionConflict
+	}
+	view.Version = expectedVersion + 1
+	repository.views[key] = view
 	return view, nil
 }
 
@@ -82,6 +97,13 @@ func TestViewServiceEnforcesSchemaFieldAllowlistAndCursorBounds(t *testing.T) {
 	}
 	if _, err := service.CreateView(context.Background(), principal, ViewInput{TenantID: "tenant-1", WorkspaceID: "workspace-1", TableID: "table-1", ID: "view-2", Name: "Unsafe", Columns: []string{"secret"}}); err == nil {
 		t.Fatal("field absent from published schema should fail")
+	}
+	updated, err := service.UpdateView(context.Background(), principal, ViewInput{TenantID: "tenant-1", WorkspaceID: "workspace-1", TableID: "table-1", ID: "view-1", Name: "Open first", Columns: []string{"title", "count"}, Sorts: []ViewSort{{Field: "count", Direction: SortDescending}}}, 1)
+	if err != nil || updated.Version != 2 || updated.Name != "Open first" {
+		t.Fatalf("update view = %#v, %v", updated, err)
+	}
+	if _, err := service.UpdateView(context.Background(), principal, ViewInput{TenantID: "tenant-1", WorkspaceID: "workspace-1", TableID: "table-1", ID: "view-1", Name: "Stale", Columns: []string{"title"}}, 1); !errors.Is(err, ErrViewVersionConflict) {
+		t.Fatalf("stale view update = %v", err)
 	}
 	if _, err := service.ListRecords(context.Background(), principal, "tenant-1", "workspace-1", "table-1", "", "", 101); err == nil {
 		t.Fatal("page limit above 100 should fail")

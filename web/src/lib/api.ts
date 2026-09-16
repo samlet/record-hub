@@ -40,8 +40,8 @@ export type ViewDefinition = {
   tableId: string;
   name: string;
   columns: string[];
-  filters: Array<{ field: string; operator: string; value: unknown }>;
-  sorts: Array<{ field: string; direction: string }>;
+  filters: ViewFilter[];
+  sorts: Array<{ field: string; direction: "asc" | "desc" }>;
   version: number;
 };
 
@@ -240,6 +240,27 @@ export const api = {
     request<ViewDefinition>(
       `/api/v1/tables/${encodeURIComponent(tableId)}/views`,
       { method: "POST", body: JSON.stringify({ ...input, tableId }) },
+    ),
+  updateView: (
+    tableId: string,
+    viewId: string,
+    version: number,
+    input: {
+      tenantId: string;
+      workspaceId: string;
+      name: string;
+      columns: string[];
+      filters: ViewFilter[];
+      sorts: Array<{ field: string; direction: "asc" | "desc" }>;
+    },
+  ) =>
+    request<ViewDefinition>(
+      `/api/v1/tables/${encodeURIComponent(tableId)}/views/${encodeURIComponent(viewId)}`,
+      {
+        method: "PATCH",
+        headers: { "If-Match": `"${version}"` },
+        body: JSON.stringify(input),
+      },
     ),
   createRecord: (
     tableId: string,

@@ -107,6 +107,23 @@ describe("Record Hub browser API client", () => {
     });
   });
 
+  it("sends view version CAS when editing a persisted view", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ id: "view-1", version: 4 }));
+    await api.updateView("table/a", "view/a", 3, {
+      tenantId: "tenant-1",
+      workspaceId: "workspace-1",
+      name: "Updated",
+      columns: ["data.status"],
+      filters: [],
+      sorts: [],
+    });
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toContain("/tables/table%2Fa/views/view%2Fa");
+    expect(new Headers(init?.headers).get("If-Match")).toBe('"3"');
+    expect(JSON.parse(String(init?.body))).toMatchObject({ name: "Updated" });
+  });
+
   it("decodes bounded API errors into ApiError", async () => {
     fetchMock.mockResolvedValue(
       jsonResponse(
