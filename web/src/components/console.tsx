@@ -13,6 +13,12 @@ import {
   ViewDefinition,
   Workspace,
 } from "../lib/api";
+import {
+  parseSchemaFields,
+  SchemaField,
+  SchemaFieldType,
+  writeSchemaFields,
+} from "../lib/schema-fields";
 
 type Tab = "records" | "schema" | "operations";
 const consumerOptions = [
@@ -1233,89 +1239,6 @@ function formatCell(value: unknown): string {
   return JSON.stringify(value);
 }
 
-type SchemaField = { name: string; type: string; required: boolean };
-
-function parseSchemaFields(raw: string): {
-  fields: SchemaField[];
-  error?: string;
-} {
-  try {
-    const document = JSON.parse(raw) as {
-      properties?: Record<string, unknown>;
-      required?: unknown;
-    };
-    if (!document || typeof document !== "object" || Array.isArray(document)) {
-      return { fields: [], error: "Schema 根节点必须是对象" };
-    }
-    const properties = document.properties;
-    if (properties === undefined) return { fields: [] };
-    if (
-      !properties ||
-      typeof properties !== "object" ||
-      Array.isArray(properties)
-    ) {
-      return { fields: [], error: "properties 必须是对象" };
-    }
-    const required = new Set(
-      Array.isArray(document.required)
-        ? document.required.filter(
-            (item): item is string => typeof item === "string",
-          )
-        : [],
-    );
-    return {
-      fields: Object.entries(properties).map(([name, value]) => ({
-        name,
-        type:
-          value &&
-          typeof value === "object" &&
-          !Array.isArray(value) &&
-          typeof (value as { type?: unknown }).type === "string"
-            ? String((value as { type: string }).type)
-            : "string",
-        required: required.has(name),
-      })),
-    };
-  } catch {
-    return { fields: [], error: "JSON 尚未闭合，字段编辑器暂不可用" };
-  }
-}
-
-function writeSchemaFields(raw: string, fields: SchemaField[]): string {
-  let document: Record<string, unknown>;
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
-      return raw;
-    document = { ...(parsed as Record<string, unknown>) };
-  } catch {
-    return raw;
-  }
-  const current =
-    document.properties &&
-    typeof document.properties === "object" &&
-    !Array.isArray(document.properties)
-      ? (document.properties as Record<string, unknown>)
-      : {};
-  const properties: Record<string, unknown> = {};
-  for (const field of fields) {
-    const existing =
-      current[field.name] &&
-      typeof current[field.name] === "object" &&
-      !Array.isArray(current[field.name])
-        ? (current[field.name] as Record<string, unknown>)
-        : {};
-    properties[field.name] = { ...existing, type: field.type };
-  }
-  document.properties = properties;
-  const required = fields
-    .filter((field) => field.required)
-    .map((field) => field.name);
-  if (required.length > 0) document.required = required;
-  else delete document.required;
-  return JSON.stringify(document, null, 2);
-}
-
 function SchemaPanel(props: {
   tenantId: string;
   workspaceId: string;
@@ -1471,6 +1394,7 @@ function SchemaPanel(props: {
                     name: `field_${fieldResult.fields.length + 1}`,
                     type: "string",
                     required: false,
+                    enumValues: "",
                   },
                 ])
               }
@@ -1503,16 +1427,22 @@ function SchemaPanel(props: {
                     value={field.type}
                     onChange={(event) => {
                       const next = [...fieldResult.fields];
-                      next[index] = { ...field, type: event.target.value };
+                      next[index] = {
+                        ...field,
+                        type: event.target.value as SchemaFieldType,
+                      };
                       updateFields(next);
                     }}
                   >
-                    <option value="string">string</option>
-                    <option value="number">number</option>
-                    <option value="integer">integer</option>
-                    <option value="boolean">boolean</option>
-                    <option value="object">object</option>
-                    <option value="array">array</option>
+                    <option value="string">文本</option>
+                    <option value="number">数字</option>
+                    <option value="boolean">布尔</option>
+                    <option value="date-time">日期时间</option>
+                    <option value="enum">枚举</option>
+                    <option value="reference">引用</option>
+                    <option value="integer">整数（高级）</option>
+                    <option value="object">对象（高级）</option>
+                    <option value="array">数组（高级）</option>
                   </select>
                   <label className="required-field">
                     <input
@@ -1542,6 +1472,28 @@ function SchemaPanel(props: {
                   >
                     移除
                   </button>
+                  {field.type === "enum" && (
+                    <input
+                      className="schema-field-detail"
+                      aria-label={`字段 ${index + 1} 枚举值`}
+                      placeholder="枚举值（逗号分隔，也可填 JSON 数组）"
+                      value={field.enumValues}
+                      onChange={(event) => {
+                        const next = [...fieldResult.fields];
+                        next[index] = {
+                          ...field,
+                          enumValues: event.target.value,
+                        };
+                        updateFields(next);
+                      }}
+                    />
+                  )}
+                  {field.type === "reference" && (
+                    <span className="schema-field-detail muted">
+                      typed reference：system / type / id（可在 JSON
+                      编辑器中调整约束）
+                    </span>
+                  )}
                 </div>
               ))}
             </div>

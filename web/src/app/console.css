@@ -97,6 +97,10 @@
   align-items: center;
 }
 
+.schema-field-detail {
+  grid-column: 1 / -1;
+}
+
 .required-field {
   color: var(--muted);
   font-size: 12px;
