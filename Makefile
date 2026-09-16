@@ -14,7 +14,7 @@ lint:
 	go vet ./...
 
 web-check:
-	cd web && npm ci && npm run typecheck && npm run build
+	cd web && npm ci && npm run typecheck && npm test && npm run build
 
 openapi-lint:
 	go run ./tools/openapi-lint api/openapi.yaml
