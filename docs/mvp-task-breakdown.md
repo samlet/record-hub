@@ -49,7 +49,7 @@
 | RH-M2-023 | Record Hub | compatibility checker | DONE | 022 | optional additive、required 放宽、integer→number/enum 扩展兼容；删除/改名/type/required/enum/约束收窄判 breaking |
 | RH-M2-024 | Record Hub | semanticTypes/Schema.org URI mapping | DONE | 020 | Schema.org HTTPS canonicalization、HTTPS custom URI/URN、排序去重；不影响结构校验结果 |
 | RH-M2-025 | Record Hub | canonical JSON/content hash | DONE | 022 | 确定性 UTF-8 key/number/string 规则、重复 key 拒绝、semanticTypes 规范化；Go/Java/TS 共享 fixture/expected hash |
-| RH-M2-026 | Record Hub Web | Schema 列表、编辑、校验和发布 UI | TODO | 021 | 错误定位到字段路径；已发布只读 |
+| RH-M2-026 | Record Hub Web | Schema 列表、编辑、校验和发布 UI | PARTIAL | 021 | Next.js JSON 编辑、版本读取、ETag 草稿/发布已接入；字段路径错误定位与列表页待补 |
 
 ## 5. M3：多维表格核心
 
@@ -61,8 +61,8 @@
 | RH-M3-033 | Record Hub | ViewDefinition、分页、排序、过滤 | DONE | 031 | ViewDefinition 持久化；字段/operator allowlist；复合排序键稳定 cursor；limit 1-100；Mongo 查询不接受任意 query |
 | RH-M3-034 | Record Hub | 动态字段索引策略 | DONE | 033 | OWNER-only；仅已发布 schema 顶层字段；asc/desc；每表最多 16 个；确定性物理名；Mongo/API/HTTP/测试已覆盖 |
 | RH-M3-035 | Record Hub | Projection record 写保护 | DONE | 031 | 通用 POST/PATCH/DELETE 在依赖、幂等键和版本校验前统一拒绝；HTTP 409 `PROJECTION_READ_ONLY`；负向矩阵已覆盖 |
-| RH-M3-036 | Record Hub Web | workspace/table/grid/record detail UI | TODO | 030-033 | 六种字段、tag、排序过滤、列显隐 |
-| RH-M3-037 | Record Hub Web | Projection 新鲜度和只读展示 | TODO | 035 | source/version/syncedAt/GAP 可见 |
+| RH-M3-036 | Record Hub Web | workspace/table/grid/record detail UI | PARTIAL | 030-033 | Next.js workspace/table/grid、record JSON/tag、View 选择与受控过滤器已接入；六种字段、列显隐待补 |
+| RH-M3-037 | Record Hub Web | Projection 新鲜度和只读展示 | PARTIAL | 035 | source/version/syncedAt/GAP 与 Operations Fresh/Lagging/Stale 已可见；真实投影浏览器矩阵待补 |
 
 ## 6. M4：JetStream 消费与投影
 

@@ -39,7 +39,8 @@ M8-082 的 Operations 控制台边界也已完成：`NewConsoleRouter` 把
 页面只允许选择 Approver、Fluxion、Bids 三个已注册 projection consumer。服务端
 同时校验 consumer、tenant/workspace 和每个 checkpoint 的 scope；freshness、GAP、
 failed/rejected/DLQ 只以有界计数和 checkpoint 元数据展示，原始 inbox/event
-payload 永不出现在页面或响应中。
+payload 永不出现在页面或响应中。Next.js Operations 页进入后立即读取并每 10 秒
+轮询，按生成时间标记 Fresh/Lagging/Stale。
 
 M8-083 的跨仓库 happy-path gate 已完成，入口为 `make m8-happy-path`。它会重复
 执行 Record Hub 的 Web/identity/schema/records/projection 测试，并执行 Approver、
