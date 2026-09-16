@@ -28,6 +28,11 @@
   border-color: #edc5c1;
 }
 
+.status.warn {
+  background: #fff6dd;
+  color: #8c6b1a;
+}
+
 @media (max-width: 650px) {
   .load-row {
     align-items: stretch;

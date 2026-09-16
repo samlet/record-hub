@@ -181,6 +181,19 @@ export function Console() {
     );
   }
 
+  useEffect(() => {
+    if (
+      tab !== "operations" ||
+      authenticated !== true ||
+      !tenantId ||
+      !workspaceId
+    )
+      return;
+    void refreshOperations();
+    const timer = window.setInterval(() => void refreshOperations(), 10_000);
+    return () => window.clearInterval(timer);
+  }, [tab, authenticated, tenantId, workspaceId, consumer]);
+
   async function signOut() {
     await run(async () => {
       await api.logout();
@@ -1102,6 +1115,7 @@ function OperationsPanel(props: {
   onRefresh: () => void;
 }) {
   const { snapshot, consumer, setConsumer, onRefresh } = props;
+  const freshness = snapshot ? freshnessLabel(snapshot.generatedAt) : null;
   return (
     <div className="panel">
       <div className="panel-heading">
@@ -1129,6 +1143,11 @@ function OperationsPanel(props: {
       </div>
       {snapshot ? (
         <>
+          <span
+            className={`status ${freshness?.tone === "good" ? "good" : freshness?.tone === "bad" ? "bad" : ""}`}
+          >
+            {freshness?.label}
+          </span>
           <div className="metric-grid">
             <Metric label="处理中" value={snapshot.inbox.processing} />
             <Metric label="已应用" value={snapshot.inbox.applied} />
@@ -1191,6 +1210,16 @@ function OperationsPanel(props: {
       )}
     </div>
   );
+}
+
+function freshnessLabel(generatedAt: string): {
+  label: string;
+  tone: "good" | "warn" | "bad";
+} {
+  const age = Math.max(0, Date.now() - new Date(generatedAt).getTime());
+  if (age < 30_000) return { label: "Fresh · <30s", tone: "good" };
+  if (age < 120_000) return { label: "Lagging · <2m", tone: "warn" };
+  return { label: "Stale · ≥2m", tone: "bad" };
 }
 
 function Metric({
