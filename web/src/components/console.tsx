@@ -664,6 +664,45 @@ function RecordsPanel(props: {
     onCreateTable,
     onCreateRecord,
   } = props;
+
+  const selectedView = useMemo(
+    () => views.find((view) => view.id === viewId),
+    [views, viewId],
+  );
+  const availableColumns = useMemo(() => {
+    const dataColumns = records.flatMap((record) =>
+      Object.keys(record.data).map((field) => `data.${field}`),
+    );
+    return Array.from(
+      new Set([
+        ...dataColumns,
+        ...(selectedView?.columns ?? []),
+        ...viewForm.columns
+          .split(",")
+          .map((column) => column.trim())
+          .filter(Boolean),
+      ]),
+    ).slice(0, 64);
+  }, [records, selectedView, viewForm.columns]);
+  const configuredColumns = viewForm.columns
+    .split(",")
+    .map((column) => column.trim())
+    .filter(Boolean);
+  const selectedColumns = new Set(
+    configuredColumns.length > 0 ? configuredColumns : availableColumns,
+  );
+
+  function toggleViewColumn(column: string) {
+    const next = new Set(selectedColumns);
+    if (next.has(column)) {
+      if (next.size <= 1) return;
+      next.delete(column);
+    } else {
+      next.add(column);
+    }
+    setViewForm({ ...viewForm, columns: Array.from(next).join(", ") });
+  }
+
   return (
     <div className="panel">
       <div className="panel-heading">
@@ -810,6 +849,29 @@ function RecordsPanel(props: {
               setViewForm({ ...viewForm, columns: event.target.value })
             }
           />
+          <div className="view-builder-heading">
+            <strong>列显隐</strong>
+            <span className="muted">从当前记录快速选择列</span>
+          </div>
+          {availableColumns.length > 0 ? (
+            <div className="column-picker">
+              {availableColumns.map((column) => (
+                <label className="column-option" key={column}>
+                  <input
+                    type="checkbox"
+                    checked={selectedColumns.has(column)}
+                    disabled={
+                      selectedColumns.size <= 1 && selectedColumns.has(column)
+                    }
+                    onChange={() => toggleViewColumn(column)}
+                  />
+                  <code>{column}</code>
+                </label>
+              ))}
+            </div>
+          ) : (
+            <p className="muted">暂无可选列；也可以直接输入字段路径。</p>
+          )}
           <div className="view-builder-heading">
             <strong>过滤条件</strong>
             <button
@@ -1011,93 +1073,138 @@ function RecordGrid({
   onEdit: (record: RecordItem) => void;
   onDelete: (record: RecordItem) => void;
 }) {
+  const availableColumns = useMemo(() => {
+    const envelopeColumns = new Set([
+      "id",
+      "tags",
+      "recordVersion",
+      "schemaVersion",
+      "createdAt",
+      "updatedAt",
+    ]);
+    const inferred = records.flatMap((record) =>
+      Object.keys(record.data).map((field) => `data.${field}`),
+    );
+    const configured = (selectedView?.columns ?? []).filter(
+      (column) => !envelopeColumns.has(column.replace(/^data\./, "")),
+    );
+    return Array.from(
+      new Set(configured.length > 0 ? configured : inferred),
+    ).slice(0, 32);
+  }, [records, selectedView]);
+  const columnKey = availableColumns.join("\u0000");
+  const [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
+
+  useEffect(() => {
+    setHiddenColumns([]);
+  }, [selectedView?.id, columnKey]);
+
+  const columns = availableColumns.filter(
+    (column) => !hiddenColumns.includes(column),
+  );
   if (records.length === 0)
     return (
       <div className="empty-state">
         暂无记录。创建一条记录或等待投影事件到达。
       </div>
     );
-  const columns = selectedView?.columns.length
-    ? selectedView.columns
-    : Array.from(
-        new Set(records.flatMap((record) => Object.keys(record.data))),
-      ).slice(0, 32);
   return (
-    <div className="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            {columns.map((column) => (
-              <th key={column}>{column}</th>
-            ))}
-            <th>标签</th>
-            <th>版本</th>
-            <th>投影状态</th>
-            <th>更新时间</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          {records.map((record) => (
-            <tr key={record.id}>
-              <td>
-                <code>{record.id}</code>
-                {record.source && (
-                  <small>
-                    {record.source.system} / {record.source.type}
-                  </small>
-                )}
-              </td>
+    <>
+      <div className="column-visibility">
+        <span className="muted">列显隐</span>
+        {availableColumns.map((column) => (
+          <label className="column-option" key={column}>
+            <input
+              type="checkbox"
+              checked={!hiddenColumns.includes(column)}
+              onChange={() =>
+                setHiddenColumns((current) =>
+                  current.includes(column)
+                    ? current.filter((item) => item !== column)
+                    : [...current, column],
+                )
+              }
+            />
+            <code>{column}</code>
+          </label>
+        ))}
+      </div>
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
               {columns.map((column) => (
-                <td key={column}>
-                  <span className="cell-value">
-                    {formatCell(readPath(record.data, column))}
-                  </span>
-                </td>
+                <th key={column}>{column}</th>
               ))}
-              <td>
-                {record.tags.map((tag) => (
-                  <span className="tag" key={tag}>
-                    {tag}
-                  </span>
-                ))}
-              </td>
-              <td>{record.recordVersion}</td>
-              <td>
-                <span
-                  className={`status ${record.projection?.status === "GAP" ? "bad" : ""}`}
-                >
-                  {record.projection?.status ?? "CUSTOM"}
-                </span>
-                {record.projection?.syncedAt && (
-                  <small>
-                    {new Date(record.projection.syncedAt).toLocaleString()}
-                  </small>
-                )}
-              </td>
-              <td>{new Date(record.updatedAt).toLocaleString()}</td>
-              <td>
-                <div className="button-row">
-                  <button
-                    className="ghost-button"
-                    onClick={() => onEdit(record)}
-                  >
-                    编辑
-                  </button>
-                  <button
-                    className="ghost-button danger-button"
-                    onClick={() => onDelete(record)}
-                  >
-                    删除
-                  </button>
-                </div>
-              </td>
+              <th>标签</th>
+              <th>版本</th>
+              <th>投影状态</th>
+              <th>更新时间</th>
+              <th>操作</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {records.map((record) => (
+              <tr key={record.id}>
+                <td>
+                  <code>{record.id}</code>
+                  {record.source && (
+                    <small>
+                      {record.source.system} / {record.source.type}
+                    </small>
+                  )}
+                </td>
+                {columns.map((column) => (
+                  <td key={column}>
+                    <span className="cell-value">
+                      {formatCell(readPath(record.data, column))}
+                    </span>
+                  </td>
+                ))}
+                <td>
+                  {record.tags.map((tag) => (
+                    <span className="tag" key={tag}>
+                      {tag}
+                    </span>
+                  ))}
+                </td>
+                <td>{record.recordVersion}</td>
+                <td>
+                  <span
+                    className={`status ${record.projection?.status === "GAP" ? "bad" : ""}`}
+                  >
+                    {record.projection?.status ?? "CUSTOM"}
+                  </span>
+                  {record.projection?.syncedAt && (
+                    <small>
+                      {new Date(record.projection.syncedAt).toLocaleString()}
+                    </small>
+                  )}
+                </td>
+                <td>{new Date(record.updatedAt).toLocaleString()}</td>
+                <td>
+                  <div className="button-row">
+                    <button
+                      className="ghost-button"
+                      onClick={() => onEdit(record)}
+                    >
+                      编辑
+                    </button>
+                    <button
+                      className="ghost-button danger-button"
+                      onClick={() => onDelete(record)}
+                    >
+                      删除
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 

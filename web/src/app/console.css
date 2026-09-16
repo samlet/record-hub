@@ -31,6 +31,39 @@
   margin-top: 10px;
 }
 
+.column-picker,
+.column-visibility {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.column-picker {
+  max-height: 118px;
+  overflow-y: auto;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.column-visibility {
+  margin: 12px 0;
+}
+
+.column-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.column-option input {
+  accent-color: var(--accent);
+}
+
 .danger-button {
   color: var(--danger);
   border-color: #edc5c1;
