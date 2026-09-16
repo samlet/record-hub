@@ -45,6 +45,12 @@ export type ViewDefinition = {
   version: number;
 };
 
+export type ViewFilter = {
+  field: string;
+  operator: "eq" | "ne" | "contains" | "in" | "gt" | "gte" | "lt" | "lte";
+  value: unknown;
+};
+
 export type SchemaDefinition = {
   tenantId: string;
   schemaId: string;
@@ -215,6 +221,8 @@ export const api = {
       id: string;
       name: string;
       columns: string[];
+      filters: ViewFilter[];
+      sorts: Array<{ field: string; direction: "asc" | "desc" }>;
     },
   ) =>
     request<ViewDefinition>(

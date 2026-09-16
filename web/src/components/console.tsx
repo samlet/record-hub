@@ -9,6 +9,7 @@ import {
   RecordItem,
   SchemaDefinition,
   TableDefinition,
+  ViewFilter,
   ViewDefinition,
   Workspace,
 } from "../lib/api";
@@ -33,7 +34,14 @@ export function Console() {
   const [records, setRecords] = useState<RecordItem[]>([]);
   const [views, setViews] = useState<ViewDefinition[]>([]);
   const [viewId, setViewId] = useState("");
-  const [viewForm, setViewForm] = useState({ id: "", name: "", columns: "" });
+  const [viewForm, setViewForm] = useState({
+    id: "",
+    name: "",
+    columns: "",
+    filterField: "",
+    filterOperator: "eq" as ViewFilter["operator"],
+    filterValue: "",
+  });
   const [tab, setTab] = useState<Tab>("records");
   const [consumer, setConsumer] = useState(consumerOptions[0][0]);
   const [operations, setOperations] = useState<OperationsSnapshot | null>(null);
@@ -347,10 +355,27 @@ export function Console() {
                       .split(",")
                       .map((column) => column.trim())
                       .filter(Boolean),
+                    filters: viewForm.filterField
+                      ? [
+                          {
+                            field: viewForm.filterField,
+                            operator: viewForm.filterOperator,
+                            value: viewForm.filterValue,
+                          },
+                        ]
+                      : [],
+                    sorts: [],
                   });
                   setViews((current) => [...current, created.body]);
                   setViewId(created.body.id);
-                  setViewForm({ id: "", name: "", columns: "" });
+                  setViewForm({
+                    id: "",
+                    name: "",
+                    columns: "",
+                    filterField: "",
+                    filterOperator: "eq",
+                    filterValue: "",
+                  });
                 })
               }
               onCreateTable={(event) =>
@@ -501,8 +526,22 @@ function RecordsPanel(props: {
   tables: TableDefinition[];
   views: ViewDefinition[];
   viewId: string;
-  viewForm: { id: string; name: string; columns: string };
-  setViewForm: (value: { id: string; name: string; columns: string }) => void;
+  viewForm: {
+    id: string;
+    name: string;
+    columns: string;
+    filterField: string;
+    filterOperator: ViewFilter["operator"];
+    filterValue: string;
+  };
+  setViewForm: (value: {
+    id: string;
+    name: string;
+    columns: string;
+    filterField: string;
+    filterOperator: ViewFilter["operator"];
+    filterValue: string;
+  }) => void;
   selectedTable?: TableDefinition;
   records: RecordItem[];
   tableForm: {
@@ -675,6 +714,39 @@ function RecordsPanel(props: {
               setViewForm({ ...viewForm, columns: event.target.value })
             }
           />
+          <input
+            placeholder="过滤字段（如 data.status）"
+            value={viewForm.filterField}
+            onChange={(event) =>
+              setViewForm({ ...viewForm, filterField: event.target.value })
+            }
+          />
+          <div className="filter-row">
+            <select
+              value={viewForm.filterOperator}
+              onChange={(event) =>
+                setViewForm({
+                  ...viewForm,
+                  filterOperator: event.target.value as ViewFilter["operator"],
+                })
+              }
+            >
+              <option value="eq">等于</option>
+              <option value="contains">包含</option>
+              <option value="ne">不等于</option>
+              <option value="gt">大于</option>
+              <option value="gte">大于等于</option>
+              <option value="lt">小于</option>
+              <option value="lte">小于等于</option>
+            </select>
+            <input
+              placeholder="过滤值"
+              value={viewForm.filterValue}
+              onChange={(event) =>
+                setViewForm({ ...viewForm, filterValue: event.target.value })
+              }
+            />
+          </div>
           <button className="secondary-button" disabled={!tableId}>
             创建视图
           </button>
