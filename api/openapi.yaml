@@ -11,6 +11,7 @@ tags:
   - name: Identity
   - name: Records
   - name: Operations
+  - name: Bindings
 paths:
   /healthz:
     get:
@@ -67,6 +68,79 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ReadinessResponse"
+  /api/v1/bindings/snapshots:
+    post:
+      tags: [Bindings]
+      operationId: createBindingSnapshot
+      summary: Create an immutable workflow snapshot
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BindingSnapshotCreateRequest"
+      responses:
+        "201":
+          description: Snapshot created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BindingSnapshot"
+        "200":
+          description: Existing snapshot returned for an idempotent replay.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BindingSnapshot"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          description: Binding service is not configured.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/bindings/snapshots/{snapshotId}:
+    parameters:
+      - $ref: "#/components/parameters/SnapshotId"
+    get:
+      tags: [Bindings]
+      operationId: getBindingSnapshot
+      summary: Read an immutable workflow snapshot
+      parameters:
+        - $ref: "#/components/parameters/TenantIdQuery"
+        - $ref: "#/components/parameters/WorkspaceIdQuery"
+      responses:
+        "200":
+          description: Immutable snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BindingSnapshot"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          description: Binding service is not configured.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/v1/me:
     get:
       tags: [Identity]
@@ -603,6 +677,14 @@ components:
         maxLength: 128
     RecordId:
       name: recordId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+    SnapshotId:
+      name: snapshotId
       in: path
       required: true
       schema:
@@ -1366,6 +1448,79 @@ components:
           type: string
           format: date-time
         updatedAt:
+          type: string
+          format: date-time
+    BindingSnapshotCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [tenantId, workspaceId, recordRef, schemaId, schemaVersion, expectedRecordVersion, purpose]
+      properties:
+        tenantId:
+          type: string
+          minLength: 1
+          maxLength: 256
+        workspaceId:
+          type: string
+          minLength: 1
+          maxLength: 256
+        recordRef:
+          type: string
+          minLength: 5
+          maxLength: 512
+          pattern: "^[^\\s:]+:[^\\s:]+:[^\\s:]+$"
+        schemaId:
+          type: string
+          minLength: 1
+          maxLength: 256
+        schemaVersion:
+          type: integer
+          minimum: 1
+        expectedRecordVersion:
+          type: integer
+          minimum: 1
+        expectedSourceVersion:
+          type: integer
+          minimum: 0
+          default: 0
+        purpose:
+          type: string
+          minLength: 1
+          maxLength: 128
+    BindingSnapshot:
+      type: object
+      additionalProperties: false
+      required: [snapshotId, tenantId, workspaceId, recordRef, schemaId, schemaVersion, recordVersion, sourceVersion, purpose, snapshotHash, data, createdAt]
+      properties:
+        snapshotId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        tenantId:
+          type: string
+        workspaceId:
+          type: string
+        recordRef:
+          type: string
+        schemaId:
+          type: string
+        schemaVersion:
+          type: integer
+          minimum: 1
+        recordVersion:
+          type: integer
+          minimum: 1
+        sourceVersion:
+          type: integer
+          minimum: 0
+        purpose:
+          type: string
+        snapshotHash:
+          type: string
+          pattern: "^sha256:[0-9a-f]{64}$"
+        data:
+          type: object
+          additionalProperties: true
+        createdAt:
           type: string
           format: date-time
     SchemaDraftRequest:

@@ -246,6 +246,21 @@ func (repository *MongoRepository) GetRecord(ctx context.Context, tenantID, work
 	return record, nil
 }
 
+// GetRecordBySource resolves a projection through its stable external
+// reference. Binding adapters use this method instead of exposing Mongo
+// queries or internal record IDs to workflow code.
+func (repository *MongoRepository) GetRecordBySource(ctx context.Context, tenantID, workspaceID, system, recordType, sourceID string) (Record, error) {
+	var record Record
+	err := repository.records.FindOne(ctx, bson.D{{Key: "tenantId", Value: tenantID}, {Key: "workspaceId", Value: workspaceID}, {Key: "source.system", Value: system}, {Key: "source.type", Value: recordType}, {Key: "source.id", Value: sourceID}}).Decode(&record)
+	if errors.Is(err, mongo.ErrNoDocuments) {
+		return Record{}, ErrRecordNotFound
+	}
+	if err != nil {
+		return Record{}, fmt.Errorf("find record by source: %w", err)
+	}
+	return record, nil
+}
+
 func (repository *MongoRepository) UpdateRecord(ctx context.Context, record Record, expectedVersion int64) (Record, error) {
 	if err := record.Validate(); err != nil {
 		return Record{}, err

@@ -96,10 +96,10 @@
 
 | ID | 仓库 | 任务 | 状态 | 依赖 | 验收 |
 | --- | --- | --- | --- | --- | --- |
-| RH-M6-060 | Record Hub | snapshot persistence/API | TODO | M3,M2-025 | immutable、operation idempotency、hash |
-| RH-M6-061 | Record Hub | machine client workspace/purpose policy | TODO | 060,M1-014 | 跨 tenant/resource/purpose 拒绝 |
-| RH-M6-062 | Record Hub | Go client generation/binding facade | TODO | M0-004,060 | timeout/cancel/error mapping |
-| RH-M6-063 | Record Hub | Java client generation/binding facade | TODO | M0-004,060 | 无 Temporal/Spring 强依赖；Kotlin 可调用 |
+| RH-M6-060 | Record Hub | snapshot persistence/API | DONE | M3,M2-025 | immutable snapshot store/API；同一 operation ID replay；不同请求 hash 冲突；canonical hash 覆盖 schema/record/source version 与 data |
+| RH-M6-061 | Record Hub | machine client workspace/purpose policy | DONE | 060,M1-014 | 精确 issuer/subject/audience/tenant/workspace/resource/purpose allowlist；跨 scope、purpose、resource、audience 均拒绝；不伪造 Dex password grant |
+| RH-M6-062 | Record Hub | Go client generation/binding facade | DONE | M0-004,060 | `sdk/go/recordhub` context-aware HTTP facade；bounded response、Idempotency-Key、timeout/cancel、typed API error |
+| RH-M6-063 | Record Hub | Java client generation/binding facade | DONE | M0-004,060 | `sdk/java` Java 17+/Kotlin-callable facade；无 Temporal/Spring 强依赖；typed snapshot/error 与 timeout |
 | RH-M6-064 | Fluxion | Temporal diagnostic Activity/Workflow | TODO | 063,M5-055 | history 仅 ref/hash；Activity retry 原 operation ID |
 | RH-M6-065 | Fluxion | Temporal replay/failure tests | TODO | 064 | snapshot success、timeout、duplicate、replay |
 | RH-M6-066 | Bids | Conductor diagnostic Worker/Workflow | TODO | 062,M5-058 | task output 仅 ref/hash；retry 幂等 |

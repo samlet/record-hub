@@ -1,0 +1,11 @@
+{
+  "schemaId": "urn:record-hub:summary:project:v1",
+  "schemaVersion": 1,
+  "recordVersion": 8,
+  "sourceVersion": 17,
+  "data": {
+    "projectId": "project-1",
+    "status": "ACTIVE"
+  },
+  "expectedHash": "sha256:2a080a9c320e6eb806bf7bf2dcd772feb3cf4989ad3537a82792accde0ed3594"
+}

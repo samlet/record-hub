@@ -46,6 +46,50 @@ Workflow history 保存引用、版本、hash 和安全摘要，不保存完整�
 7. 结果通过 event/result receipt 返回并唤醒 Workflow。
 ```
 
+## 3.1 Snapshot API（M6-060）
+
+```http
+POST /api/v1/bindings/snapshots
+Idempotency-Key: <stable operation id>
+```
+
+请求必须包含 `tenantId`、`workspaceId`、`recordRef`、`schemaId`、
+`schemaVersion`、`expectedRecordVersion` 和 `purpose`；可选的
+`expectedSourceVersion` 为 `0` 时表示不对 source version 做额外约束。`recordRef`
+严格使用 `system:type:id` 三段格式。
+
+Record Hub 先按租户/workspace/身份授权，再读取当前记录并校验 schema、record version
+和 source version。成功后持久化不可变 snapshot；相同 `Idempotency-Key` 和请求 hash
+返回原 snapshot（HTTP 200），hash 不同返回 `409 IDEMPOTENCY_CONFLICT`。snapshot hash
+覆盖 schema ID/version、record/source version 和 canonical JSON data，响应不暴露内部
+operation hash。
+
+```json
+{
+  "snapshotId": "uuid",
+  "recordRef": "fluxion:PROJECT:uuid",
+  "schemaId": "urn:record-hub:summary:project:v1",
+  "schemaVersion": 1,
+  "recordVersion": 8,
+  "sourceVersion": 17,
+  "purpose": "diagnostic",
+  "snapshotHash": "sha256:...",
+  "data": {}
+}
+```
+
+Snapshot 仅允许读取；没有删除、更新或“读取最新版本覆盖旧 snapshot”的 API。
+
+## 3.2 Machine policy（M6-061）
+
+服务 principal 不继承人类 workspace role。每个机器身份必须命中一条精确 allowlist：
+`(issuer, subject, audience, tenant, workspace, resource system, resource type, purpose)`
+全部匹配才允许创建或读取 snapshot。策略没有 wildcard 或跨 tenant fallback；Dex
+尚未提供稳定 `client_credentials` 时不得用 password grant 伪造机器身份。
+
+Go 与 Java/Kotlin facade 位于 `sdk/`，只依赖公共 HTTP/OpenAPI 契约；Activity/Worker
+必须把同一个 operation ID 传给每次重试。
+
 ## 4. Temporal 适配
 
 - 所有 Record Hub I/O 只能在 Activity/Nexus handler 中发生，不能在 Workflow deterministic code 中直接发 HTTP/NATS/Mongo 请求。
@@ -70,4 +114,3 @@ Workflow history 保存引用、版本、hash 和安全摘要，不保存完整�
 - `COMPENSATE`：执行已登记补偿。
 
 涉及金额、定标、签署、审批和付款的默认策略是 `MANUAL_REVIEW`，不得自动覆盖新版本。
-
