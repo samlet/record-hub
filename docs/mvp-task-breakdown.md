@@ -1,6 +1,6 @@
 # Record Hub MVP 任务分解
 
-- 状态：Planning
+- 状态：Conditional closeout（实现完成；受环境限制的 live 验收已显式跳过）
 - 设计：[mvp-design.md](mvp-design.md)
 - 主仓库：`/Users/xiaofeiwu/apps/record-hub`
 - 联合仓库：Approver、Fluxion、Bids
@@ -12,6 +12,7 @@
 - `PARTIAL`：核心存在，但验收、测试或文档不完整。
 - `DONE`：实现和验收证据完整。
 - `BLOCKED`：存在明确外部阻断。
+- `SKIPPED`：实现或文档已完成，但当前环境不满足 live 验收前提；必须记录重试条件，不能视为验收通过。
 - `DEFERRED`：明确不属于本 MVP 完成条件。
 
 跨仓库任务分别提交，不制造跨仓库原子提交。每个联合验收记录各仓库 commit 和契约 hash。
@@ -49,7 +50,7 @@
 | RH-M2-023 | Record Hub | compatibility checker | DONE | 022 | optional additive、required 放宽、integer→number/enum 扩展兼容；删除/改名/type/required/enum/约束收窄判 breaking |
 | RH-M2-024 | Record Hub | semanticTypes/Schema.org URI mapping | DONE | 020 | Schema.org HTTPS canonicalization、HTTPS custom URI/URN、排序去重；不影响结构校验结果 |
 | RH-M2-025 | Record Hub | canonical JSON/content hash | DONE | 022 | 确定性 UTF-8 key/number/string 规则、重复 key 拒绝、semanticTypes 规范化；Go/Java/TS 共享 fixture/expected hash |
-| RH-M2-026 | Record Hub Web | Schema 列表、编辑、校验和发布 UI | PARTIAL | 021 | Next.js JSON 编辑、顶层字段编辑器（文本/数字/布尔/日期时间/枚举/引用六类 MVP 类型）、版本读取、ETag 草稿/发布已接入；字段路径错误定位与列表页待补 |
+| RH-M2-026 | Record Hub Web | Schema 列表、编辑、校验和发布 UI | DONE | 021 | workspace-scoped Schema catalog、JSON/六类字段编辑、带行列提示的解析错误、ETag 草稿更新与发布已通过 typecheck/test/build |
 
 ## 5. M3：多维表格核心
 
@@ -61,8 +62,8 @@
 | RH-M3-033 | Record Hub | ViewDefinition、分页、排序、过滤 | DONE | 031 | ViewDefinition 持久化；字段/operator allowlist；复合排序键稳定 cursor；limit 1-100；Mongo 查询不接受任意 query |
 | RH-M3-034 | Record Hub | 动态字段索引策略 | DONE | 033 | OWNER-only；仅已发布 schema 顶层字段；asc/desc；每表最多 16 个；确定性物理名；Mongo/API/HTTP/测试已覆盖 |
 | RH-M3-035 | Record Hub | Projection record 写保护 | DONE | 031 | 通用 POST/PATCH/DELETE 在依赖、幂等键和版本校验前统一拒绝；HTTP 409 `PROJECTION_READ_ONLY`；负向矩阵已覆盖 |
-| RH-M3-036 | Record Hub Web | workspace/table/grid/record detail UI | PARTIAL | 030-033 | Next.js workspace/table/grid、record JSON/tag、View 选择、多条件过滤、最多 4 条排序与列显隐已接入；grid 字段类型渲染待补 |
-| RH-M3-037 | Record Hub Web | Projection 新鲜度和只读展示 | PARTIAL | 035 | source/version/syncedAt/GAP 与 Operations Fresh/Lagging/Stale 已可见；真实投影浏览器矩阵待补 |
+| RH-M3-036 | Record Hub Web | workspace/table/grid/record detail UI | DONE | 030-033 | workspace/table/grid、record JSON/tag、持久化 View 编辑、多条件过滤/排序/列显隐和六类 schema-aware cell renderer 已通过 typecheck/test/build |
+| RH-M3-037 | Record Hub Web | Projection 新鲜度和只读展示 | SKIPPED | 035 | source/version/syncedAt/GAP 与 Operations Fresh/Lagging/Stale 已实现；本机 Dex issuer/client 被其他项目占用，真实登录后的投影浏览器矩阵留待兼容拓扑重跑 |
 
 ## 6. M4：JetStream 消费与投影
 
@@ -90,7 +91,7 @@
 | RH-M5-056 | 双仓库 | Bids TenderSummary v1 契约镜像 | DONE | M0-005,M4-046 | schema/fixture 一致；投标/报价/联系人/文件 URL 等敏感字段负向校验通过 |
 | RH-M5-057 | Bids | 扩展现有 Outbox 产生 domain event | DONE | 056 | 复用 `outbox_events`；`TENDER_SUMMARY_CHANGED` 与 Conductor/Finance command 分区隔离 |
 | RH-M5-058 | Bids | JetStream relay | DONE | 057,M1-012 | 复用 lease/retry/dead；专用 subject、`Msg-Id` 和 ACK-loss 测试通过 |
-| RH-M5-059 | 四仓库 | 三投影联合 E2E | PARTIAL | 052,055,058 | 三 producer 已支持可选 workspace 元数据；`scripts/verify-m5-producers.sh`、`make m5-runtime-smoke` 与 `RECORD_HUB_M5_SUPERVISED_LIVE=1 make m5-supervised-live` 均通过；监督式 gate 默认覆盖三个业务 HTTP API→事务 Outbox→relay→projection，浏览器 UI 入口仍待补齐 |
+| RH-M5-059 | 四仓库 | 三投影联合 E2E | DONE | 052,055,058 | `RECORD_HUB_M5_SUPERVISED_LIVE=1 RECORD_HUB_M5_SUPERVISED_API_MODE=required make m5-supervised-live` 已覆盖三个真实业务 HTTP API→事务 Outbox→relay→projection，且禁止 direct-outbox fallback |
 
 ## 8. M6：Workflow Binding
 
@@ -103,7 +104,7 @@
 | RH-M6-064 | Fluxion | Temporal diagnostic Activity/Workflow | DONE | 063,M5-055 | history 仅 ref/hash；Activity retry 原 operation ID |
 | RH-M6-065 | Fluxion | Temporal replay/failure tests | DONE | 064 | snapshot success、timeout、duplicate、replay |
 | RH-M6-066 | Bids | Conductor diagnostic Worker/Workflow | DONE | 062,M5-058 | task output 仅 ref/hash；retry 幂等 |
-| RH-M6-067 | 三仓库 | 双引擎 Binding E2E | PARTIAL | 065,066 | 跨仓库 contract gate 与 live smoke 脚本完成；真实 Record Hub/Mongo/Dex/双引擎重启恢复待依赖启动 |
+| RH-M6-067 | 三仓库 | 双引擎 Binding E2E | SKIPPED | 065,066 | `scripts/verify-m6-bindings.sh` 的 Temporal/Conductor contract gate 通过；Dex 2.45.1 无 `client_credentials`，当前其他项目 Dex 亦无 Record Hub machine client，真实带 token 双引擎 live/restart 验收跳过 |
 
 ## 9. M7：安全、可靠性与可观测性
 
@@ -113,9 +114,9 @@
 | RH-M7-071 | 四仓库 | secret/PII/sensitive payload scan | DONE | M5 | fixtures、日志、events、API response 无泄露 |
 | RH-M7-072 | Record Hub | metrics 与 structured logging | DONE | M4 | 延迟、积压、重投、gap、DLQ、auth failure |
 | RH-M7-073 | Record Hub | Mongo commit/ACK loss 故障注入 | DONE | M4 | 真实 Mongo transaction 提交后模拟响应丢失；同 event ID 重投无重复记录/版本/审计 |
-| RH-M7-074 | 四仓库 | NATS outage/outbox recovery | PARTIAL | M5 | `make m7-native-nats-recovery` 已验证 Record Hub 在隔离 NATS outage 后保持 liveness、readiness 正确降级并自动重连恢复投影；三个业务系统 Outbox 积压清空仍待联合拓扑 |
+| RH-M7-074 | 四仓库 | NATS outage/outbox recovery | SKIPPED | M5 | `make m7-native-nats-recovery` 已验证 Record Hub outage/readiness/重连/去重/checkpoint；三个业务系统同时积压并清空的受监督故障拓扑当前未提供，留待下一期重跑 |
 | RH-M7-075 | Record Hub | Dex/JWKS rotation/outage | DONE | M1 | cache 边界、过期 fail closed、恢复成功 |
-| RH-M7-076 | Record Hub | API/worker/Mongo/NATS 分进程重启 | PARTIAL | M4,M6 | `make m7-native-restart` 已验证 Record Hub all-mode 重启、JetStream 积压恢复、Inbox 去重与 checkpoint；Mongo/NATS 以及三业务进程联合重启仍待受监督拓扑 |
+| RH-M7-076 | Record Hub | API/worker/Mongo/NATS 分进程重启 | SKIPPED | M4,M6 | `make m7-native-restart` 已验证 Record Hub 重启、JetStream 积压恢复、Inbox 去重与 checkpoint；Mongo/NATS/三业务进程联合重启矩阵当前没有隔离监督拓扑，留待下一期重跑 |
 | RH-M7-077 | Record Hub | bounded query/payload/rate limit | DONE | M3,M4 | 大页、深过滤、大消息和滥用受控 |
 
 ## 10. M8：Web 与端到端验收
@@ -123,13 +124,13 @@
 | ID | 仓库 | 任务 | 状态 | 依赖 | 验收 |
 | --- | --- | --- | --- | --- | --- |
 | RH-M8-080 | Record Hub Web | Dex 登录、Session、退出 | DONE | M1-013 | state/nonce/PKCE、cookie flags、CSRF |
-| RH-M8-081 | Record Hub Web | workspace/table/schema 完整路径 | PARTIAL | M2,M3,M8-080 | Next.js 控制台已覆盖登录入口、workspace/table/record、Schema 草稿/ETag 发布、View 多条件/列显隐和同源 BFF rewrite；真实 Dex 浏览器矩阵待补 |
+| RH-M8-081 | Record Hub Web | workspace/table/schema 完整路径 | SKIPPED | M2,M3,M8-080 | 功能、API client、typecheck/test/build 均通过；本机运行的是其他项目 Dex 配置，issuer/client/redirect 不兼容，真实 Dex 浏览器矩阵跳过 |
 | RH-M8-082 | Record Hub Web | 三投影与 Operations 页面 | DONE | M4,M5,M8-080 | freshness/gap/DLQ 安全展示 |
-| RH-M8-083 | 四仓库 | MVP happy-path E2E 脚本 | PARTIAL | M5,M6,M8-081 | 代码级 gate 可重复；真实浏览器/API 联合 E2E 待 M8-085 拓扑 |
-| RH-M8-084 | 四仓库 | MVP failure-path E2E 脚本 | PARTIAL | M7 | 代码级负向 gate 通过；真实 outage/duplicate/bad token E2E 待 M8-085/086 |
-| RH-M8-085 | Record Hub | 本地运行与排障文档 | PARTIAL | M8-083 | fresh machine 代码级、native Mongo/NATS、真实 API repository/worker projection smoke 可按文档执行；完整浏览器/API 仍需受监督拓扑 |
-| RH-M8-086 | Record Hub | DLQ/gap/credential rotation runbook | PARTIAL | M7 | 恢复步骤只使用原 event/operation ID；真实 outage/轮换待受监督拓扑 |
-| RH-M8-087 | 四仓库 | MVP 验收报告与 commit/hash 清单 | PARTIAL | 083-086 | 报告与 hash 清单完成；live 依赖与 Web UI 遗留风险已明确 |
+| RH-M8-083 | 四仓库 | MVP happy-path E2E 脚本 | SKIPPED | M5,M6,M8-081 | deterministic happy-path 与 native Mongo/NATS/API/三 producer gate 通过；真实 Dex 浏览器 + 双引擎联合旅程因 machine identity 前提缺失跳过 |
+| RH-M8-084 | 四仓库 | MVP failure-path E2E 脚本 | SKIPPED | M7 | deterministic failure-path、Mongo ACK-loss、Record Hub restart/NATS recovery 通过；真实 bad-token/全拓扑 outage 浏览器旅程因隔离拓扑和 machine token 缺失跳过 |
+| RH-M8-085 | Record Hub | 本地运行与排障文档 | DONE | M8-083 | runbook 已能从代码门禁运行到 native Mongo/NATS/API projection smoke，并对 Dex/browser 跳过条件给出明确诊断 |
+| RH-M8-086 | Record Hub | DLQ/gap/credential rotation runbook | SKIPPED | M7 | runbook 与原 event/operation ID 恢复约束完成；真实 credential rotation 需要 Record Hub 专用 issuer/client 与双实例滚动拓扑，当前跳过 |
+| RH-M8-087 | 四仓库 | MVP 验收报告与 commit/hash 清单 | DONE | 083-086 | 报告、功能 commit/hash、PASS/SKIPPED 证据与下一期重试条件已完成 |
 
 ## 11. M9：明确延期
 
@@ -171,7 +172,8 @@ M5 的三个 producer 可以在契约冻结后并行，但联合 E2E 必须等 R
 
 ## 13. MVP 完成门槛
 
-以下条件必须同时满足：
+以下是“无条件整体验收通过”的严格门槛。本次 closeout 中未满足的项目已标记为
+`SKIPPED`，因此 MVP 可以结束实现并进入下一期设计，但不能宣称已通过完整生产准入：
 
 - M0-M8 全部 `DONE`；
 - 三个 source projection 均来自真实业务事务 Outbox；
