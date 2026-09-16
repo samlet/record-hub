@@ -175,6 +175,17 @@ make m7-native-restart
 最后检查 Mongo 中记录、checkpoint、Inbox 和 audit 均无重复且状态为 `CURRENT`。它不
 停止 MongoDB/NATS，也不覆盖已有租户数据。
 
+验证 NATS outage/recovery（脚本会在临时端口启动并停止一个隔离的 NATS JetStream，
+不会触碰本机 `:4222` 服务）：
+
+```bash
+make m7-native-nats-recovery
+```
+
+该 gate 会确认 NATS 不可用时 Record Hub 进程仍存活、`/healthz` 保持可用而 `/readyz`
+正确降级为 503；NATS 用同一 JetStream store 恢复后，Record Hub 自动重连并完成重复
+事件的单次投影。三个业务系统自身的 Outbox 积压恢复仍需在联合拓扑中验收。
+
 ## 4. 停止与排障
 
 ```bash
