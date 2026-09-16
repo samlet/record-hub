@@ -5,6 +5,7 @@
 data/
 dist/
 build/
+sdk/java/target/
 coverage/
 node_modules/
 /.idea/
