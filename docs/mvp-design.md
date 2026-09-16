@@ -272,6 +272,10 @@ DEAD_LETTERS
 
 Record Hub 使用 durable pull consumer：
 
+- Go runner 使用 server-side durable consumer，Fetch 参数（batch、timeout、重试和 drain）均有上限；
+- NATS 连接启用无限重连，consumer lookup/fetch 失败只进入有界退避；handler 成功后使用
+  `DoubleAck`，失败发送 `NAK`，取消时停止拉取并给当前消息一个 bounded drain 窗口。
+
 ```text
 record-hub-approver-projection-v1
 record-hub-fluxion-projection-v1
