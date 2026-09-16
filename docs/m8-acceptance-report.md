@@ -20,13 +20,13 @@ Binding E2E 和 Next.js grid UI 仍是遗留项。
 | --- | --- | --- |
 | M0 | DONE | Go module、OpenAPI、envelope、配置/日志、CI 基线 |
 | M1 | DONE（M1-014 DEFERRED） | Mongo/NATS/Dex 本地拓扑、OIDC verifier/JWKS、membership；Dex stable 不提供 client_credentials |
-| M2 | PARTIAL | Schema server/persistence/API 完成；Schema Web UI（M2-026）仍 TODO |
-| M3 | PARTIAL | workspace/table/record/view/index server 完成；grid/record UI（M3-036/037）仍 TODO |
+| M2 | PARTIAL | Schema server/persistence/API 与 Next.js Schema 编辑基础完成；字段级 UI 验收仍待浏览器矩阵 |
+| M3 | PARTIAL | workspace/table/record/view/index server 与 Next.js grid/record 基础完成；视图/字段编辑仍待浏览器矩阵 |
 | M4 | DONE | durable projection、Inbox、事务 checkpoint、gap/retry/DLQ、Operations API/UI |
-| M5 | PARTIAL | 三 producer contract/outbox/relay gate、`make m5-runtime-smoke` 和 `make m5-supervised-live` 均通过；监督式 gate 默认已覆盖三业务 HTTP API→事务 Outbox→relay→projection，浏览器 UI 入口仍未纳入 |
+| M5 | PARTIAL | 三 producer contract/outbox/relay gate、`make m5-runtime-smoke` 和 `make m5-supervised-live` 均通过；监督式 gate 默认已覆盖三业务 HTTP API→事务 Outbox→relay→projection，浏览器端投影旅程仍待真实拓扑 |
 | M6 | PARTIAL | Temporal/Conductor diagnostic binding 与 client gate 通过；真实双引擎 + Record Hub 重启 E2E 待依赖 |
 | M7 | 混合 | scope/payload/metrics/Dex JWKS/bounds DONE；Mongo ACK loss、Record Hub native restart 与隔离 NATS outage/recovery 已有 live 证据；三业务进程完整重启保持 PARTIAL |
-| M8 | 混合 | OIDC/BFF/Operations 代码级 gate、native API repository/worker smoke 完成；happy/failure/live runbook 均明确 live 限制；Web UI 浏览器矩阵仍 PARTIAL |
+| M8 | 混合 | OIDC/BFF/Operations 代码级 gate、Next.js UI 构建与 native API repository/worker smoke 完成；happy/failure/live runbook 均明确 live 限制；Web UI 浏览器矩阵仍 PARTIAL |
 | M9 | DEFERRED | Command Gateway、审批迁移、Storage Gateway、Functions、Presence、GraphQL、生产 HA |
 
 ## 可重复证据
@@ -83,8 +83,9 @@ make dex-smoke
    未配置 URI 时仍保留 dependency-free contract boundary。Approver、Fluxion、Bids 的
    新 summary 事件可通过各自环境变量写入 `metadata.workspaceId`；未配置的历史事件
    仍需受校验的 tenant→workspace map 或显式 fallback，不能隐式猜 scope。
-2. `web/` Next.js 项目尚未落地，M2-026、M3-036、M3-037 的字段编辑、grid、tag、
-   filter、projection freshness 浏览器路径未形成真实 UI 矩阵；M8-081 相应保持
+2. `web/` Next.js 控制台已落地最小闭环（登录入口、workspace/table/record、Schema
+   草稿/发布、projection operations）；M2-026、M3-036、M3-037 的字段编辑、grid、
+   tag、filter、projection freshness 真实浏览器路径尚未形成矩阵，M8-081 相应保持
    PARTIAL。
 3. pending OIDC state 当前是有界一次性内存 store；多实例部署前需替换共享短期 store。
    Session secret 当前单 key，轮换会使所有浏览器 session 失效。
@@ -98,8 +99,9 @@ make dex-smoke
    Approver application、Fluxion project、Bids tender 的真实 HTTP API→事务 Outbox→relay→
    projection，浏览器 UI 和完整用户旅程仍待补齐。使用 `..._API_MODE=required` 可在本地
    依赖齐全时禁止 direct-outbox fallback。
-2. 完成 `web/` Next.js BFF/grid，复用本报告中的 Go auth/session/CSRF contract，
-   把 OWNER/EDITOR/VIEWER 矩阵提升为真实浏览器测试。
+2. 在 `web/` Next.js 基础上补字段/视图编辑和真实 Dex/Mongo/NATS/Temporal/Conductor
+   监督式浏览器路径，复用本报告中的 Go auth/session/CSRF contract，把
+   OWNER/EDITOR/VIEWER 矩阵提升为真实浏览器测试。
 3. 按 `m8-recovery-runbook.md` 做一次原 event ID 的 GAP/DLQ 重放、ACK-loss、凭据
    滚动轮换并保存 backlog/lease/audit 证据；再将 native restart/recovery gate 扩展
    到三业务进程和依赖的受监督重启矩阵。

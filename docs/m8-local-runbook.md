@@ -18,6 +18,19 @@ make m8-happy-path
 make m8-failure-path
 ```
 
+启动 Web 控制台（Next.js）时，Go API/BFF 必须先在 `127.0.0.1:8080` 运行并打开
+`RECORD_HUB_WEB_ENABLED=true`。控制台通过同源 rewrite 转发 `/api` 和 `/auth`，不会
+把 Dex client secret 放进浏览器：
+
+```bash
+cd web
+npm ci
+RECORD_HUB_API_ORIGIN=http://127.0.0.1:8080 npm run dev
+```
+
+然后打开 <http://127.0.0.1:3000>，使用 Dex 登录并输入 tenant ID。生产环境应让受信任
+的反向代理把 Web 与 BFF 置于同一 HTTPS origin，并开启 secure cookies。
+
 ## 2. 启动本地依赖
 
 ### 2.1 Native 服务（推荐用于本机已有安装）
