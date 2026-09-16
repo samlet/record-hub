@@ -19,8 +19,16 @@
 
 .filter-row {
   display: grid;
-  grid-template-columns: minmax(100px, 0.8fr) minmax(0, 1.2fr);
+  grid-template-columns: minmax(0, 1fr) 110px minmax(0, 1fr) auto;
   gap: 8px;
+}
+
+.view-builder-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 .danger-button {
@@ -82,5 +90,9 @@
 
   .schema-field-row {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .filter-row {
+    grid-template-columns: 1fr;
   }
 }

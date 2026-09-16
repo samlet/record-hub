@@ -69,6 +69,38 @@ describe("Record Hub browser API client", () => {
     );
   });
 
+  it("serializes bounded multi-condition view definitions", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ id: "view-1" }));
+    await api.createView("table-1", {
+      tenantId: "tenant-1",
+      workspaceId: "workspace-1",
+      id: "view-1",
+      name: "待处理",
+      columns: ["data.status", "data.priority"],
+      filters: [
+        { field: "data.status", operator: "eq", value: "OPEN" },
+        { field: "data.priority", operator: "gte", value: 3 },
+      ],
+      sorts: [
+        { field: "data.priority", direction: "desc" },
+        { field: "data.status", direction: "asc" },
+      ],
+    });
+
+    const [, init] = fetchMock.mock.calls[0];
+    expect(JSON.parse(String(init?.body))).toMatchObject({
+      tableId: "table-1",
+      filters: [
+        { field: "data.status", operator: "eq", value: "OPEN" },
+        { field: "data.priority", operator: "gte", value: 3 },
+      ],
+      sorts: [
+        { field: "data.priority", direction: "desc" },
+        { field: "data.status", direction: "asc" },
+      ],
+    });
+  });
+
   it("decodes bounded API errors into ApiError", async () => {
     fetchMock.mockResolvedValue(
       jsonResponse(

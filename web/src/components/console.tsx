@@ -24,6 +24,40 @@ const consumerOptions = [
 const initialSchema =
   '{\n  "$schema": "https://json-schema.org/draft/2020-12/schema",\n  "type": "object",\n  "properties": {},\n  "additionalProperties": true\n}';
 
+type ViewFilterDraft = {
+  field: string;
+  operator: ViewFilter["operator"];
+  value: string;
+};
+
+type ViewSortDraft = { field: string; direction: "asc" | "desc" };
+
+type ViewForm = {
+  id: string;
+  name: string;
+  columns: string;
+  filters: ViewFilterDraft[];
+  sorts: ViewSortDraft[];
+};
+
+const emptyViewForm = (): ViewForm => ({
+  id: "",
+  name: "",
+  columns: "",
+  filters: [{ field: "", operator: "eq", value: "" }],
+  sorts: [{ field: "", direction: "asc" }],
+});
+
+function parseFilterValue(raw: string): unknown {
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return raw;
+  }
+}
+
 export function Console() {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [tenantId, setTenantId] = useState("tenant-local");
@@ -35,16 +69,7 @@ export function Console() {
   const [editingRecord, setEditingRecord] = useState<RecordItem | null>(null);
   const [views, setViews] = useState<ViewDefinition[]>([]);
   const [viewId, setViewId] = useState("");
-  const [viewForm, setViewForm] = useState({
-    id: "",
-    name: "",
-    columns: "",
-    filterField: "",
-    filterOperator: "eq" as ViewFilter["operator"],
-    filterValue: "",
-    sortField: "",
-    sortDirection: "asc" as "asc" | "desc",
-  });
+  const [viewForm, setViewForm] = useState<ViewForm>(emptyViewForm);
   const [tab, setTab] = useState<Tab>("records");
   const [consumer, setConsumer] = useState(consumerOptions[0][0]);
   const [operations, setOperations] = useState<OperationsSnapshot | null>(null);
@@ -371,36 +396,20 @@ export function Console() {
                       .split(",")
                       .map((column) => column.trim())
                       .filter(Boolean),
-                    filters: viewForm.filterField
-                      ? [
-                          {
-                            field: viewForm.filterField,
-                            operator: viewForm.filterOperator,
-                            value: viewForm.filterValue,
-                          },
-                        ]
-                      : [],
-                    sorts: viewForm.sortField
-                      ? [
-                          {
-                            field: viewForm.sortField,
-                            direction: viewForm.sortDirection,
-                          },
-                        ]
-                      : [],
+                    filters: viewForm.filters
+                      .filter((filter) => filter.field.trim())
+                      .map((filter) => ({
+                        ...filter,
+                        field: filter.field.trim(),
+                        value: parseFilterValue(filter.value),
+                      })),
+                    sorts: viewForm.sorts
+                      .filter((sort) => sort.field.trim())
+                      .map((sort) => ({ ...sort, field: sort.field.trim() })),
                   });
                   setViews((current) => [...current, created.body]);
                   setViewId(created.body.id);
-                  setViewForm({
-                    id: "",
-                    name: "",
-                    columns: "",
-                    filterField: "",
-                    filterOperator: "eq",
-                    filterValue: "",
-                    sortField: "",
-                    sortDirection: "asc",
-                  });
+                  setViewForm(emptyViewForm());
                 })
               }
               onCreateTable={(event) =>
@@ -600,26 +609,8 @@ function RecordsPanel(props: {
   tables: TableDefinition[];
   views: ViewDefinition[];
   viewId: string;
-  viewForm: {
-    id: string;
-    name: string;
-    columns: string;
-    filterField: string;
-    filterOperator: ViewFilter["operator"];
-    filterValue: string;
-    sortField: string;
-    sortDirection: "asc" | "desc";
-  };
-  setViewForm: (value: {
-    id: string;
-    name: string;
-    columns: string;
-    filterField: string;
-    filterOperator: ViewFilter["operator"];
-    filterValue: string;
-    sortField: string;
-    sortDirection: "asc" | "desc";
-  }) => void;
+  viewForm: ViewForm;
+  setViewForm: (value: ViewForm) => void;
   selectedTable?: TableDefinition;
   records: RecordItem[];
   tableForm: {
@@ -819,60 +810,168 @@ function RecordsPanel(props: {
               setViewForm({ ...viewForm, columns: event.target.value })
             }
           />
-          <input
-            placeholder="过滤字段（如 data.status）"
-            value={viewForm.filterField}
-            onChange={(event) =>
-              setViewForm({ ...viewForm, filterField: event.target.value })
-            }
-          />
-          <div className="filter-row">
-            <select
-              value={viewForm.filterOperator}
-              onChange={(event) =>
+          <div className="view-builder-heading">
+            <strong>过滤条件</strong>
+            <button
+              type="button"
+              className="ghost-button"
+              disabled={viewForm.filters.length >= 16}
+              onClick={() =>
                 setViewForm({
                   ...viewForm,
-                  filterOperator: event.target.value as ViewFilter["operator"],
+                  filters: [
+                    ...viewForm.filters,
+                    { field: "", operator: "eq", value: "" },
+                  ],
                 })
               }
             >
-              <option value="eq">等于</option>
-              <option value="contains">包含</option>
-              <option value="ne">不等于</option>
-              <option value="gt">大于</option>
-              <option value="gte">大于等于</option>
-              <option value="lt">小于</option>
-              <option value="lte">小于等于</option>
-            </select>
-            <input
-              placeholder="过滤值"
-              value={viewForm.filterValue}
-              onChange={(event) =>
-                setViewForm({ ...viewForm, filterValue: event.target.value })
-              }
-            />
+              添加条件
+            </button>
           </div>
-          <div className="filter-row">
-            <input
-              placeholder="排序字段（可选）"
-              value={viewForm.sortField}
-              onChange={(event) =>
-                setViewForm({ ...viewForm, sortField: event.target.value })
-              }
-            />
-            <select
-              value={viewForm.sortDirection}
-              onChange={(event) =>
+          {viewForm.filters.map((filter, index) => (
+            <div className="filter-row" key={`filter-${index}`}>
+              <input
+                placeholder="过滤字段（如 data.status）"
+                value={filter.field}
+                onChange={(event) =>
+                  setViewForm({
+                    ...viewForm,
+                    filters: viewForm.filters.map((current, currentIndex) =>
+                      currentIndex === index
+                        ? { ...current, field: event.target.value }
+                        : current,
+                    ),
+                  })
+                }
+              />
+              <select
+                value={filter.operator}
+                onChange={(event) =>
+                  setViewForm({
+                    ...viewForm,
+                    filters: viewForm.filters.map((current, currentIndex) =>
+                      currentIndex === index
+                        ? {
+                            ...current,
+                            operator: event.target
+                              .value as ViewFilter["operator"],
+                          }
+                        : current,
+                    ),
+                  })
+                }
+              >
+                <option value="eq">等于</option>
+                <option value="contains">包含</option>
+                <option value="ne">不等于</option>
+                <option value="in">属于列表</option>
+                <option value="gt">大于</option>
+                <option value="gte">大于等于</option>
+                <option value="lt">小于</option>
+                <option value="lte">小于等于</option>
+              </select>
+              <input
+                placeholder="过滤值（可填 JSON）"
+                value={filter.value}
+                onChange={(event) =>
+                  setViewForm({
+                    ...viewForm,
+                    filters: viewForm.filters.map((current, currentIndex) =>
+                      currentIndex === index
+                        ? { ...current, value: event.target.value }
+                        : current,
+                    ),
+                  })
+                }
+              />
+              {viewForm.filters.length > 1 && (
+                <button
+                  type="button"
+                  className="ghost-button danger-button"
+                  onClick={() =>
+                    setViewForm({
+                      ...viewForm,
+                      filters: viewForm.filters.filter(
+                        (_, currentIndex) => currentIndex !== index,
+                      ),
+                    })
+                  }
+                >
+                  移除
+                </button>
+              )}
+            </div>
+          ))}
+          <div className="view-builder-heading">
+            <strong>排序条件</strong>
+            <button
+              type="button"
+              className="ghost-button"
+              disabled={viewForm.sorts.length >= 4}
+              onClick={() =>
                 setViewForm({
                   ...viewForm,
-                  sortDirection: event.target.value as "asc" | "desc",
+                  sorts: [...viewForm.sorts, { field: "", direction: "asc" }],
                 })
               }
             >
-              <option value="asc">升序</option>
-              <option value="desc">降序</option>
-            </select>
+              添加排序
+            </button>
           </div>
+          {viewForm.sorts.map((sort, index) => (
+            <div className="filter-row" key={`sort-${index}`}>
+              <input
+                placeholder="排序字段（可选）"
+                value={sort.field}
+                onChange={(event) =>
+                  setViewForm({
+                    ...viewForm,
+                    sorts: viewForm.sorts.map((current, currentIndex) =>
+                      currentIndex === index
+                        ? { ...current, field: event.target.value }
+                        : current,
+                    ),
+                  })
+                }
+              />
+              <select
+                value={sort.direction}
+                onChange={(event) =>
+                  setViewForm({
+                    ...viewForm,
+                    sorts: viewForm.sorts.map((current, currentIndex) =>
+                      currentIndex === index
+                        ? {
+                            ...current,
+                            direction: event.target.value as "asc" | "desc",
+                          }
+                        : current,
+                    ),
+                  })
+                }
+              >
+                <option value="asc">升序</option>
+                <option value="desc">降序</option>
+              </select>
+              {viewForm.sorts.length > 1 && (
+                <button
+                  type="button"
+                  className="ghost-button danger-button"
+                  onClick={() =>
+                    setViewForm({
+                      ...viewForm,
+                      sorts: viewForm.sorts.filter(
+                        (_, currentIndex) => currentIndex !== index,
+                      ),
+                    })
+                  }
+                >
+                  移除
+                </button>
+              )}
+            </div>
+          ))}
           <button className="secondary-button" disabled={!tableId}>
             创建视图
           </button>
