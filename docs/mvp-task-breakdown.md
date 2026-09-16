@@ -61,7 +61,7 @@
 | RH-M3-033 | Record Hub | ViewDefinition、分页、排序、过滤 | DONE | 031 | ViewDefinition 持久化；字段/operator allowlist；复合排序键稳定 cursor；limit 1-100；Mongo 查询不接受任意 query |
 | RH-M3-034 | Record Hub | 动态字段索引策略 | DONE | 033 | OWNER-only；仅已发布 schema 顶层字段；asc/desc；每表最多 16 个；确定性物理名；Mongo/API/HTTP/测试已覆盖 |
 | RH-M3-035 | Record Hub | Projection record 写保护 | DONE | 031 | 通用 POST/PATCH/DELETE 在依赖、幂等键和版本校验前统一拒绝；HTTP 409 `PROJECTION_READ_ONLY`；负向矩阵已覆盖 |
-| RH-M3-036 | Record Hub Web | workspace/table/grid/record detail UI | PARTIAL | 030-033 | Next.js workspace/table/grid、record JSON/tag、View 选择与受控过滤器/单排序已接入；六种字段、列显隐待补 |
+| RH-M3-036 | Record Hub Web | workspace/table/grid/record detail UI | PARTIAL | 030-033 | Next.js workspace/table/grid、record JSON/tag、View 选择、多条件过滤与最多 4 条排序已接入；六种字段、列显隐待补 |
 | RH-M3-037 | Record Hub Web | Projection 新鲜度和只读展示 | PARTIAL | 035 | source/version/syncedAt/GAP 与 Operations Fresh/Lagging/Stale 已可见；真实投影浏览器矩阵待补 |
 
 ## 6. M4：JetStream 消费与投影
