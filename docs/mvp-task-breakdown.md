@@ -61,7 +61,7 @@
 | RH-M3-033 | Record Hub | ViewDefinition、分页、排序、过滤 | DONE | 031 | ViewDefinition 持久化；字段/operator allowlist；复合排序键稳定 cursor；limit 1-100；Mongo 查询不接受任意 query |
 | RH-M3-034 | Record Hub | 动态字段索引策略 | DONE | 033 | OWNER-only；仅已发布 schema 顶层字段；asc/desc；每表最多 16 个；确定性物理名；Mongo/API/HTTP/测试已覆盖 |
 | RH-M3-035 | Record Hub | Projection record 写保护 | DONE | 031 | 通用 POST/PATCH/DELETE 在依赖、幂等键和版本校验前统一拒绝；HTTP 409 `PROJECTION_READ_ONLY`；负向矩阵已覆盖 |
-| RH-M3-036 | Record Hub Web | workspace/table/grid/record detail UI | PARTIAL | 030-033 | Next.js workspace/table/grid、record JSON/tag、View 选择、多条件过滤与最多 4 条排序已接入；六种字段、列显隐待补 |
+| RH-M3-036 | Record Hub Web | workspace/table/grid/record detail UI | PARTIAL | 030-033 | Next.js workspace/table/grid、record JSON/tag、View 选择、多条件过滤、最多 4 条排序与列显隐已接入；六种字段待补 |
 | RH-M3-037 | Record Hub Web | Projection 新鲜度和只读展示 | PARTIAL | 035 | source/version/syncedAt/GAP 与 Operations Fresh/Lagging/Stale 已可见；真实投影浏览器矩阵待补 |
 
 ## 6. M4：JetStream 消费与投影
@@ -123,7 +123,7 @@
 | ID | 仓库 | 任务 | 状态 | 依赖 | 验收 |
 | --- | --- | --- | --- | --- | --- |
 | RH-M8-080 | Record Hub Web | Dex 登录、Session、退出 | DONE | M1-013 | state/nonce/PKCE、cookie flags、CSRF |
-| RH-M8-081 | Record Hub Web | workspace/table/schema 完整路径 | PARTIAL | M2,M3,M8-080 | Next.js 控制台已覆盖登录入口、workspace/table/record、Schema 草稿/ETag 发布和同源 BFF rewrite；字段/视图编辑与真实 Dex 浏览器矩阵待补 |
+| RH-M8-081 | Record Hub Web | workspace/table/schema 完整路径 | PARTIAL | M2,M3,M8-080 | Next.js 控制台已覆盖登录入口、workspace/table/record、Schema 草稿/ETag 发布、View 多条件/列显隐和同源 BFF rewrite；真实 Dex 浏览器矩阵待补 |
 | RH-M8-082 | Record Hub Web | 三投影与 Operations 页面 | DONE | M4,M5,M8-080 | freshness/gap/DLQ 安全展示 |
 | RH-M8-083 | 四仓库 | MVP happy-path E2E 脚本 | PARTIAL | M5,M6,M8-081 | 代码级 gate 可重复；真实浏览器/API 联合 E2E 待 M8-085 拓扑 |
 | RH-M8-084 | 四仓库 | MVP failure-path E2E 脚本 | PARTIAL | M7 | 代码级负向 gate 通过；真实 outage/duplicate/bad token E2E 待 M8-085/086 |
