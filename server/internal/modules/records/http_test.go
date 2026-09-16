@@ -57,9 +57,42 @@ func TestRecordsHTTPRejectsProjectionWithoutPolicy(t *testing.T) {
 	}
 }
 
+func TestRecordsHTTPRecordCRUDContract(t *testing.T) {
+	principal := identity.Principal{Kind: identity.PrincipalUser, Issuer: "https://issuer.example", Subject: "owner"}
+	definition := recordSchemaDefinition(t)
+	tables := &memoryTableRepository{values: map[string]TableDefinition{"tenant-1:workspace-1:table-1": {ID: "table-1", TenantID: "tenant-1", WorkspaceID: "workspace-1", Name: "Custom", Kind: TableKindCustom, SchemaID: definition.SchemaID, SchemaVersion: 1}}}
+	service := NewRecordService(nil, tables, memorySchemaReader{definition: definition}, identity.NewAuthorizer(serviceMembershipReader{membership: identity.WorkspaceMembership{TenantID: "tenant-1", WorkspaceID: "workspace-1", Identity: principal.IdentityKey(), Role: identity.RoleOwner, Status: identity.MembershipActive}}), &memoryRecordRepository{values: make(map[string]Record)}, &memoryRecordReceipts{values: make(map[string]RecordReceipt)}, &memoryRecordAudit{})
+	handler := NewHTTPHandler(service)
+	createBody := `{"tenantId":"tenant-1","workspaceId":"workspace-1","id":"record-1","data":{"title":"hello","count":1},"tags":["urgent"]}`
+	created := doRecordsRequestWithHeaders(handler, &principal, http.MethodPost, "/api/v1/tables/table-1/records", createBody, map[string]string{"Idempotency-Key": "record-create-1"})
+	if created.Code != http.StatusCreated || created.Header().Get("ETag") != `"1"` || !strings.Contains(created.Body.String(), `"title":"hello"`) {
+		t.Fatalf("record create status=%d etag=%q body=%s", created.Code, created.Header().Get("ETag"), created.Body.String())
+	}
+	updateBody := `{"tenantId":"tenant-1","workspaceId":"workspace-1","tableId":"table-1","data":{"title":"updated","count":2},"tags":[]}`
+	updated := doRecordsRequestWithHeaders(handler, &principal, http.MethodPatch, "/api/v1/records/record-1", updateBody, map[string]string{"Idempotency-Key": "record-update-1", "If-Match": `"1"`})
+	if updated.Code != http.StatusOK || updated.Header().Get("ETag") != `"2"` {
+		t.Fatalf("record update status=%d etag=%q body=%s", updated.Code, updated.Header().Get("ETag"), updated.Body.String())
+	}
+	read := doRecordsRequest(handler, &principal, http.MethodGet, "/api/v1/records/record-1?tenantId=tenant-1&workspaceId=workspace-1", "")
+	if read.Code != http.StatusOK || !strings.Contains(read.Body.String(), `"recordVersion":2`) {
+		t.Fatalf("record get status=%d body=%s", read.Code, read.Body.String())
+	}
+	deleted := doRecordsRequestWithHeaders(handler, &principal, http.MethodDelete, "/api/v1/records/record-1?tenantId=tenant-1&workspaceId=workspace-1&tableId=table-1", "", map[string]string{"Idempotency-Key": "record-delete-1", "If-Match": `"2"`})
+	if deleted.Code != http.StatusOK {
+		t.Fatalf("record delete status=%d body=%s", deleted.Code, deleted.Body.String())
+	}
+}
+
 func doRecordsRequest(handler http.Handler, principal *identity.Principal, method, path, body string) *httptest.ResponseRecorder {
+	return doRecordsRequestWithHeaders(handler, principal, method, path, body, nil)
+}
+
+func doRecordsRequestWithHeaders(handler http.Handler, principal *identity.Principal, method, path, body string, headers map[string]string) *httptest.ResponseRecorder {
 	request := httptest.NewRequest(method, path, strings.NewReader(body))
 	request.Header.Set("Content-Type", "application/json")
+	for key, value := range headers {
+		request.Header.Set(key, value)
+	}
 	if principal != nil {
 		request = request.WithContext(identity.WithPrincipal(context.Background(), *principal))
 	}

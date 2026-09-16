@@ -4,9 +4,12 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
+	"github.com/samlet/record-hub/server/internal/modules/audit"
 	"github.com/samlet/record-hub/server/internal/modules/identity"
 	"github.com/samlet/record-hub/server/internal/modules/schema"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type memoryWorkspaceRepository struct {
@@ -123,3 +126,141 @@ func (reader serviceMembershipReader) FindMembership(_ context.Context, subject 
 	}
 	return reader.membership, nil
 }
+
+type memoryRecordRepository struct {
+	values map[string]Record
+}
+
+func (repository *memoryRecordRepository) CreateRecord(_ context.Context, record Record) error {
+	key := record.TenantID + ":" + record.WorkspaceID + ":" + record.ID
+	if _, ok := repository.values[key]; ok {
+		return ErrRecordExists
+	}
+	repository.values[key] = record
+	return nil
+}
+
+func (repository *memoryRecordRepository) GetRecord(_ context.Context, tenantID, workspaceID, recordID string) (Record, error) {
+	record, ok := repository.values[tenantID+":"+workspaceID+":"+recordID]
+	if !ok {
+		return Record{}, ErrRecordNotFound
+	}
+	return record, nil
+}
+
+func (repository *memoryRecordRepository) UpdateRecord(_ context.Context, record Record, expectedVersion int64) (Record, error) {
+	key := record.TenantID + ":" + record.WorkspaceID + ":" + record.ID
+	existing, ok := repository.values[key]
+	if !ok {
+		return Record{}, ErrRecordNotFound
+	}
+	if existing.RecordVersion != expectedVersion {
+		return Record{}, ErrRecordVersionConflict
+	}
+	record.RecordVersion = expectedVersion + 1
+	repository.values[key] = record
+	return record, nil
+}
+
+func (repository *memoryRecordRepository) DeleteRecord(_ context.Context, tenantID, workspaceID, recordID string, expectedVersion int64) error {
+	key := tenantID + ":" + workspaceID + ":" + recordID
+	record, ok := repository.values[key]
+	if !ok {
+		return ErrRecordNotFound
+	}
+	if record.RecordVersion != expectedVersion {
+		return ErrRecordVersionConflict
+	}
+	delete(repository.values, key)
+	return nil
+}
+
+type memoryRecordReceipts struct {
+	values map[string]RecordReceipt
+}
+
+func (store *memoryRecordReceipts) Find(_ context.Context, tenantID, workspaceID, operation, key string) (RecordReceipt, error) {
+	receipt, ok := store.values[tenantID+":"+workspaceID+":"+operation+":"+key]
+	if !ok {
+		return RecordReceipt{}, ErrReceiptNotFound
+	}
+	return receipt, nil
+}
+
+func (store *memoryRecordReceipts) Save(_ context.Context, receipt RecordReceipt) error {
+	identity := receipt.TenantID + ":" + receipt.WorkspaceID + ":" + receipt.Operation + ":" + receipt.IdempotencyKey
+	if existing, ok := store.values[identity]; ok {
+		if existing.RequestHash != receipt.RequestHash {
+			return ErrIdempotencyConflict
+		}
+		return nil
+	}
+	store.values[identity] = receipt
+	return nil
+}
+
+type memoryRecordAudit struct {
+	entries []audit.Entry
+}
+
+func (writer *memoryRecordAudit) Append(_ context.Context, entry audit.Entry) error {
+	writer.entries = append(writer.entries, entry)
+	return nil
+}
+
+func TestRecordServiceCRUDIdempotencyAndCAS(t *testing.T) {
+	principal := identity.Principal{Kind: identity.PrincipalUser, Issuer: "https://issuer.example", Subject: "owner"}
+	membership := identity.WorkspaceMembership{TenantID: "tenant-1", WorkspaceID: "workspace-1", Identity: principal.IdentityKey(), Role: identity.RoleOwner, Status: identity.MembershipActive}
+	definition := recordSchemaDefinition(t)
+	tables := &memoryTableRepository{values: map[string]TableDefinition{"tenant-1:workspace-1:table-1": {ID: "table-1", TenantID: "tenant-1", WorkspaceID: "workspace-1", Name: "Custom", Kind: TableKindCustom, SchemaID: definition.SchemaID, SchemaVersion: 1, Version: 1, CreatedBy: principal.IdentityKey(), UpdatedBy: principal.IdentityKey(), CreatedAt: timeNow(), UpdatedAt: timeNow()}}}
+	store := &memoryRecordRepository{values: make(map[string]Record)}
+	receipts := &memoryRecordReceipts{values: make(map[string]RecordReceipt)}
+	audits := &memoryRecordAudit{}
+	service := NewRecordService(nil, tables, memorySchemaReader{definition: definition}, identity.NewAuthorizer(serviceMembershipReader{membership: membership}), store, receipts, audits)
+	ctx := context.Background()
+	data := mustRecordData(t, `{"title":"hello","count":1}`)
+	input := RecordInput{TenantID: "tenant-1", WorkspaceID: "workspace-1", TableID: "table-1", ID: "record-1", Data: data, Tags: []string{"urgent", "urgent"}, IdempotencyKey: "create-1"}
+	created, err := service.CreateRecord(ctx, principal, input)
+	if err != nil || created.RecordVersion != 1 || len(created.Tags) != 1 {
+		t.Fatalf("create record = %#v, %v", created, err)
+	}
+	if _, err := service.CreateRecord(ctx, principal, input); err != nil {
+		t.Fatalf("idempotent create = %v", err)
+	}
+	conflict := input
+	conflict.Data = mustRecordData(t, `{"title":"different","count":1}`)
+	if _, err := service.CreateRecord(ctx, principal, conflict); !errors.Is(err, ErrIdempotencyConflict) {
+		t.Fatalf("create idempotency conflict = %v", err)
+	}
+	updated, err := service.UpdateRecord(ctx, principal, RecordInput{TenantID: input.TenantID, WorkspaceID: input.WorkspaceID, TableID: input.TableID, ID: input.ID, Data: mustRecordData(t, `{"title":"updated","count":2}`), IdempotencyKey: "update-1"}, 1)
+	if err != nil || updated.RecordVersion != 2 {
+		t.Fatalf("update record = %#v, %v", updated, err)
+	}
+	if _, err := service.UpdateRecord(ctx, principal, RecordInput{TenantID: input.TenantID, WorkspaceID: input.WorkspaceID, TableID: input.TableID, ID: input.ID, Data: data, IdempotencyKey: "stale"}, 1); !errors.Is(err, ErrRecordVersionConflict) {
+		t.Fatalf("stale update = %v", err)
+	}
+	deleted, err := service.DeleteRecord(ctx, principal, RecordDeleteInput{TenantID: input.TenantID, WorkspaceID: input.WorkspaceID, TableID: input.TableID, RecordID: input.ID, IdempotencyKey: "delete-1"}, 2)
+	if err != nil || deleted.RecordVersion != 2 || len(audits.entries) != 3 {
+		t.Fatalf("delete record = %#v, audits=%d, err=%v", deleted, len(audits.entries), err)
+	}
+	if _, err := service.DeleteRecord(ctx, principal, RecordDeleteInput{TenantID: input.TenantID, WorkspaceID: input.WorkspaceID, TableID: input.TableID, RecordID: input.ID, IdempotencyKey: "delete-1"}, 2); err != nil {
+		t.Fatalf("idempotent delete = %v", err)
+	}
+}
+
+func recordSchemaDefinition(t *testing.T) schema.Definition {
+	t.Helper()
+	jsonSchema := mustRecordData(t, `{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","required":["title","count"],"properties":{"title":{"type":"string"},"count":{"type":"integer"}}}`)
+	return schema.Definition{TenantID: "tenant-1", SchemaID: "urn:record-hub:schema:record", Version: 1, Status: schema.StatusPublished, JSONSchema: jsonSchema}
+}
+
+func mustRecordData(t *testing.T, value string) bson.Raw {
+	t.Helper()
+	var raw bson.Raw
+	if err := bson.UnmarshalExtJSON([]byte(value), false, &raw); err != nil {
+		t.Fatal(err)
+	}
+	return raw
+}
+
+func timeNow() time.Time { return time.Now().UTC() }

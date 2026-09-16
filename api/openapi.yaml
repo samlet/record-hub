@@ -164,6 +164,130 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+  /api/v1/tables/{tableId}/records:
+    parameters:
+      - $ref: "#/components/parameters/TableId"
+    post:
+      tags: [Records]
+      operationId: createRecord
+      summary: Create a validated custom-table record
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/RequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordCreateRequest"
+      responses:
+        "201":
+          description: Record created.
+          headers:
+            ETag:
+              $ref: "#/components/headers/RecordVersionETag"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Record"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/v1/records/{recordId}:
+    parameters:
+      - $ref: "#/components/parameters/RecordId"
+    get:
+      tags: [Records]
+      operationId: getRecord
+      summary: Get one record by scoped ID
+      parameters:
+        - $ref: "#/components/parameters/TenantIdQuery"
+        - $ref: "#/components/parameters/WorkspaceIdQuery"
+      responses:
+        "200":
+          description: Record envelope.
+          headers:
+            ETag:
+              $ref: "#/components/headers/RecordVersionETag"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Record"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Records]
+      operationId: updateRecord
+      summary: Update record data with record-version CAS
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/RequestId"
+        - $ref: "#/components/parameters/IfMatchRecord"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordUpdateRequest"
+      responses:
+        "200":
+          description: Record updated.
+          headers:
+            ETag:
+              $ref: "#/components/headers/RecordVersionETag"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Record"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "428":
+          $ref: "#/components/responses/PreconditionRequired"
+    delete:
+      tags: [Records]
+      operationId: deleteRecord
+      summary: Delete a record with record-version CAS
+      parameters:
+        - $ref: "#/components/parameters/TenantIdQuery"
+        - $ref: "#/components/parameters/WorkspaceIdQuery"
+        - $ref: "#/components/parameters/TableIdQuery"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/RequestId"
+        - $ref: "#/components/parameters/IfMatchRecord"
+      responses:
+        "200":
+          description: Deleted record snapshot, safe for idempotent replay.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Record"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "428":
+          $ref: "#/components/responses/PreconditionRequired"
   /api/v1/schemas:
     post:
       tags: [Schema]
@@ -336,6 +460,30 @@ components:
         type: string
         minLength: 1
         maxLength: 128
+    RecordId:
+      name: recordId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+    WorkspaceIdQuery:
+      name: workspaceId
+      in: query
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+    TableIdQuery:
+      name: tableId
+      in: query
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
     SchemaId:
       name: schemaId
       in: path
@@ -366,9 +514,21 @@ components:
       schema:
         type: string
         pattern: '^"?[1-9][0-9]*"?$'
+    IfMatchRecord:
+      name: If-Match
+      in: header
+      required: true
+      description: Expected current recordVersion as a quoted ETag.
+      schema:
+        type: string
+        pattern: '^"?[1-9][0-9]*"?$'
   headers:
     RevisionETag:
       description: Current schema revision as a quoted ETag.
+      schema:
+        type: string
+    RecordVersionETag:
+      description: Current recordVersion as a quoted ETag.
       schema:
         type: string
 
@@ -604,6 +764,159 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TableDefinition"
+    RecordCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [tenantId, workspaceId, id, data]
+      properties:
+        tenantId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        workspaceId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        id:
+          type: string
+          minLength: 1
+          maxLength: 128
+        data:
+          type: object
+          additionalProperties: true
+        tags:
+          type: array
+          maxItems: 64
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 64
+        relations:
+          type: array
+          maxItems: 64
+          items:
+            $ref: "#/components/schemas/RecordRelation"
+    RecordUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [tenantId, workspaceId, tableId, data]
+      properties:
+        tenantId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        workspaceId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        tableId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        data:
+          type: object
+          additionalProperties: true
+        tags:
+          type: array
+          maxItems: 64
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 64
+        relations:
+          type: array
+          maxItems: 64
+          items:
+            $ref: "#/components/schemas/RecordRelation"
+    RecordSource:
+      type: object
+      additionalProperties: false
+      required: [system, type, id, version]
+      properties:
+        system:
+          type: string
+        type:
+          type: string
+        id:
+          type: string
+        version:
+          type: integer
+          minimum: 1
+    RecordRelation:
+      type: object
+      additionalProperties: false
+      required: [target, relationType]
+      properties:
+        target:
+          $ref: "#/components/schemas/RecordSource"
+        relationType:
+          type: string
+          minLength: 1
+        resolvedRecordId:
+          type: string
+        status:
+          type: string
+          enum: [CURRENT, BROKEN, FORBIDDEN]
+    ProjectionState:
+      type: object
+      additionalProperties: false
+      required: [lastEventId, syncedAt, status]
+      properties:
+        lastEventId:
+          type: string
+        syncedAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+    Record:
+      type: object
+      additionalProperties: false
+      required: [id, tenantId, workspaceId, tableId, schemaId, schemaVersion, recordVersion, tags, data, relations, createdBy, updatedBy, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        workspaceId:
+          type: string
+        tableId:
+          type: string
+        schemaId:
+          type: string
+        schemaVersion:
+          type: integer
+          minimum: 1
+        source:
+          $ref: "#/components/schemas/RecordSource"
+        recordVersion:
+          type: integer
+          minimum: 1
+        tags:
+          type: array
+          items:
+            type: string
+        data:
+          type: object
+          additionalProperties: true
+        relations:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecordRelation"
+        projection:
+          $ref: "#/components/schemas/ProjectionState"
+        createdBy:
+          $ref: "#/components/schemas/IdentityKey"
+        updatedBy:
+          $ref: "#/components/schemas/IdentityKey"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
     SchemaDraftRequest:
       type: object
       additionalProperties: false
