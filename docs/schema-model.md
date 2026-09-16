@@ -36,6 +36,7 @@ DRAFT -> PUBLISHED -> DEPRECATED
 - 通用更新只匹配 `DRAFT` 状态。`PUBLISHED`/`DEPRECATED` 即使并发调用或伪装成 draft 也不能通过 repository 改写。
 - 增加可选字段可以发布兼容小版本。
 - 删除、改名、改变类型/必填语义或枚举含义必须发布新主版本。
+- Compatibility checker 按“旧版本接受的实例仍应被新版本接受”判断：移除 required、`integer` 放宽为 `number`、扩展 enum 属于兼容；新增 required、删除属性、收窄 type/enum 或改变其他约束属于 breaking。MVP 对无法证明安全的约束变化保守判 breaking。
 - 记录固定 `schemaId + schemaVersion`，不得自动漂移到最新版。
 - Schema 迁移生成新记录版本并保留迁移来源。
 
