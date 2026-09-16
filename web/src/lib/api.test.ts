@@ -124,6 +124,30 @@ describe("Record Hub browser API client", () => {
     expect(JSON.parse(String(init?.body))).toMatchObject({ name: "Updated" });
   });
 
+  it("posts a schema compatibility candidate to the encoded schema route", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({ compatible: false, changes: [] }),
+    );
+    await api.compareSchemaCompatibility(
+      "schema/a",
+      "tenant one",
+      "workspace/one",
+      3,
+      { type: "object" },
+    );
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toBe(
+      "/api/v1/schemas/schema%2Fa/compatibility",
+    );
+    expect(JSON.parse(String(init?.body))).toEqual({
+      tenantId: "tenant one",
+      workspaceId: "workspace/one",
+      publishedVersion: 3,
+      candidateSchema: { type: "object" },
+    });
+  });
+
   it("decodes bounded API errors into ApiError", async () => {
     fetchMock.mockResolvedValue(
       jsonResponse(

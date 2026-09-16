@@ -7,6 +7,7 @@ import {
   items,
   OperationsSnapshot,
   RecordItem,
+  SchemaCompatibilityReport,
   SchemaDefinition,
   SchemaSummary,
   TableDefinition,
@@ -1479,9 +1480,36 @@ function SchemaPanel(props: {
     onReset,
     onPublish,
   } = props;
+  const [compatibility, setCompatibility] = useState<SchemaCompatibilityReport | null>(null);
+  const [compatibilityError, setCompatibilityError] = useState("");
+  const [compatibilityBusy, setCompatibilityBusy] = useState(false);
   const fieldResult = useMemo(() => parseSchemaFields(form.data), [form.data]);
   const updateFields = (fields: SchemaField[]) =>
     setForm({ ...form, data: writeSchemaFields(form.data, fields) });
+
+  async function compareCompatibility() {
+    if (!schema) return;
+    setCompatibilityBusy(true);
+    setCompatibilityError("");
+    try {
+      const candidate = JSON.parse(form.data) as Record<string, unknown>;
+      const response = await api.compareSchemaCompatibility(
+        schema.schemaId,
+        props.tenantId,
+        props.workspaceId,
+        schema.version,
+        candidate,
+      );
+      setCompatibility(response.body);
+    } catch (caught) {
+      setCompatibility(null);
+      setCompatibilityError(
+        caught instanceof ApiError ? caught.message : "候选 Schema 不是有效 JSON",
+      );
+    } finally {
+      setCompatibilityBusy(false);
+    }
+  }
   return (
     <div className="panel">
       <div className="panel-heading">
@@ -1724,8 +1752,45 @@ function SchemaPanel(props: {
               ))}
             </div>
           )}
+      </section>
+      {schema && schema.status === "PUBLISHED" && (
+        <section className="schema-fields">
+          <div className="subheading">
+            <div>
+              <h3>兼容性预览</h3>
+              <span className="muted">
+                将当前编辑器内容与已发布版本 v{schema.version} 比较，不会保存候选版本。
+              </span>
+            </div>
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={compatibilityBusy}
+              onClick={() => void compareCompatibility()}
+            >
+              {compatibilityBusy ? "检查中…" : "检查兼容性"}
+            </button>
+          </div>
+          {compatibilityError && <p className="field-error">{compatibilityError}</p>}
+          {compatibility && (
+            <div className="compatibility-result">
+              <span className={`status ${compatibility.compatible ? "good" : "bad"}`}>
+                {compatibility.compatible ? "兼容" : "存在 breaking change"}
+              </span>
+              {compatibility.changes.length > 0 && (
+                <ul>
+                  {compatibility.changes.map((change) => (
+                    <li key={`${change.path}:${change.kind}`}>
+                      <code>{change.path}</code> · {change.kind} · {change.message}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </section>
-        <div className="button-row">
+      )}
+      <div className="button-row">
           <button
             className="primary-button"
             disabled={!workspaceId || !form.id}

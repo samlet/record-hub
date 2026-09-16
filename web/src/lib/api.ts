@@ -75,6 +75,22 @@ export type SchemaSummary = {
   updatedAt: string;
 };
 
+export type SchemaCompatibilityChange = {
+  path: string;
+  kind:
+    | "required-added"
+    | "property-removed"
+    | "type-narrowed"
+    | "enum-narrowed"
+    | "constraint-changed";
+  message: string;
+};
+
+export type SchemaCompatibilityReport = {
+  compatible: boolean;
+  changes: SchemaCompatibilityChange[];
+};
+
 export type OperationsSnapshot = {
   tenantId: string;
   workspaceId: string;
@@ -332,6 +348,25 @@ export const api = {
   ) =>
     request<SchemaDefinition>(
       `/api/v1/schemas/${encodeURIComponent(schemaId)}?tenantId=${encodeURIComponent(tenantId)}&workspaceId=${encodeURIComponent(workspaceId)}&version=${version}`,
+    ),
+  compareSchemaCompatibility: (
+    schemaId: string,
+    tenantId: string,
+    workspaceId: string,
+    publishedVersion: number,
+    candidateSchema: Record<string, unknown>,
+  ) =>
+    request<SchemaCompatibilityReport>(
+      `/api/v1/schemas/${encodeURIComponent(schemaId)}/compatibility`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          tenantId,
+          workspaceId,
+          publishedVersion,
+          candidateSchema,
+        }),
+      },
     ),
   updateSchema: (
     schemaId: string,
