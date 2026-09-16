@@ -37,6 +37,13 @@ M8-082 的 Operations 控制台边界也已完成：`NewConsoleRouter` 把
 failed/rejected/DLQ 只以有界计数和 checkpoint 元数据展示，原始 inbox/event
 payload 永不出现在页面或响应中。
 
+M8-083 的跨仓库 happy-path gate 已完成，入口为 `make m8-happy-path`。它会重复
+执行 Record Hub 的 Web/identity/schema/records/projection 测试，并执行 Approver、
+Fluxion、Bids 的 summary contract、Outbox、Binding/diagnostic workflow/worker
+测试。依赖不可用时命令仍能给出确定的代码级结果；真实浏览器/API + MongoDB +
+NATS + Dex + Temporal/Conductor 联合路径必须由 M8-085 runbook 运行，不能由此
+gate 冒充 live E2E。
+
 ## 本地启动
 
 先启动 Dex 并生成本地 secret：
