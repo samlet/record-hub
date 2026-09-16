@@ -104,6 +104,24 @@ func TestOperationsServiceRejectsUnboundedQueryAndReaderErrors(t *testing.T) {
 	}
 }
 
+func TestOperationsServiceRejectsUnknownConsumerAndReaderScopeMismatch(t *testing.T) {
+	reader := &memoryOperationsReader{snapshot: validOperationsSnapshot()}
+	service, principal := operationsService(t, reader, identity.RoleViewer)
+	if _, err := service.Snapshot(context.Background(), principal, OperationsQuery{TenantID: "tenant-1", WorkspaceID: "workspace-1", Consumer: "events.anything.>"}); !errors.Is(err, ErrOperationsQueryInvalid) {
+		t.Fatalf("unknown consumer error = %v", err)
+	}
+	reader.snapshot = validOperationsSnapshot()
+	reader.snapshot.WorkspaceID = "workspace-other"
+	if _, err := service.Snapshot(context.Background(), principal, OperationsQuery{TenantID: "tenant-1", WorkspaceID: "workspace-1", Consumer: "record-hub-approver-v1"}); !errors.Is(err, ErrOperationsQueryInvalid) {
+		t.Fatalf("scope mismatch error = %v", err)
+	}
+	reader.snapshot = validOperationsSnapshot()
+	reader.snapshot.Checkpoints[0].Consumer = "record-hub-fluxion-v1"
+	if _, err := service.Snapshot(context.Background(), principal, OperationsQuery{TenantID: "tenant-1", WorkspaceID: "workspace-1", Consumer: "record-hub-approver-v1"}); !errors.Is(err, ErrOperationsQueryInvalid) {
+		t.Fatalf("checkpoint consumer mismatch error = %v", err)
+	}
+}
+
 func TestOperationsHTTPReturnsSafeMetadataOnly(t *testing.T) {
 	reader := &memoryOperationsReader{snapshot: validOperationsSnapshot()}
 	service, principal := operationsService(t, reader, identity.RoleViewer)
@@ -139,7 +157,7 @@ func TestOperationsPageIsAuthenticatedAndPayloadFree(t *testing.T) {
 		t.Fatalf("unauthenticated page status = %d", response.Code)
 	}
 	response := doOperationsRequest(handler, &principal, http.MethodGet, "/operations/events", "")
-	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "/api/v1/operations/events") || strings.Contains(response.Body.String(), "raw payload") {
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "/api/v1/operations/events") || !strings.Contains(response.Body.String(), "record-hub-bids-projection-v1") || strings.Contains(response.Body.String(), "raw payload") {
 		t.Fatalf("operations page = status %d body=%s", response.Code, response.Body.String())
 	}
 }

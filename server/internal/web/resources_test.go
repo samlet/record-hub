@@ -58,6 +58,34 @@ func TestResourceRouterFailsClosedForMissingHandler(t *testing.T) {
 	}
 }
 
+func TestConsoleRouterDispatchesOperationsPageWithoutShadowingResources(t *testing.T) {
+	marker := func(name string, status int) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("X-Resource", name)
+			w.WriteHeader(status)
+		})
+	}
+	router := NewConsoleRouter(marker("records", http.StatusAccepted), marker("schemas", http.StatusCreated), marker("operations", http.StatusNoContent))
+	for _, test := range []struct {
+		path       string
+		wantHeader string
+		wantStatus int
+	}{
+		{path: "/operations/events", wantHeader: "operations", wantStatus: http.StatusNoContent},
+		{path: "/api/v1/operations/events", wantHeader: "operations", wantStatus: http.StatusNoContent},
+		{path: "/api/v1/workspaces", wantHeader: "records", wantStatus: http.StatusAccepted},
+		{path: "/api/v1/schemas", wantHeader: "schemas", wantStatus: http.StatusCreated},
+	} {
+		t.Run(test.path, func(t *testing.T) {
+			response := httptest.NewRecorder()
+			router.ServeHTTP(response, httptest.NewRequest(http.MethodGet, test.path, nil))
+			if response.Code != test.wantStatus || response.Header().Get("X-Resource") != test.wantHeader {
+				t.Fatalf("response = %d/%q, want %d/%q", response.Code, response.Header().Get("X-Resource"), test.wantStatus, test.wantHeader)
+			}
+		})
+	}
+}
+
 func TestResourceRouterReceivesSessionPrincipalAndCSRFBoundary(t *testing.T) {
 	sessions, err := NewSessionManager([]byte(strings.Repeat("r", 32)), time.Hour, false)
 	if err != nil {

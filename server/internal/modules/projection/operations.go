@@ -18,9 +18,23 @@ import (
 )
 
 const (
-	DefaultOperationsLimit = 50
-	MaxOperationsLimit     = 100
+	DefaultOperationsLimit     = 50
+	MaxOperationsLimit         = 100
+	ApproverProjectionConsumer = "record-hub-approver-projection-v1"
+	FluxionProjectionConsumer  = "record-hub-fluxion-projection-v1"
+	BidsProjectionConsumer     = "record-hub-bids-projection-v1"
 )
+
+var supportedProjectionConsumers = map[string]struct{}{
+	ApproverProjectionConsumer: {},
+	FluxionProjectionConsumer:  {},
+	BidsProjectionConsumer:     {},
+	// Explicit migration aliases for pre-M8 local fixtures. No wildcard or
+	// arbitrary consumer selector is accepted by the operations page.
+	"record-hub-approver-v1": {},
+	"record-hub-fluxion-v1":  {},
+	"record-hub-bids-v1":     {},
+}
 
 var (
 	ErrOperationsQueryInvalid = errors.New("invalid projection operations query")
@@ -48,6 +62,9 @@ func (query OperationsQuery) normalized() (OperationsQuery, error) {
 	}
 	if strings.ContainsAny(query.TenantID+query.WorkspaceID+query.Consumer, " \t\r\n") {
 		return OperationsQuery{}, fmt.Errorf("%w: scope identifiers cannot contain whitespace", ErrOperationsQueryInvalid)
+	}
+	if _, ok := supportedProjectionConsumers[query.Consumer]; !ok {
+		return OperationsQuery{}, fmt.Errorf("%w: consumer is not a registered projection", ErrOperationsQueryInvalid)
 	}
 	if query.Limit == 0 {
 		query.Limit = DefaultOperationsLimit
@@ -144,6 +161,14 @@ func (service *OperationsService) Snapshot(ctx context.Context, principal identi
 	}
 	if snapshot.Consumer == "" {
 		snapshot.Consumer = query.Consumer
+	}
+	if snapshot.TenantID != query.TenantID || snapshot.WorkspaceID != query.WorkspaceID || snapshot.Consumer != query.Consumer {
+		return OperationsSnapshot{}, fmt.Errorf("%w: reader returned a different scope", ErrOperationsQueryInvalid)
+	}
+	for _, checkpoint := range snapshot.Checkpoints {
+		if checkpoint.TenantID != query.TenantID || checkpoint.WorkspaceID != query.WorkspaceID || checkpoint.Consumer != query.Consumer {
+			return OperationsSnapshot{}, fmt.Errorf("%w: checkpoint scope differs from query", ErrOperationsQueryInvalid)
+		}
 	}
 	if snapshot.GeneratedAt.IsZero() {
 		snapshot.GeneratedAt = service.clock().UTC()
@@ -310,6 +335,6 @@ const operationsPageHTML = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Record Hub Operations</title>
 <style>body{font:15px system-ui,sans-serif;max-width:980px;margin:2rem auto;padding:0 1rem}label{display:inline-flex;flex-direction:column;margin-right:.75rem}input{padding:.35rem}button{padding:.4rem .8rem}pre{background:#f5f5f5;padding:1rem;overflow:auto}.status-GAP,.status-FAILED{color:#b00020;font-weight:600}</style></head>
 <body><h1>Projection operations</h1><p>This page shows bounded counts and checkpoint metadata only. Event payloads and secrets are never displayed.</p>
-<form id="query"><label>Tenant <input name="tenantId" required maxlength="128"></label><label>Workspace <input name="workspaceId" required maxlength="128"></label><label>Consumer <input name="consumer" required maxlength="256"></label><label>Limit <input name="limit" type="number" min="1" max="100" value="50"></label><button>Refresh</button></form>
+<form id="query"><label>Tenant <input name="tenantId" required maxlength="128"></label><label>Workspace <input name="workspaceId" required maxlength="128"></label><label>Projection <select name="consumer" required><option value="record-hub-approver-projection-v1">Approver</option><option value="record-hub-fluxion-projection-v1">Fluxion</option><option value="record-hub-bids-projection-v1">Bids</option></select></label><label>Limit <input name="limit" type="number" min="1" max="100" value="50"></label><button>Refresh</button></form>
 <pre id="result" aria-live="polite">Enter a scope and refresh.</pre>
 <script>const form=document.querySelector('#query'),out=document.querySelector('#result');form.addEventListener('submit',async e=>{e.preventDefault();const q=new URLSearchParams(new FormData(form));const r=await fetch('/api/v1/operations/events?'+q,{headers:{accept:'application/json'}});const body=await r.json();out.textContent=JSON.stringify(body,null,2)});</script></body></html>`

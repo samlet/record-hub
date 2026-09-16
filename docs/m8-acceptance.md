@@ -30,6 +30,13 @@ HTTP handlers 收敛到单一 `/api/v1` 浏览器入口，`/api/v1/schemas` 及�
 仍来自同一 Session middleware，OWNER/EDITOR/VIEWER allow/deny 仍由本地
 membership authorizer 决定。
 
+M8-082 的 Operations 控制台边界也已完成：`NewConsoleRouter` 把
+`/operations/events` 页面及 `/api/v1/operations/events` API 与资源路由组合，
+页面只允许选择 Approver、Fluxion、Bids 三个已注册 projection consumer。服务端
+同时校验 consumer、tenant/workspace 和每个 checkpoint 的 scope；freshness、GAP、
+failed/rejected/DLQ 只以有界计数和 checkpoint 元数据展示，原始 inbox/event
+payload 永不出现在页面或响应中。
+
 ## 本地启动
 
 先启动 Dex 并生成本地 secret：
