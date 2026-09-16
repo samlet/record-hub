@@ -79,7 +79,8 @@ make dex-smoke
 1. `server/internal/app` 现在会在配置 Mongo/NATS URI 时实例化 Mongo repositories、
    records/schema/binding/Operations handlers 和三个 durable projection consumers；
    未配置 URI 时仍保留 dependency-free contract boundary。生产事件目前没有顶层
-   workspaceId，需通过 metadata 或显式 fallback 配置，不能隐式猜 scope。
+   workspaceId，需通过 metadata、受校验的 tenant→workspace map 或显式 fallback 配置，
+   不能隐式猜 scope。
 2. `web/` Next.js 项目尚未落地，M2-026、M3-036、M3-037 的字段编辑、grid、tag、
    filter、projection freshness 浏览器路径未形成真实 UI 矩阵；M8-081 相应保持
    PARTIAL。

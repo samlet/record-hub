@@ -132,6 +132,7 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 		_ = client.Disconnect(context.Background())
 		return nil, fmt.Errorf("configure summary projector: %w", err)
 	}
+	projector.WithWorkspaceMappings(cfg.ProjectionWorkspaceMappings)
 	dlq, err := projection.NewNATSDeadLetterPublisher(natsClient.Publisher(), "dlq.record-hub")
 	if err != nil {
 		natsClient.Close()

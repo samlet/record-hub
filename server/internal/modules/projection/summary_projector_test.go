@@ -60,6 +60,26 @@ func TestSummaryProjectorBuildsScopedProjectionApply(t *testing.T) {
 	}
 }
 
+func TestSummaryProjectorPrefersTenantWorkspaceMappingOverGlobalFallback(t *testing.T) {
+	registry := NewHandlerRegistry()
+	if err := RegisterSummaryHandlers(registry); err != nil {
+		t.Fatal(err)
+	}
+	repository := &projectorRepository{}
+	projector, err := NewSummaryProjector(registry, &projectorInbox{}, repository, "workspace-global")
+	if err != nil {
+		t.Fatal(err)
+	}
+	projector.WithWorkspaceMappings(map[string]string{"tenant-1": "workspace-mapped"})
+	raw := summaryProjectorEnvelope(t, map[string]any{"applicationId": "app-1", "title": "Review", "status": "OPEN", "processRef": "wf-1", "updatedAt": "2026-09-15T15:30:00Z", "version": 1})
+	if err := projector.Handle(context.Background(), "events.approver.application.summary-changed.v1", raw); err != nil {
+		t.Fatalf("Handle() error = %v", err)
+	}
+	if repository.applied.Record.WorkspaceID != "workspace-mapped" {
+		t.Fatalf("workspace mapping = %q, want workspace-mapped", repository.applied.Record.WorkspaceID)
+	}
+}
+
 func TestSummaryProjectorRequiresExplicitWorkspaceScope(t *testing.T) {
 	registry := NewHandlerRegistry()
 	if err := RegisterSummaryHandlers(registry); err != nil {

@@ -35,6 +35,7 @@ func TestLoadRuntimeDependencyConfig(t *testing.T) {
 		"RECORD_HUB_MONGODB_DATABASE":           "record_hub_local",
 		"RECORD_HUB_NATS_URL":                   "nats://127.0.0.1:4222",
 		"RECORD_HUB_PROJECTION_WORKSPACE_ID":    "workspace-local",
+		"RECORD_HUB_PROJECTION_WORKSPACE_MAP":   `{"tenant-a":"workspace-a","tenant-b":"workspace-b"}`,
 		"RECORD_HUB_OIDC_ISSUER":                "http://127.0.0.1:5556",
 		"RECORD_HUB_OIDC_AUDIENCE":              "record-hub-api-local",
 		"RECORD_HUB_OIDC_PRINCIPAL_KIND":        "user",
@@ -47,8 +48,36 @@ func TestLoadRuntimeDependencyConfig(t *testing.T) {
 	if cfg.MongoURI == "" || cfg.MongoDatabase != "record_hub_local" || cfg.NATSURL == "" || cfg.ProjectionWorkspaceID != "workspace-local" {
 		t.Fatalf("runtime config = %+v", cfg)
 	}
+	if len(cfg.ProjectionWorkspaceMappings) != 2 || cfg.ProjectionWorkspaceMappings["tenant-a"] != "workspace-a" {
+		t.Fatalf("workspace mappings = %+v", cfg.ProjectionWorkspaceMappings)
+	}
 	if cfg.OIDCIssuer == "" || cfg.OIDCAudience == "" || cfg.OIDCPrincipalKind != "user" || !cfg.OIDCAllowInsecureIssuer {
 		t.Fatalf("OIDC config = %+v", cfg)
+	}
+}
+
+func TestLoadRejectsInvalidProjectionWorkspaceMap(t *testing.T) {
+	tests := []struct {
+		name string
+		raw  string
+		want string
+	}{
+		{name: "not json", raw: "tenant-a=workspace-a", want: "must be a JSON object"},
+		{name: "null", raw: "null", want: "must be a JSON object"},
+		{name: "empty workspace", raw: `{"tenant-a":""}`, want: "workspace IDs must be non-empty"},
+		{name: "whitespace tenant", raw: `{"tenant a":"workspace-a"}`, want: "tenant IDs must be non-empty"},
+		{name: "normalized duplicate", raw: `{"tenant-a":"workspace-a"," tenant-a ":"workspace-b"}`, want: "duplicate tenant ID"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := load(mapLookup(map[string]string{
+				"RECORD_HUB_MODE":                     "worker",
+				"RECORD_HUB_PROJECTION_WORKSPACE_MAP": tt.raw,
+			}))
+			if err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("load() error = %v, want containing %q", err, tt.want)
+			}
+		})
 	}
 }
 

@@ -2,6 +2,7 @@
 package config
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -65,6 +66,9 @@ type Config struct {
 	// should prefer an allowlisted per-tenant mapping or include workspaceId in
 	// event metadata.
 	ProjectionWorkspaceID string
+	// ProjectionWorkspaceMappings is an explicit tenant-to-workspace allowlist
+	// for legacy events that do not yet carry metadata.workspaceId.
+	ProjectionWorkspaceMappings map[string]string
 	// Optional bearer OIDC settings. Browser/BFF settings remain in Web.
 	OIDCIssuer              string
 	OIDCAudience            string
@@ -135,6 +139,14 @@ func load(lookup lookupEnv) (Config, error) {
 	}
 	if value, present := optional(lookup, "RECORD_HUB_PROJECTION_WORKSPACE_ID"); present {
 		cfg.ProjectionWorkspaceID = value
+	}
+	if value, present := optional(lookup, "RECORD_HUB_PROJECTION_WORKSPACE_MAP"); present {
+		mappings, err := parseProjectionWorkspaceMappings(value)
+		if err != nil {
+			errs = append(errs, err)
+		} else {
+			cfg.ProjectionWorkspaceMappings = mappings
+		}
 	}
 	if value, present := optional(lookup, "RECORD_HUB_OIDC_ISSUER"); present {
 		cfg.OIDCIssuer = value
@@ -247,6 +259,42 @@ func optionalBool(lookup lookupEnv, key string) (bool, bool, error) {
 		return false, true, fmt.Errorf("%s must be true or false; got %q", key, value)
 	}
 	return parsed, true, nil
+}
+
+func parseProjectionWorkspaceMappings(raw string) (map[string]string, error) {
+	var values map[string]string
+	if err := json.Unmarshal([]byte(raw), &values); err != nil {
+		return nil, fmt.Errorf("RECORD_HUB_PROJECTION_WORKSPACE_MAP must be a JSON object of tenant to workspace IDs: %w", err)
+	}
+	if values == nil {
+		return nil, errors.New("RECORD_HUB_PROJECTION_WORKSPACE_MAP must be a JSON object of tenant to workspace IDs")
+	}
+	if len(values) > 128 {
+		return nil, errors.New("RECORD_HUB_PROJECTION_WORKSPACE_MAP cannot contain more than 128 tenants")
+	}
+	normalized := make(map[string]string, len(values))
+	for tenantID, workspaceID := range values {
+		tenantID = strings.TrimSpace(tenantID)
+		workspaceID = strings.TrimSpace(workspaceID)
+		if err := validateScopeMappingIdentifier(tenantID, "tenant"); err != nil {
+			return nil, fmt.Errorf("RECORD_HUB_PROJECTION_WORKSPACE_MAP: %w", err)
+		}
+		if err := validateScopeMappingIdentifier(workspaceID, "workspace"); err != nil {
+			return nil, fmt.Errorf("RECORD_HUB_PROJECTION_WORKSPACE_MAP: %w", err)
+		}
+		if _, exists := normalized[tenantID]; exists {
+			return nil, fmt.Errorf("RECORD_HUB_PROJECTION_WORKSPACE_MAP: duplicate tenant ID %q after trimming", tenantID)
+		}
+		normalized[tenantID] = workspaceID
+	}
+	return normalized, nil
+}
+
+func validateScopeMappingIdentifier(value, kind string) error {
+	if value == "" || len(value) > 128 || strings.ContainsAny(value, " \t\r\n") {
+		return fmt.Errorf("%s IDs must be non-empty, at most 128 characters, and contain no whitespace", kind)
+	}
+	return nil
 }
 
 func validateAddress(address string) error {

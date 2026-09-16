@@ -24,12 +24,13 @@ import (
 // and atomically claims/applies it through Inbox and Projection repositories.
 // It never copies arbitrary envelope metadata into the record.
 type SummaryProjector struct {
-	registry     *HandlerRegistry
-	inbox        InboxRepository
-	projection   ProjectionRepository
-	workspaceID  string
-	projectorKey identity.IdentityKey
-	now          func() time.Time
+	registry          *HandlerRegistry
+	inbox             InboxRepository
+	projection        ProjectionRepository
+	workspaceID       string
+	workspaceByTenant map[string]string
+	projectorKey      identity.IdentityKey
+	now               func() time.Time
 }
 
 type summaryEventEnvelope struct {
@@ -52,11 +53,31 @@ func NewSummaryProjector(registry *HandlerRegistry, inbox InboxRepository, repos
 		return nil, errors.New("summary projector requires registry, inbox, and projection repository")
 	}
 	return &SummaryProjector{
-		registry: registry, inbox: inbox, projection: repository,
+		registry:     registry,
+		inbox:        inbox,
+		projection:   repository,
 		workspaceID:  strings.TrimSpace(workspaceID),
 		projectorKey: identity.IdentityKey{Issuer: "record-hub", Subject: "projector"},
 		now:          time.Now,
 	}, nil
+}
+
+// WithWorkspaceMappings supplies an explicit tenant-to-workspace allowlist
+// for legacy envelopes. The map is copied so caller mutations cannot change
+// routing after the projector has started.
+func (projector *SummaryProjector) WithWorkspaceMappings(mappings map[string]string) *SummaryProjector {
+	if projector == nil {
+		return projector
+	}
+	if len(mappings) == 0 {
+		projector.workspaceByTenant = nil
+		return projector
+	}
+	projector.workspaceByTenant = make(map[string]string, len(mappings))
+	for tenantID, workspaceID := range mappings {
+		projector.workspaceByTenant[strings.TrimSpace(tenantID)] = strings.TrimSpace(workspaceID)
+	}
+	return projector
 }
 
 // HandleMessage is suitable for PullRunner. Deterministic contract or scope
@@ -84,6 +105,9 @@ func (projector *SummaryProjector) Handle(ctx context.Context, subject string, r
 		return DeterministicError(errors.New("aggregateVersion must be positive for projection"), "summary aggregate version rejected")
 	}
 	workspaceID := strings.TrimSpace(envelope.Metadata["workspaceId"])
+	if workspaceID == "" {
+		workspaceID = strings.TrimSpace(projector.workspaceByTenant[envelope.TenantID])
+	}
 	if workspaceID == "" {
 		workspaceID = projector.workspaceID
 	}

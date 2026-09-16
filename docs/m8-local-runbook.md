@@ -41,6 +41,8 @@ export RECORD_HUB_NATS_URL='nats://127.0.0.1:4222'
 # Set an explicit local fallback for the projection worker; new producers
 # should instead add metadata.workspaceId.
 export RECORD_HUB_PROJECTION_WORKSPACE_ID='workspace-local'
+# Optional and preferred when multiple tenants share one projector:
+# export RECORD_HUB_PROJECTION_WORKSPACE_MAP='{"tenant-a":"workspace-a","tenant-b":"workspace-b"}'
 ```
 
 直接运行 native 依赖/API smoke（不会启动、停止或删除本机服务）：
@@ -154,8 +156,10 @@ export RECORD_HUB_PROJECTION_WORKSPACE_ID=workspace-local
 ./build/record-hub serve
 ```
 
-worker 只接受三种已注册的 summary event；缺失 workspace scope 的事件不会写入
-Mongo，而是按确定性错误重投并最终进入 `dlq.record-hub.<consumer>`。
+worker 只接受三种已注册的 summary event；workspace scope 按
+`metadata.workspaceId` → `RECORD_HUB_PROJECTION_WORKSPACE_MAP` →
+`RECORD_HUB_PROJECTION_WORKSPACE_ID` 的顺序解析。三者都缺失的事件不会写入 Mongo，而是
+按确定性错误重投并最终进入 `dlq.record-hub.<consumer>`。
 
 三 producer 的 live runtime gate（会生成带时间租户名的本地测试记录，不会删除现有业务
 数据）可执行：
