@@ -15,6 +15,11 @@
 和 Record Hub 均由脚本自身启动，退出时只向自身 PID 发送信号。失败时保留临时目录并输出
 路径，便于查看有界日志；成功时删除临时目录。
 
+Temporal/Conductor 引擎基线另由 `make p2-engine-foundation` 验收。该命令使用专用的
+Temporal gRPC `:17233`、Temporal UI `:18233` 和 Conductor HTTP `:18080`，并把 Temporal
+SQLite 与 Conductor 日志放在独立临时目录；不会停止或修改共享的 `:7233`/`:8080`。四个业务
+进程的接入尚未纳入该命令，记录在 P2-0-006b，完成前不得宣称整套业务拓扑已通过。
+
 ## 覆盖端口
 
 例如：
@@ -43,4 +48,3 @@ make p2-isolated-core
 
 该拓扑是本地/CI 验收工具，不是生产部署模板。workload issuer 的临时签名 key 不持久化，
 生产必须替换为独立 Authorization Server 或平台 workload identity。
-
