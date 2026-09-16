@@ -60,9 +60,16 @@ Inbox 的 `(consumer,eventId)` 去重，四类文档数量和 recordVersion 必�
 ./scripts/verify-m7-mongo-faults.sh
 ```
 
-当前环境未提供 `RECORD_HUB_MONGODB_URI`，因此该项保持 `PARTIAL`；脚本默认只报告跳过，不
-伪报真实 Mongo 故障注入通过。启动本地 replica set 后设置
-`RECORD_HUB_M7_MONGO_LIVE=1` 执行 live gate。
+本机已启动 Homebrew MongoDB `rs0`，并执行真实 Mongo gate：
+
+```bash
+RECORD_HUB_M7_MONGO_LIVE=1 \
+RECORD_HUB_MONGODB_URI='mongodb://127.0.0.1:27017/record_hub?replicaSet=rs0&directConnection=true' \
+./scripts/verify-m7-mongo-faults.sh
+```
+
+结果为 `M7-073 live Mongo response-loss fault injection: PASS`。该测试使用真实
+transaction、Inbox 去重和 projection 文档，M7-073 已具备 live 证据。
 
 ## M7-074 NATS outage/outbox recovery
 
@@ -75,9 +82,10 @@ ACK loss 后保留同一 outbox/event ID，等待 lease/retry。业务事务与 
 ./scripts/verify-m7-nats-recovery.sh
 ```
 
-该脚本不会停止当前本地进程。NATS 宕机、恢复和 backlog 清空的真实场景需要在本地 Mongo/
-PostgreSQL/NATS 全部启动后执行；设置 `RECORD_HUB_M7_NATS_LIVE=1` 会追加 NATS connectivity
-smoke，但当前环境尚未完成真实 outage/recovery，因此 M7-074 保持 `PARTIAL`。
+该脚本不会停止当前本地进程。当前已用 Homebrew NATS 执行
+`RECORD_HUB_M7_NATS_LIVE=1` connectivity smoke，且四仓库 deterministic ACK-loss/reconnect
+gate 通过；但 NATS 宕机、恢复和 backlog 清空的真实场景尚未执行，因此 M7-074 保持
+`PARTIAL`。
 
 ## M7-075 Dex/JWKS rotation/outage
 

@@ -52,10 +52,22 @@ M5 producer acceptance: PASS
 
 ## Live smoke 与遗留项
 
-当前开发环境的 NATS 已运行，本次单独执行 `RECORD_HUB_NATS_URL=nats://localhost:4222 make nats-smoke` 通过；但没有可用的 MongoDB 实例，因此未执行完整 live MongoDB/JetStream smoke。脚本会明确输出 `SKIPPED`（默认 NATS 地址为 `nats://localhost:4222`），这使 RH-M5-059 保持 `PARTIAL`，不是契约或代码验收失败。启动本地依赖后执行：
+当前开发环境通过 Homebrew 原生运行 NATS 和 MongoDB。本批已执行真实驱动 smoke：
+
+```text
+NATS topology ready: DOMAIN_EVENTS DEAD_LETTERS and projection consumers
+mongo smoke passed: transaction unique-index cas change-stream
+```
+
+可重复执行完整 gate：
 
 ```bash
 RECORD_HUB_M5_LIVE=1 ./scripts/verify-m5-producers.sh
 ```
 
-该命令要求 Record Hub 的 NATS、MongoDB replica set 已按本地运行文档启动。M6 的 snapshot/binding、真实 Temporal/Conductor engine E2E，以及 M7 的 outage/rotation 故障注入不属于本批范围。
+本机 native Mongo 使用 `rs0`、无认证开发 URI；Docker 拓扑仍使用文档中的
+`record-hub-rs`、keyfile 和应用用户。M5-059 仍保持 `PARTIAL`，因为当前 gate 验证了
+真实 Mongo/JetStream 能力和 producer contract，但完整的三 producer → durable
+projection consumer → Mongo 表联合链路仍需 Record Hub runtime wiring 和真实业务进程。
+M6 的 snapshot/binding、真实 Temporal/Conductor engine E2E，以及 M7 的 outage/rotation
+故障注入不属于本批范围。

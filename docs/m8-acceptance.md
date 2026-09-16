@@ -50,8 +50,9 @@ gap/DLQ、Outbox ACK-loss 和两种 workflow retry/failure 测试；依赖故障
 M8-085/086 的受监督拓扑。
 
 M8-085 runbook 位于 [m8-local-runbook.md](m8-local-runbook.md)，`make m8-local-smoke`
-默认执行全部代码级 gate；设置 `RECORD_HUB_M8_LOCAL_LIVE=1` 后才会启动本地
-Dex/MongoDB/NATS 并探测 Go API。Docker 不可用时不会伪报 live 通过。
+默认执行全部代码级 gate；设置 `RECORD_HUB_M8_LOCAL_LIVE=1` 后执行依赖 smoke。默认
+runtime 为 Docker，设置 `RECORD_HUB_M8_RUNTIME=native` 会连接已经运行的本机
+Dex/MongoDB/NATS 并探测 Go API，不启动或停止这些进程。
 
 M8-086 恢复与轮换步骤位于 [m8-recovery-runbook.md](m8-recovery-runbook.md)，明确
 GAP、DLQ、ACK loss、NATS/Mongo/Dex 和 Session secret 的边界；DLQ 摘要不含 payload，
@@ -92,5 +93,6 @@ go test ./server/internal/web ./server/internal/modules/identity ./server/intern
 
 测试覆盖 PKCE challenge、state/nonce 绑定、pending state replay、session cookie
 flags、CSRF 负向/正向路径、logout 清 cookie、token endpoint form 和 nonce verifier
-强制。真实 Dex 浏览器路径仍需在 Docker 可用时运行 M8-083/084 联合 E2E；本机若
-没有 Docker，不能把 fake issuer 测试当成 live Dex 证据。
+强制。真实 Dex 浏览器路径仍需使用与应用 issuer/client/redirect 完全匹配的本机或
+Docker 配置运行 M8-083/084 联合 E2E；native Mongo/NATS smoke 不能替代真实 Dex 登录
+和浏览器矩阵。

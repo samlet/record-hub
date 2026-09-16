@@ -5,9 +5,10 @@
 ## 结论
 
 四个仓库的代码级契约、Outbox、Binding、projection、Web/BFF 安全边界和负向 gate
-均可重复执行；所有已完成批次均已提交并推送到各自 upstream。MVP **尚未整体
-验收通过**：当前主机没有 Docker daemon，MongoDB/NATS/Dex 真实故障与滚动轮换未
-执行；Record Hub 的 Next.js grid UI 和 API 的真实 repository wiring 仍是遗留项。
+均可重复执行；本机已补齐 Homebrew 原生 MongoDB，并完成真实 Mongo/NATS smoke 与
+Mongo ACK-loss gate。MVP **尚未整体验收通过**：当前主机没有 Docker daemon，Dex
+配置与 Record Hub 默认 issuer/client 不一致，NATS outage、凭据滚动轮换、真实双引擎
+Binding E2E、Record Hub repository wiring 和 Next.js grid UI 仍是遗留项。
 
 因此本报告把“代码级 DONE”“依赖 live PARTIAL”“明确 DEFERRED”分开，不把 fake 或
 单元测试当成跨进程 E2E。
@@ -23,7 +24,7 @@
 | M4 | DONE | durable projection、Inbox、事务 checkpoint、gap/retry/DLQ、Operations API/UI |
 | M5 | PARTIAL | 三 producer contract/outbox/relay gate 通过；真实 Mongo/JetStream 联合表 E2E 待依赖 |
 | M6 | PARTIAL | Temporal/Conductor diagnostic binding 与 client gate 通过；真实双引擎 + Record Hub 重启 E2E 待依赖 |
-| M7 | 混合 | scope/payload/metrics/Dex JWKS/bounds DONE；Mongo ACK loss、NATS outage、完整分进程重启保持 PARTIAL |
+| M7 | 混合 | scope/payload/metrics/Dex JWKS/bounds DONE；Mongo ACK loss 已有 native live 证据；NATS outage、完整分进程重启保持 PARTIAL |
 | M8 | 混合 | OIDC/BFF/Operations 代码级 gate 完成；happy/failure/live runbook 均明确 live 限制；Web UI 浏览器矩阵仍 PARTIAL |
 | M9 | DEFERRED | Command Gateway、审批迁移、Storage Gateway、Functions、Presence、GraphQL、生产 HA |
 
@@ -42,17 +43,21 @@ make m8-local-smoke
 均通过。M8 gates 同时运行四仓库测试；Approver 的 ACK-loss 测试会按设计输出一条
 WARN/异常栈，但测试结果为通过。
 
-已提供但在当前机器不能通过的 live 命令：
+已提供的 live 命令与当前证据：
 
 ```bash
+make m8-native-smoke
+RECORD_HUB_M5_LIVE=1 RECORD_HUB_MONGODB_URI='mongodb://127.0.0.1:27017/record_hub?replicaSet=rs0&directConnection=true' ./scripts/verify-m5-producers.sh
+RECORD_HUB_M7_MONGO_LIVE=1 RECORD_HUB_MONGODB_URI='mongodb://127.0.0.1:27017/record_hub?replicaSet=rs0&directConnection=true' ./scripts/verify-m7-mongo-faults.sh
+RECORD_HUB_M7_NATS_LIVE=1 RECORD_HUB_NATS_URL='nats://127.0.0.1:4222' ./scripts/verify-m7-nats-recovery.sh
 RECORD_HUB_M8_LOCAL_LIVE=1 ./scripts/verify-m8-local.sh
-make mongo-smoke
-make nats-smoke
 make dex-smoke
 ```
 
-原因是 Docker socket `~/.docker/run/docker.sock` 不存在。`make secret-scan`、M7
-Mongo/NATS live gate 因同一原因保持 skipped/failed，不纳入通过证据。
+其中 `make m8-native-smoke`、M5 live gate、M7 Mongo fault gate 和 M7 NATS live gate
+已通过。默认 `RECORD_HUB_M8_LOCAL_LIVE=1` 仍走 Docker；要连接本机进程请使用
+`RECORD_HUB_M8_RUNTIME=native`。Dex live gate 尚未执行，因为当前运行的 Dex 是其他
+项目配置。`make secret-scan` 仍依赖 Docker gitleaks 镜像。
 
 ## 推送的关键 commit/hash
 
@@ -81,10 +86,10 @@ Mongo/NATS live gate 因同一原因保持 skipped/failed，不纳入通过证�
 
 ## 下一步建议
 
-1. 先完成 `web/` Next.js BFF/grid，复用本报告中的 Go auth/session/CSRF contract，
+1. 先接入真实 Mongo/NATS repositories 与 projection worker wiring，使 native smoke
+   能覆盖完整 API/worker 数据平面，再按 `m8-local-runbook.md` 执行 M5/M6/M7/M8 live gate。
+2. 完成 `web/` Next.js BFF/grid，复用本报告中的 Go auth/session/CSRF contract，
    把 OWNER/EDITOR/VIEWER 矩阵提升为真实浏览器测试。
-2. 接入真实 Mongo/NATS repositories 与 projection worker wiring，再按
-   `m8-local-runbook.md` 启动四项依赖，执行 M5/M6/M7/M8 live gate。
 3. 按 `m8-recovery-runbook.md` 做一次原 event ID 的 GAP/DLQ 重放、ACK-loss、凭据
    滚动轮换并保存 backlog/lease/audit 证据。
 4. 单独评审 M1-014 machine identity 方案后，再决定 Dex stable、专用 Authorization

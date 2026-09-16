@@ -112,7 +112,7 @@
 | RH-M7-070 | Record Hub | tenant/workspace/row/field 负向矩阵 | DONE | M3,M4,M6 | 用户与机器跨 scope 全拒绝 |
 | RH-M7-071 | 四仓库 | secret/PII/sensitive payload scan | DONE | M5 | fixtures、日志、events、API response 无泄露 |
 | RH-M7-072 | Record Hub | metrics 与 structured logging | DONE | M4 | 延迟、积压、重投、gap、DLQ、auth failure |
-| RH-M7-073 | Record Hub | Mongo commit/ACK loss 故障注入 | PARTIAL | M4 | 重投无重复记录/版本/审计 |
+| RH-M7-073 | Record Hub | Mongo commit/ACK loss 故障注入 | DONE | M4 | 真实 Mongo transaction 提交后模拟响应丢失；同 event ID 重投无重复记录/版本/审计 |
 | RH-M7-074 | 四仓库 | NATS outage/outbox recovery | PARTIAL | M5 | 业务事务继续；恢复后积压清空 |
 | RH-M7-075 | Record Hub | Dex/JWKS rotation/outage | DONE | M1 | cache 边界、过期 fail closed、恢复成功 |
 | RH-M7-076 | Record Hub | API/worker/Mongo/NATS 分进程重启 | PARTIAL | M4,M6 | 无消息丢失，无永久 lease |

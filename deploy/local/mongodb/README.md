@@ -14,6 +14,28 @@ Compose 显式启用 glibc rseq，以兼容使用 Linux 6.19—7.0.13 内核的 
 
 ## 启动与验收
 
+### Homebrew native 安装
+
+macOS 本地可以使用 MongoDB 官方 Homebrew tap，不需要 Docker：
+
+```bash
+brew tap mongodb/brew
+brew install mongodb-community@8.0
+brew services start mongodb/brew/mongodb-community@8.0
+```
+
+公式生成的默认配置使用单节点 replica set `rs0`。如果该实例已有其他本地数据，保持
+`rs0` 不变，不执行清库或重命名；Record Hub native smoke 使用独立的 `record_hub` 数据库：
+
+```bash
+export RECORD_HUB_MONGODB_URI='mongodb://127.0.0.1:27017/record_hub?replicaSet=rs0&directConnection=true'
+make mongo-smoke
+```
+
+该模式默认没有 MongoDB 用户认证，只适合受控开发机。需要验证 Record Hub 文档中带
+`record-hub-rs`、keyfile 和独立应用用户的拓扑时，使用下方 Docker 配置或单独的 native
+`mongod.conf`/数据目录，不要修改共享的 Homebrew 实例。
+
 先在当前 shell 设置四个本地凭据；建议用密码管理器或 `openssl rand -hex 24` 生成，不要写入被跟踪文件：
 
 ```bash

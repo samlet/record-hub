@@ -7,7 +7,7 @@ secret、NATS credential 或 MongoDB password 提交到 Git。
 ## 1. 依赖
 
 - Go 1.27、`curl`、`openssl`、`jq`；
-- Docker Desktop/Engine（运行 Dex、MongoDB replica set、NATS JetStream）；
+- Docker Desktop/Engine，或已由 Homebrew/本机进程启动的 Dex、MongoDB replica set、NATS JetStream；
 - 联合 gate 还需要 JDK/Maven 和 Fluxion Gradle wrapper。
 
 先执行代码级门禁（不需要 Docker）：
@@ -19,6 +19,55 @@ make m8-failure-path
 ```
 
 ## 2. 启动本地依赖
+
+### 2.1 Native 服务（推荐用于本机已有安装）
+
+Docker 不是必需条件。先确认服务进程已经运行：
+
+```bash
+brew services list | grep -E 'mongodb|nats|postgres'
+mongosh --quiet --host 127.0.0.1:27017 --eval 'rs.status().members.map(m => ({name:m.name,stateStr:m.stateStr}))'
+nats --server nats://127.0.0.1:4222 stream ls
+```
+
+Homebrew 的 `mongodb-community@8.0` 默认使用单节点 replica set `rs0`。本机实例已有
+数据时不要重命名或清理该 replica set；Record Hub native smoke 使用独立数据库名和以下
+连接串：
+
+```bash
+export RECORD_HUB_MONGODB_URI='mongodb://127.0.0.1:27017/record_hub?replicaSet=rs0&directConnection=true'
+export RECORD_HUB_NATS_URL='nats://127.0.0.1:4222'
+```
+
+直接运行 native 依赖/API smoke（不会启动、停止或删除本机服务）：
+
+```bash
+make m8-native-smoke
+```
+
+该命令验证 Mongo transaction/unique-index/CAS/change-stream、NATS JetStream topology 和
+Record Hub API health/metrics。Dex/Web smoke 需要与当前运行 Dex 的 issuer、client 和
+redirect URI 完全匹配时才启用：
+
+```bash
+RECORD_HUB_M8_DEX_LIVE=1 \
+RECORD_HUB_WEB_ENABLED=true \
+RECORD_HUB_WEB_ISSUER='http://127.0.0.1:5556/dex' \
+RECORD_HUB_WEB_AUTHORIZATION_ENDPOINT='http://127.0.0.1:5556/dex/auth' \
+RECORD_HUB_WEB_TOKEN_ENDPOINT='http://127.0.0.1:5556/dex/token' \
+RECORD_HUB_WEB_AUDIENCE='record-hub-web-local' \
+RECORD_HUB_WEB_CLIENT_ID='record-hub-web-local' \
+RECORD_HUB_WEB_CLIENT_SECRET='<local-secret>' \
+RECORD_HUB_WEB_REDIRECT_URL='http://127.0.0.1:18080/auth/callback' \
+RECORD_HUB_M8_LOCAL_LIVE=1 RECORD_HUB_M8_RUNTIME=native \
+./scripts/verify-m8-local.sh
+```
+
+如果当前 Dex 是其他项目的配置（例如 issuer 没有 `/dex` 或没有 Record Hub client），
+不要把失败归因于 Mongo/NATS；应启动独立的 Record Hub Dex 配置或仅运行不带 Web 的
+native smoke。
+
+### 2.2 Docker 服务
 
 ```bash
 make dex-env
