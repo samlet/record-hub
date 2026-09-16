@@ -110,3 +110,19 @@ func TestInboxClaimBoundsPayloadAndIdentifiers(t *testing.T) {
 		t.Fatal("oversized inbox payload should fail")
 	}
 }
+
+func TestInboxClaimScopeIsOptionalButMustBeComplete(t *testing.T) {
+	repository := &memoryInboxRepository{values: make(map[string]InboxEvent)}
+	claim := InboxClaim{EventID: "event-scoped-1", Consumer: "record-hub-approver-v1", Subject: "events.approver.application.changed.v1", TenantID: "tenant-1", Payload: []byte(`{"eventId":"event-scoped-1"}`), ReceivedAt: time.Now()}
+	if _, err := repository.Claim(context.Background(), claim); err == nil {
+		t.Fatal("partial inbox scope should fail")
+	}
+	claim.WorkspaceID = "workspace-1"
+	claimed, err := repository.Claim(context.Background(), claim)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if claimed.Event.TenantID != "tenant-1" || claimed.Event.WorkspaceID != "workspace-1" {
+		t.Fatalf("scoped inbox event = %#v", claimed.Event)
+	}
+}

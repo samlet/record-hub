@@ -376,8 +376,9 @@ Operations 页只展示安全错误、consumer、event ID、aggregate reference�
 M4-047 API 为 `GET /api/v1/operations/events`，必须带 `tenantId`、`workspaceId` 和一个
 durable `consumer`，查询最多返回 100 个 checkpoint。响应只包含 Inbox 各状态计数、最早
 processing 时间和 checkpoint 的 aggregate/version/status 元数据；Mongo 查询使用固定字段
-投影，绝不选择或解码 Inbox payload。页面 `/operations/events` 只渲染这些安全字段，通过
-普通刷新获取最新快照。
+投影，绝不选择或解码 Inbox payload。新 Inbox claim 同时记录 tenant/workspace，旧的无 scope
+claim 不参与租户计数，避免跨租户侧信道。页面 `/operations/events` 只渲染这些安全字段，
+通过普通刷新获取最新快照。
 
 MVP 更新采用普通 HTTP 刷新或轻量 SSE；不实现 Presence/Broadcast。
 

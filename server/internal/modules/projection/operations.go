@@ -27,9 +27,10 @@ var (
 )
 
 // OperationsQuery is deliberately scoped to one consumer and workspace. The
-// inbox summary is consumer-scoped because the v1 inbox record predates
-// tenant/workspace columns; checkpoints are always filtered by both scope
-// fields before being returned.
+// Inbox claims may omit scope for backwards compatibility with pre-M4-047
+// consumers. Scoped claims are counted only for this tenant/workspace; legacy
+// unscoped claims are intentionally excluded instead of becoming a cross-
+// tenant side channel. Checkpoints are always filtered by both scope fields.
 type OperationsQuery struct {
 	TenantID    string
 	WorkspaceID string
@@ -155,13 +156,15 @@ func (repository *MongoProjectionRepository) Snapshot(ctx context.Context, query
 		return OperationsSnapshot{}, ErrOperationsUnavailable
 	}
 	counts := InboxOperationsSummary{}
+	inboxFilter := bson.D{{Key: "consumer", Value: query.Consumer}, {Key: "tenantId", Value: query.TenantID}, {Key: "workspaceId", Value: query.WorkspaceID}}
 	for status, target := range map[InboxStatus]*int64{
 		InboxProcessing: &counts.Processing,
 		InboxApplied:    &counts.Applied,
 		InboxRejected:   &counts.Rejected,
 		InboxFailed:     &counts.Failed,
 	} {
-		count, countErr := repository.inbox.CountDocuments(ctx, bson.D{{Key: "consumer", Value: query.Consumer}, {Key: "status", Value: status}})
+		countFilter := append(append(bson.D(nil), inboxFilter...), bson.E{Key: "status", Value: status})
+		count, countErr := repository.inbox.CountDocuments(ctx, countFilter)
 		if countErr != nil {
 			return OperationsSnapshot{}, fmt.Errorf("count inbox %s: %w", status, countErr)
 		}
@@ -170,7 +173,8 @@ func (repository *MongoProjectionRepository) Snapshot(ctx context.Context, query
 	var oldest struct {
 		ReceivedAt time.Time `bson:"receivedAt"`
 	}
-	oldestErr := repository.inbox.FindOne(ctx, bson.D{{Key: "consumer", Value: query.Consumer}, {Key: "status", Value: InboxProcessing}}, options.FindOne().SetProjection(bson.D{{Key: "receivedAt", Value: 1}}).SetSort(bson.D{{Key: "receivedAt", Value: 1}})).Decode(&oldest)
+	oldestFilter := append(append(bson.D(nil), inboxFilter...), bson.E{Key: "status", Value: InboxProcessing})
+	oldestErr := repository.inbox.FindOne(ctx, oldestFilter, options.FindOne().SetProjection(bson.D{{Key: "receivedAt", Value: 1}}).SetSort(bson.D{{Key: "receivedAt", Value: 1}})).Decode(&oldest)
 	if oldestErr == nil {
 		value := oldest.ReceivedAt.UTC()
 		counts.OldestProcessingAt = &value

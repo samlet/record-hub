@@ -34,6 +34,8 @@ type InboxEvent struct {
 	EventID     string      `bson:"eventId" json:"eventId"`
 	Consumer    string      `bson:"consumer" json:"consumer"`
 	Subject     string      `bson:"subject" json:"subject"`
+	TenantID    string      `bson:"tenantId,omitempty" json:"tenantId,omitempty"`
+	WorkspaceID string      `bson:"workspaceId,omitempty" json:"workspaceId,omitempty"`
 	PayloadHash string      `bson:"payloadHash" json:"payloadHash"`
 	Status      InboxStatus `bson:"status" json:"status"`
 	ReceivedAt  time.Time   `bson:"receivedAt" json:"receivedAt"`
@@ -42,11 +44,13 @@ type InboxEvent struct {
 }
 
 type InboxClaim struct {
-	EventID    string
-	Consumer   string
-	Subject    string
-	Payload    []byte
-	ReceivedAt time.Time
+	EventID     string
+	Consumer    string
+	Subject     string
+	TenantID    string
+	WorkspaceID string
+	Payload     []byte
+	ReceivedAt  time.Time
 }
 
 type InboxClaimResult struct {
@@ -57,6 +61,12 @@ type InboxClaimResult struct {
 func (event InboxEvent) Validate() error {
 	if strings.TrimSpace(event.EventID) == "" || strings.TrimSpace(event.Consumer) == "" || strings.TrimSpace(event.Subject) == "" || strings.TrimSpace(event.PayloadHash) == "" {
 		return errors.New("inbox event id, consumer, subject, and payload hash are required")
+	}
+	if (event.TenantID == "") != (event.WorkspaceID == "") {
+		return errors.New("inbox tenantId and workspaceId must be provided together")
+	}
+	if len(event.TenantID) > 128 || len(event.WorkspaceID) > 128 || strings.ContainsAny(event.TenantID+event.WorkspaceID, " \t\r\n") {
+		return errors.New("inbox scope identifiers are invalid")
 	}
 	if event.Status != InboxProcessing && event.Status != InboxApplied && event.Status != InboxRejected && event.Status != InboxFailed {
 		return errors.New("inbox event status is invalid")
@@ -179,8 +189,13 @@ func normalizeInboxClaim(claim InboxClaim) (InboxEvent, error) {
 	eventID := strings.TrimSpace(claim.EventID)
 	consumer := strings.TrimSpace(claim.Consumer)
 	subject := strings.TrimSpace(claim.Subject)
+	tenantID := strings.TrimSpace(claim.TenantID)
+	workspaceID := strings.TrimSpace(claim.WorkspaceID)
 	if eventID == "" || consumer == "" || subject == "" || len(eventID) > 256 || len(consumer) > 256 || len(subject) > 256 {
 		return InboxEvent{}, errors.New("inbox event id, consumer, and subject are required and bounded")
+	}
+	if (tenantID == "") != (workspaceID == "") || len(tenantID) > 128 || len(workspaceID) > 128 {
+		return InboxEvent{}, errors.New("inbox tenantId and workspaceId must be provided together and bounded")
 	}
 	if strings.IndexFunc(eventID+consumer+subject, func(r rune) bool { return r == '\n' || r == '\r' || r == '\t' || r == ' ' }) >= 0 {
 		return InboxEvent{}, errors.New("inbox event identifiers cannot contain whitespace")
@@ -192,6 +207,6 @@ func normalizeInboxClaim(claim InboxClaim) (InboxEvent, error) {
 		return InboxEvent{}, errors.New("inbox event receivedAt is required")
 	}
 	digest := sha256.Sum256(claim.Payload)
-	event := InboxEvent{EventID: eventID, Consumer: consumer, Subject: subject, PayloadHash: "sha256:" + hex.EncodeToString(digest[:]), Status: InboxProcessing, ReceivedAt: claim.ReceivedAt.UTC()}
+	event := InboxEvent{EventID: eventID, Consumer: consumer, Subject: subject, TenantID: tenantID, WorkspaceID: workspaceID, PayloadHash: "sha256:" + hex.EncodeToString(digest[:]), Status: InboxProcessing, ReceivedAt: claim.ReceivedAt.UTC()}
 	return event, event.Validate()
 }

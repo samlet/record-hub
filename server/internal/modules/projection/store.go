@@ -216,7 +216,7 @@ func validateProjectionApply(input ProjectionApply) error {
 	if input.Record.Projection == nil {
 		return ErrProjectionRecordRequired
 	}
-	if input.Checkpoint.LastEventID != input.InboxEvent.EventID || input.Checkpoint.TenantID != input.Record.TenantID || input.Checkpoint.WorkspaceID != input.Record.WorkspaceID || input.Checkpoint.Consumer != input.InboxEvent.Consumer || input.Audit.TenantID != input.Record.TenantID || input.Audit.WorkspaceID != input.Record.WorkspaceID || input.Audit.ResourceID != input.Record.ID {
+	if input.Checkpoint.LastEventID != input.InboxEvent.EventID || input.Checkpoint.TenantID != input.Record.TenantID || input.Checkpoint.WorkspaceID != input.Record.WorkspaceID || input.Checkpoint.Consumer != input.InboxEvent.Consumer || input.Audit.TenantID != input.Record.TenantID || input.Audit.WorkspaceID != input.Record.WorkspaceID || input.Audit.ResourceID != input.Record.ID || (input.InboxEvent.TenantID != "" && (input.InboxEvent.TenantID != input.Record.TenantID || input.InboxEvent.WorkspaceID != input.Record.WorkspaceID)) {
 		return errors.New("projection apply scope and event identity do not match")
 	}
 	if input.Audit.Action == "" || input.Audit.Actor.Issuer == "" || input.Audit.Actor.Subject == "" || input.Audit.ResourceType == "" || input.Audit.CreatedAt.IsZero() {
