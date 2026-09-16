@@ -182,6 +182,50 @@ func TestSummaryHandlersRejectWrongIdentityAndSensitiveFields(t *testing.T) {
 	}
 }
 
+func TestM7SummaryFieldBoundaryRejectsSensitiveFieldsForEveryProducer(t *testing.T) {
+	tests := []struct {
+		kind         SummaryKind
+		sourceSystem string
+		eventType    string
+	}{
+		{kind: SummaryApplication, sourceSystem: "approver", eventType: "approver.application.summary-changed"},
+		{kind: SummaryProject, sourceSystem: "fluxion", eventType: "fluxion.project.summary-changed"},
+		{kind: SummaryTender, sourceSystem: "bids", eventType: "bids.tender.summary-changed"},
+	}
+	for _, test := range tests {
+		t.Run(string(test.kind), func(t *testing.T) {
+			handler, err := NewSummaryHandler(test.kind)
+			if err != nil {
+				t.Fatal(err)
+			}
+			fixture, err := summaries.Fixture(summaries.Kind(test.kind))
+			if err != nil {
+				t.Fatal(err)
+			}
+			var safePayload map[string]any
+			if err := json.Unmarshal(fixture, &safePayload); err != nil {
+				t.Fatal(err)
+			}
+			for _, field := range []string{"contactEmail", "phone", "bidAmount", "quotation", "fileUrl", "documentUrl"} {
+				t.Run(field, func(t *testing.T) {
+					payload := make(map[string]any, len(safePayload)+1)
+					for key, value := range safePayload {
+						payload[key] = value
+					}
+					payload[field] = "sensitive-value"
+					err := handler.Handle(context.Background(), summaryEnvelopeJSON(test.sourceSystem, test.eventType, payload))
+					if err == nil {
+						t.Fatal("sensitive field was accepted")
+					}
+					if strings.Contains(err.Error(), "sensitive-value") {
+						t.Fatalf("error leaked sensitive value: %q", err)
+					}
+				})
+			}
+		})
+	}
+}
+
 func TestSummaryHandlersRejectOversizedEnvelope(t *testing.T) {
 	handler, err := NewSummaryHandler(SummaryProject)
 	if err != nil {
