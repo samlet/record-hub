@@ -25,6 +25,16 @@ go test ./server/internal/modules/identity ./server/internal/modules/binding ./s
 go test ./...
 ```
 
+M7-071 的跨仓库安全 payload gate：
+
+```bash
+./scripts/verify-m7-payload-scan.sh
+```
+
+该 gate 固化四个仓库的 summary fixture、Outbox payload、workflow/task 输出和 Record Hub
+operations/API 脱敏测试；它只使用 deterministic fake，不把未启动的 MongoDB、NATS、Temporal、
+Conductor 或 Dex 伪报成 live E2E。
+
 ## 边界说明
 
 binding 只接受 `system:type:id` 的稳定引用和已经由 projection/record owner 过滤后的 JSON
