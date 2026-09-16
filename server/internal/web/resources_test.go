@@ -153,6 +153,24 @@ func TestResourceRouterReceivesSessionPrincipalAndCSRFBoundary(t *testing.T) {
 	}
 }
 
+func TestServiceBearerDoesNotRequireBrowserCSRF(t *testing.T) {
+	secret := []byte("01234567890123456789012345678901")
+	sessions, err := NewSessionManager(secret, time.Hour, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := (&Handler{sessions: sessions, csrf: newCSRFProtection(sessions)}).Middleware(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+		writer.WriteHeader(http.StatusNoContent)
+	}))
+	request := httptest.NewRequest(http.MethodPost, "http://app.test/api/v1/bindings/snapshots", strings.NewReader(`{}`))
+	request = request.WithContext(identity.WithPrincipal(request.Context(), identity.Principal{Kind: identity.PrincipalService, Issuer: "https://workload.example", Subject: "fluxion-to-record-hub"}))
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if response.Code != http.StatusNoContent {
+		t.Fatalf("service bearer status = %d, want 204", response.Code)
+	}
+}
+
 func TestSessionMiddlewareDoesNotTrustMalformedCookie(t *testing.T) {
 	sessions, err := NewSessionManager([]byte(strings.Repeat("m", 32)), time.Hour, false)
 	if err != nil {

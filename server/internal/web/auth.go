@@ -367,6 +367,13 @@ func (p *CSRFProtection) Validate(r *http.Request) error {
 func (p *CSRFProtection) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		p.Ensure(w, r)
+		// A validated service bearer token is not ambient browser state, so it
+		// is not vulnerable to cookie-forcing CSRF. Keep the browser session
+		// path below protected by the signed double-submit token.
+		if principal, ok := identity.PrincipalFromContext(r.Context()); ok && principal.Kind == identity.PrincipalService {
+			next.ServeHTTP(w, r)
+			return
+		}
 		if r.Method != http.MethodGet && r.Method != http.MethodHead && r.Method != http.MethodOptions && r.Method != http.MethodTrace {
 			if err := p.Validate(r); err != nil {
 				http.Error(w, "CSRF validation failed", http.StatusForbidden)

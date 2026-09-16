@@ -16,7 +16,7 @@
 | P2-0-002 | Exact machine policy runtime config | DONE | 有界严格 JSON；issuer/subject/audience/scope/tenant/workspace/purpose/resource exact match；负向测试通过 |
 | P2-0-003 | Ephemeral local workload issuer | DONE | client credentials、临时 RS256、5 分钟 token、discovery/JWKS；仅本地/CI |
 | P2-0-004 | Workload token live contract gate | DONE | Fluxion/Bids 独立 client；错误 secret/scope 拒绝；`make p2-workload-identity-smoke` 通过 |
-| P2-0-005 | 隔离 Mongo/NATS/Dex/Workload issuer/API 拓扑 | TODO | 专用端口/目录/数据库；一条命令启动、探测、验收、清理，不影响现有服务 |
+| P2-0-005 | 隔离 Mongo/NATS/Dex/Workload issuer/API 拓扑 | DONE | `make p2-isolated-core` 使用专用端口/临时目录/数据库，一条命令启动、探测、验收、清理；Mongo/NATS/Dex/Record Hub 与 workload token 均通过 |
 | P2-0-006 | 隔离 Temporal/Conductor/四应用拓扑 | TODO | 真实 engine、三个 producer、Record Hub 受监督运行，保存版本与有界日志 |
 | P2-0-007 | 补跑 Dex 浏览器角色矩阵 | TODO | login/callback/logout、OWNER/EDITOR/VIEWER、撤权与跨租户负向无跳过 |
 | P2-0-008 | 补跑双引擎 Binding live/restart | TODO | workload token、真实 Temporal/Conductor、snapshot/replay/restart 无跳过 |
@@ -32,3 +32,4 @@
 | P2-3 Controlled Command | TODO | policy、receipt、owner Inbox、单一低风险 command |
 | P2-4 Approval/Beta | TODO | Approver connector/试点、备份恢复、升级回滚、Beta 准入 |
 
+P2-0-005 的运行说明见 [deploy/local/isolated/README.md](../deploy/local/isolated/README.md)。

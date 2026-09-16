@@ -53,6 +53,7 @@ HTTP 契约以 [`api/openapi.yaml`](api/openapi.yaml) 为准。`make generate-cl
 - [下一期方案评估](docs/phase-2-evaluation.md)
 - [下一期需求设计](docs/phase-2-requirements.md)
 - [下一期任务分解](docs/phase-2-task-breakdown.md)
+- [原生隔离验收拓扑](deploy/local/isolated/README.md)
 - [参考资料](docs/references.md)
 - [ADR-0001：独立仓库与事实所有权](docs/adr/0001-independent-service-and-data-ownership.md)
 - [ADR-0002：Go 服务端](docs/adr/0002-go-server.md)
