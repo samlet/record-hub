@@ -1,4 +1,4 @@
-.PHONY: build test lint openapi-lint generate-clients dependency-scan sbom secret-scan mongo-up mongo-smoke mongo-down schema-persistence-smoke records-persistence-smoke projection-persistence-smoke nats-up nats-init nats-smoke nats-permissions-smoke nats-down dex-env dex-up dex-smoke dex-down m5-runtime-smoke m5-supervised-live m7-native-restart m7-native-nats-recovery m8-happy-path m8-failure-path m8-local-smoke m8-native-smoke check ci clean
+.PHONY: build test lint web-check openapi-lint generate-clients dependency-scan sbom secret-scan mongo-up mongo-smoke mongo-down schema-persistence-smoke records-persistence-smoke projection-persistence-smoke nats-up nats-init nats-smoke nats-permissions-smoke nats-down dex-env dex-up dex-smoke dex-down m5-runtime-smoke m5-supervised-live m7-native-restart m7-native-nats-recovery m8-happy-path m8-failure-path m8-local-smoke m8-native-smoke check ci clean
 
 BUILD_DIR := build
 BINARY := $(BUILD_DIR)/record-hub
@@ -12,6 +12,9 @@ test:
 lint:
 	test -z "$$(gofmt -l contracts server tools)"
 	go vet ./...
+
+web-check:
+	cd web && npm ci && npm run typecheck && npm run build
 
 openapi-lint:
 	go run ./tools/openapi-lint api/openapi.yaml
@@ -98,7 +101,7 @@ m8-local-smoke:
 m8-native-smoke:
 	RECORD_HUB_M8_LOCAL_LIVE=1 RECORD_HUB_M8_RUNTIME=native ./scripts/verify-m8-local.sh
 
-check: lint openapi-lint test build
+check: lint web-check openapi-lint test build
 
 ci: check dependency-scan sbom secret-scan
 

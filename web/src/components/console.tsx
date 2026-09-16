@@ -14,7 +14,7 @@ const initialSchema = '{\n  "$schema": "https://json-schema.org/draft/2020-12/sc
 
 export function Console() {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
-  const [tenantId, setTenantId] = useState(() => typeof window === "undefined" ? "tenant-local" : localStorage.getItem("record-hub-tenant") ?? "tenant-local");
+  const [tenantId, setTenantId] = useState("tenant-local");
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [workspaceId, setWorkspaceId] = useState("");
   const [tables, setTables] = useState<TableDefinition[]>([]);
@@ -37,6 +37,11 @@ export function Console() {
 
   useEffect(() => {
     api.session().then(() => setAuthenticated(true)).catch(() => setAuthenticated(false));
+  }, []);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("record-hub-tenant");
+    if (saved) setTenantId(saved);
   }, []);
 
   useEffect(() => {

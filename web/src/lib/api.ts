@@ -87,6 +87,11 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<{ body:
   if (init.method && !["GET", "HEAD", "OPTIONS"].includes(init.method.toUpperCase())) {
     const token = csrfToken();
     if (token) headers.set("X-CSRF-Token", token);
+    if (!headers.has("Idempotency-Key")) {
+      const random = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      headers.set("Idempotency-Key", `web-${random}`);
+    }
+    if (!headers.has("X-Request-ID")) headers.set("X-Request-ID", `web-${Date.now()}-${Math.random().toString(36).slice(2)}`);
   }
   const response = await fetch(path, { ...init, headers, credentials: "include" });
   const text = await response.text();
