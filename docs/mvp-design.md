@@ -291,6 +291,9 @@ record-hub-bids-projection-v1
 5. transaction 成功后 ACK。
 6. 确定性错误进入 REJECTED/DLQ；临时错误 NAK/退避重投。
 
+Handler registry 按 `sourceSystem/eventType/schemaVersion` 精确匹配，注册键全局唯一；不允许
+按 source 或 event type 回退匹配，未注册事件直接 fail closed，避免未知事件误写投影。
+
 MVP 单消息上限暂定 256 KiB；压测后才能提高。
 
 ## 10. 三个生产者接入

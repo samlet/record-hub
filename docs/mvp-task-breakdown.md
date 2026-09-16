@@ -70,7 +70,7 @@
 | --- | --- | --- | --- | --- | --- |
 | RH-M4-040 | Record Hub | NATS client、durable pull lifecycle | DONE | M1-011,M0-002 | Go client 自动重连；durable pull Fetch；handler 成功后 DoubleAck、失败 NAK；取消时 bounded drain；配置有界且单元测试覆盖 |
 | RH-M4-041 | Record Hub | InboxEvent claim/payloadHash 冲突 | DONE | 040,M1-010 | `(consumer,eventId)` 唯一 claim；相同 payload hash duplicate success；不同 payload 冲突；PROCESSING/APPLIED/REJECTED 状态；Mongo/内存测试已覆盖 |
-| RH-M4-042 | Record Hub | 投影 handler registry | TODO | 041 | source/type/version 唯一注册；unknown fail closed |
+| RH-M4-042 | Record Hub | 投影 handler registry | DONE | 041 | 精确 `sourceSystem/eventType/schemaVersion` 唯一注册；重复注册和 unknown event fail closed；并发安全单元测试已覆盖 |
 | RH-M4-043 | Record Hub | projection transaction/checkpoint/audit | TODO | 042,M3-035 | Mongo transaction 原子提交后 ACK |
 | RH-M4-044 | Record Hub | aggregate version duplicate/gap recovery | TODO | 043 | 落后忽略、跳跃 GAP、补齐恢复 |
 | RH-M4-045 | Record Hub | retry/backoff/MaxDeliver/DLQ | TODO | 043 | deterministic/transient 分类和安全错误 |
