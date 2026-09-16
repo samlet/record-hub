@@ -25,8 +25,8 @@ type Principal struct {
 
 // IdentityKey is safe to use as a local membership lookup key.
 type IdentityKey struct {
-	Issuer  string
-	Subject string
+	Issuer  string `json:"issuer" bson:"issuer"`
+	Subject string `json:"subject" bson:"subject"`
 }
 
 func (p Principal) IdentityKey() IdentityKey {

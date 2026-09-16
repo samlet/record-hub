@@ -30,6 +30,8 @@ DRAFT -> PUBLISHED -> DEPRECATED
 ```
 
 - Published 版本不可原地修改。
+- MongoDB 同时以 `(tenantId, name, version)` 和 `(tenantId, schemaId, version)` 建立唯一索引；草稿更新使用 `revision` CAS。
+- 通用更新只匹配 `DRAFT` 状态。`PUBLISHED`/`DEPRECATED` 即使并发调用或伪装成 draft 也不能通过 repository 改写。
 - 增加可选字段可以发布兼容小版本。
 - 删除、改名、改变类型/必填语义或枚举含义必须发布新主版本。
 - 记录固定 `schemaId + schemaVersion`，不得自动漂移到最新版。
@@ -93,4 +95,3 @@ Envelope 字段由服务控制。用户只能编辑 Schema 和权限允许的 `d
 - 常用 tag、投影状态和同步时间索引。
 
 任意动态字段索引必须由受控的 View/Index Policy 创建，不能由用户无限制创建索引。
-
