@@ -23,6 +23,8 @@ Record Hub 不以 Schema.org 代替严格校验，而采用双层模型：
 
 无法准确拟合 Schema.org 的领域概念必须保留自有 URI，不创建错误的公共语义映射。
 
+MVP validator 强制声明 Draft 2020-12，并在编译时校验 schema vocabulary 和 format。实例解析拒绝非法 UTF-8、多 JSON 值及尾随内容；文本、数字、布尔、`date-time`、枚举和 typed reference 六种字段均通过相同编译器验证。数字规范化与跨语言 hash 属于 canonicalization 层，不由 JSON Schema validator 猜测 decimal scale。
+
 ## 2. Schema 生命周期
 
 ```text

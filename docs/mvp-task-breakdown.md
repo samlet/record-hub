@@ -45,7 +45,7 @@
 | --- | --- | --- | --- | --- | --- |
 | RH-M2-020 | Record Hub | SchemaDefinition persistence 与索引 | DONE | M1-010 | tenant/name/version 与 tenant/schemaId/version 唯一；draft CAS；published/deprecated immutable，真实 MongoDB 验收通过 |
 | RH-M2-021 | Record Hub | Draft create/update/publish API | TODO | 020,M1-016 | idempotency、If-Match、审计和角色检查 |
-| RH-M2-022 | Record Hub | JSON Schema 2020-12 validation | TODO | 020 | 六种 MVP 字段类型与负向 fixture |
+| RH-M2-022 | Record Hub | JSON Schema 2020-12 validation | DONE | 020 | 强制 Draft 2020-12；text/number/boolean/date-time/enum/reference 正负 fixture；非法 UTF-8/尾随 JSON 拒绝 |
 | RH-M2-023 | Record Hub | compatibility checker | TODO | 022 | optional additive 兼容；删除/改名/收窄判 breaking |
 | RH-M2-024 | Record Hub | semanticTypes/Schema.org URI mapping | TODO | 020 | URI 规范化；不影响结构校验结果 |
 | RH-M2-025 | Record Hub | canonical JSON/content hash | TODO | 022 | Go/Java/TS fixture hash 一致 |
