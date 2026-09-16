@@ -20,10 +20,10 @@
 | P2-0-006 | 隔离 Temporal/Conductor/四应用拓扑 | PARTIAL | P2-0-006a 引擎基线已通过；四应用受监督接入仍需单独完成，不能复用共享运行时 |
 | P2-0-006a | 隔离 Temporal/Conductor 引擎基线 | DONE | `make p2-engine-foundation` 使用专用端口和临时持久化，真实 Temporal/Conductor 启动、健康探测、退出清理通过 |
 | P2-0-006b | Approver/Fluxion/Bids/Record Hub 业务接入 | TODO | 四进程分别指向隔离身份、Mongo/NATS、Temporal/Conductor；保存版本、配置摘要和有界日志 |
-| P2-0-007 | 补跑 Dex 浏览器角色矩阵 | TODO | login/callback/logout、OWNER/EDITOR/VIEWER、撤权与跨租户负向无跳过 |
-| P2-0-008 | 补跑双引擎 Binding live/restart | TODO | workload token、真实 Temporal/Conductor、snapshot/replay/restart 无跳过 |
-| P2-0-009 | 补跑四系统 outage/restart/rotation | TODO | producer backlog/recovery、全进程 restart、JWKS/client secret rotation 无跳过 |
-| P2-0-010 | P2-0 基线验收报告 | TODO | 命令、版本、commit、PASS/SKIPPED 与遗留风险完整 |
+| P2-0-007 | 补跑 Dex 浏览器角色矩阵 | SKIPPED | Dex 协议与 PKCE 已通过，但本批未运行真实浏览器 login/callback/logout、OWNER/EDITOR/VIEWER、撤权和跨租户矩阵；待 Playwright/Chrome 与 membership provisioning 拓扑就绪后重试 |
+| P2-0-008 | 补跑双引擎 Binding live/restart | SKIPPED | Temporal/Conductor 引擎基线与 workload token contract 已通过，四业务进程接入（P2-0-006b）尚未完成，因此未宣称真实 snapshot/replay/restart；完成 006b 后重试 |
+| P2-0-009 | 补跑四系统 outage/restart/rotation | SKIPPED | 当前没有可独立启动的 Approver/Fluxion/Bids/Record Hub 监督式拓扑，未运行 producer backlog/recovery、全进程 restart、JWKS/client-secret rotation；完成 006b 与 rotation 配置后重试 |
+| P2-0-010 | P2-0 基线验收报告 | DONE | [phase-2-acceptance-report.md](phase-2-acceptance-report.md) 固化命令、版本、commit、PASS/SKIPPED、重试条件与遗留风险 |
 
 ## 后续批次
 
