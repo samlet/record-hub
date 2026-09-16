@@ -1,6 +1,6 @@
 # Schema Migration Plan 设计（P2-1-002）
 
-状态：Draft for implementation  
+状态：Registration API implemented; execution pending
 日期：2026-09-17
 
 ## 目标与边界
@@ -13,6 +13,9 @@ snapshot/history。每个计划固定引用一个 `fromVersion` 和 `toVersion`�
 第一阶段只实现计划登记、兼容性快照和取消；实际记录转换器与 staging generation 在
 P2-1-004 Projection rebuild 之后接入。这样可以先冻结控制面契约，再避免在没有 owner 规则
 时自动改写业务数据。
+
+当前实现已提供三条 HTTP 路由、Mongo 持久化/唯一索引、compatibility hash、幂等 receipt、
+OWNER 授权和 DRAFT/RUNNING 取消状态测试；下文标注的执行器和 publish 强制关联仍未完成。
 
 ## 计划模型
 

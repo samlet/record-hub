@@ -34,16 +34,23 @@ type CompatibilityService interface {
 }
 
 type HTTPHandler struct {
-	service MutationService
+	service    MutationService
+	migrations MigrationHTTPService
 }
 
-func NewHTTPHandler(service MutationService) http.Handler {
+func NewHTTPHandler(service MutationService, migrations ...MigrationHTTPService) http.Handler {
 	handler := &HTTPHandler{service: service}
+	if len(migrations) > 0 {
+		handler.migrations = migrations[0]
+	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /api/v1/schemas", handler.create)
 	mux.HandleFunc("GET /api/v1/schemas", handler.list)
 	mux.HandleFunc("GET /api/v1/schemas/{schemaID}", handler.get)
 	mux.HandleFunc("POST /api/v1/schemas/{schemaID}/compatibility", handler.compatibility)
+	mux.HandleFunc("POST /api/v1/schemas/{schemaID}/migration-plans", handler.createMigrationPlan)
+	mux.HandleFunc("GET /api/v1/schemas/{schemaID}/migration-plans/{planID}", handler.getMigrationPlan)
+	mux.HandleFunc("POST /api/v1/schemas/{schemaID}/migration-plans/{planID}/cancel", handler.cancelMigrationPlan)
 	mux.HandleFunc("PUT /api/v1/schemas/{schemaID}/draft", handler.update)
 	mux.HandleFunc("POST /api/v1/schemas/{schemaID}/publish", handler.publish)
 	return mux

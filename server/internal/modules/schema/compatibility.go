@@ -9,14 +9,14 @@ import (
 )
 
 type CompatibilityChange struct {
-	Path    string
-	Kind    string
-	Message string
+	Path    string `json:"path" bson:"path"`
+	Kind    string `json:"kind" bson:"kind"`
+	Message string `json:"message" bson:"message"`
 }
 
 type CompatibilityReport struct {
-	Compatible bool
-	Changes    []CompatibilityChange
+	Compatible bool                  `json:"compatible" bson:"compatible"`
+	Changes    []CompatibilityChange `json:"changes" bson:"changes"`
 }
 
 // CheckBackwardCompatibility answers whether every instance accepted by the

@@ -94,8 +94,10 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 	schemaRepo := schema.NewMongoRepository(database)
 	auditWriter := audit.NewMongoWriter(database)
 	schemaReceipts := schema.NewMongoReceiptStore(database)
+	migrationReceipts := schema.NewMongoMigrationPlanReceiptStore(database)
 	recordReceipts := records.NewMongoRecordReceiptStore(database)
 	schemaService := schema.NewService(schemaRepo, authorizer, schemaReceipts, auditWriter)
+	migrationService := schema.NewMigrationService(schemaRepo, schemaRepo, authorizer, migrationReceipts, auditWriter)
 	recordService := records.NewRecordService(recordRepo, recordRepo, schemaRepo, authorizer, recordRepo, recordReceipts, auditWriter).WithViewRepository(recordRepo).WithIndexRepository(recordRepo)
 	snapshotStore := binding.NewMongoSnapshotStore(database)
 	var machineAuthorizer binding.PolicyAuthorizer
@@ -118,7 +120,7 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 	bindingService := binding.NewService(binding.NewMongoRecordReader(recordRepo), snapshotStore, authorizer, machineAuthorizer)
 	operationsService := projection.NewOperationsService(projection.NewMongoProjectionRepository(database), authorizer).WithMetrics(metrics)
 	deps.records = records.NewHTTPHandler(recordService)
-	deps.schema = schema.NewHTTPHandler(schemaService)
+	deps.schema = schema.NewHTTPHandler(schemaService, migrationService)
 	deps.binding = binding.NewHTTPHandler(bindingService)
 	deps.operations = projection.NewOperationsHTTPHandler(operationsService)
 
@@ -183,6 +185,9 @@ func ensureMongoIndexes(database *mongo.Database) error {
 		return err
 	}
 	if err := schema.NewMongoReceiptStore(database).EnsureIndexes(ctx); err != nil {
+		return err
+	}
+	if err := schema.NewMongoMigrationPlanReceiptStore(database).EnsureIndexes(ctx); err != nil {
 		return err
 	}
 	if err := records.NewMongoRecordReceiptStore(database).EnsureIndexes(ctx); err != nil {

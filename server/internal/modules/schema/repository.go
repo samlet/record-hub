@@ -20,10 +20,12 @@ var (
 )
 
 const collectionName = "schema_definitions"
+const migrationPlanCollectionName = "migration_plans"
 
 type MongoRepository struct {
-	collection *mongo.Collection
-	clock      func() time.Time
+	collection     *mongo.Collection
+	migrationPlans *mongo.Collection
+	clock          func() time.Time
 }
 
 // WithTransaction lets mutation services atomically couple a registry change
@@ -42,7 +44,7 @@ func (repository *MongoRepository) WithTransaction(ctx context.Context, fn func(
 }
 
 func NewMongoRepository(database *mongo.Database) *MongoRepository {
-	return &MongoRepository{collection: database.Collection(collectionName), clock: time.Now}
+	return &MongoRepository{collection: database.Collection(collectionName), migrationPlans: database.Collection(migrationPlanCollectionName), clock: time.Now}
 }
 
 func (repository *MongoRepository) EnsureIndexes(ctx context.Context) error {
@@ -62,6 +64,19 @@ func (repository *MongoRepository) EnsureIndexes(ctx context.Context) error {
 	})
 	if err != nil {
 		return fmt.Errorf("create schema indexes: %w", err)
+	}
+	_, err = repository.migrationPlans.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		{
+			Keys:    bson.D{{Key: "tenantId", Value: 1}, {Key: "workspaceId", Value: 1}, {Key: "schemaId", Value: 1}, {Key: "fromVersion", Value: 1}, {Key: "toVersion", Value: 1}, {Key: "mode", Value: 1}, {Key: "compatibilityHash", Value: 1}},
+			Options: options.Index().SetName("migration_plan_fingerprint_unique").SetUnique(true),
+		},
+		{
+			Keys:    bson.D{{Key: "tenantId", Value: 1}, {Key: "workspaceId", Value: 1}, {Key: "schemaId", Value: 1}, {Key: "updatedAt", Value: -1}},
+			Options: options.Index().SetName("migration_plan_scope_updated"),
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("create migration plan indexes: %w", err)
 	}
 	return nil
 }
@@ -113,6 +128,63 @@ func (repository *MongoRepository) List(ctx context.Context, tenantID string, li
 		return nil, fmt.Errorf("decode schema definitions: %w", err)
 	}
 	return definitions, nil
+}
+
+func (repository *MongoRepository) CreateMigrationPlan(ctx context.Context, plan MigrationPlan) error {
+	if err := plan.Validate(); err != nil {
+		return err
+	}
+	if _, err := repository.migrationPlans.InsertOne(ctx, plan); err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			return ErrMigrationPlanExists
+		}
+		return fmt.Errorf("insert migration plan: %w", err)
+	}
+	return nil
+}
+
+func (repository *MongoRepository) FindMigrationPlan(ctx context.Context, tenantID, workspaceID, schemaID, planID string) (MigrationPlan, error) {
+	var plan MigrationPlan
+	err := repository.migrationPlans.FindOne(ctx, bson.D{{Key: "_id", Value: planID}, {Key: "tenantId", Value: tenantID}, {Key: "workspaceId", Value: workspaceID}, {Key: "schemaId", Value: schemaID}}).Decode(&plan)
+	if errors.Is(err, mongo.ErrNoDocuments) {
+		return MigrationPlan{}, ErrMigrationPlanNotFound
+	}
+	if err != nil {
+		return MigrationPlan{}, fmt.Errorf("find migration plan: %w", err)
+	}
+	return plan, nil
+}
+
+func (repository *MongoRepository) FindMigrationPlanByFingerprint(ctx context.Context, tenantID, workspaceID, schemaID string, fromVersion, toVersion int64, mode MigrationPlanMode, compatibilityHash string) (MigrationPlan, error) {
+	var plan MigrationPlan
+	err := repository.migrationPlans.FindOne(ctx, bson.D{{Key: "tenantId", Value: tenantID}, {Key: "workspaceId", Value: workspaceID}, {Key: "schemaId", Value: schemaID}, {Key: "fromVersion", Value: fromVersion}, {Key: "toVersion", Value: toVersion}, {Key: "mode", Value: mode}, {Key: "compatibilityHash", Value: compatibilityHash}}).Decode(&plan)
+	if errors.Is(err, mongo.ErrNoDocuments) {
+		return MigrationPlan{}, ErrMigrationPlanNotFound
+	}
+	if err != nil {
+		return MigrationPlan{}, fmt.Errorf("find migration plan by fingerprint: %w", err)
+	}
+	return plan, nil
+}
+
+func (repository *MongoRepository) UpdateMigrationPlan(ctx context.Context, plan MigrationPlan, expectedVersion int64) (MigrationPlan, error) {
+	if err := plan.Validate(); err != nil {
+		return MigrationPlan{}, err
+	}
+	filter := bson.D{{Key: "_id", Value: plan.ID}, {Key: "tenantId", Value: plan.TenantID}, {Key: "workspaceId", Value: plan.WorkspaceID}, {Key: "schemaId", Value: plan.SchemaID}, {Key: "version", Value: expectedVersion}}
+	update := bson.D{{Key: "$set", Value: bson.D{{Key: "status", Value: plan.Status}, {Key: "updatedBy", Value: plan.UpdatedBy}, {Key: "updatedAt", Value: plan.UpdatedAt}, {Key: "cancelRequestedAt", Value: plan.CancelRequestedAt}}}, {Key: "$inc", Value: bson.D{{Key: "version", Value: 1}}}}
+	var updated MigrationPlan
+	err := repository.migrationPlans.FindOneAndUpdate(ctx, filter, update, options.FindOneAndUpdate().SetReturnDocument(options.After)).Decode(&updated)
+	if err == nil {
+		return updated, nil
+	}
+	if !errors.Is(err, mongo.ErrNoDocuments) {
+		return MigrationPlan{}, fmt.Errorf("update migration plan: %w", err)
+	}
+	if _, lookupErr := repository.FindMigrationPlan(ctx, plan.TenantID, plan.WorkspaceID, plan.SchemaID, plan.ID); errors.Is(lookupErr, ErrMigrationPlanNotFound) {
+		return MigrationPlan{}, ErrMigrationPlanNotFound
+	}
+	return MigrationPlan{}, ErrMigrationPlanConflict
 }
 
 // UpdateDraft is the only general mutation path. Filtering on DRAFT makes

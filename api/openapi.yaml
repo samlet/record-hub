@@ -657,6 +657,106 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+  /api/v1/schemas/{schemaId}/migration-plans:
+    post:
+      tags: [Schema]
+      operationId: createMigrationPlan
+      summary: Register an owner-authorized schema migration plan
+      parameters:
+        - $ref: "#/components/parameters/SchemaId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/RequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MigrationPlanCreateRequest"
+      responses:
+        "201":
+          description: Migration plan registered.
+          headers:
+            ETag:
+              $ref: "#/components/headers/RevisionETag"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MigrationPlan"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/v1/schemas/{schemaId}/migration-plans/{planId}:
+    get:
+      tags: [Schema]
+      operationId: getMigrationPlan
+      summary: Get an owner-authorized migration plan
+      parameters:
+        - $ref: "#/components/parameters/SchemaId"
+        - $ref: "#/components/parameters/PlanId"
+        - $ref: "#/components/parameters/TenantIdQuery"
+        - $ref: "#/components/parameters/WorkspaceIdQuery"
+      responses:
+        "200":
+          description: Migration plan.
+          headers:
+            ETag:
+              $ref: "#/components/headers/RevisionETag"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MigrationPlan"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/schemas/{schemaId}/migration-plans/{planId}/cancel:
+    post:
+      tags: [Schema]
+      operationId: cancelMigrationPlan
+      summary: Request cancellation of a migration plan
+      parameters:
+        - $ref: "#/components/parameters/SchemaId"
+        - $ref: "#/components/parameters/PlanId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/RequestId"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MigrationPlanCancelRequest"
+      responses:
+        "200":
+          description: Updated migration plan.
+          headers:
+            ETag:
+              $ref: "#/components/headers/RevisionETag"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MigrationPlan"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "428":
+          $ref: "#/components/responses/PreconditionRequired"
   /api/v1/schemas/{schemaId}/draft:
     put:
       tags: [Schema]
@@ -876,6 +976,14 @@ components:
         type: string
         minLength: 1
         maxLength: 256
+    PlanId:
+      name: planId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
     IdempotencyKey:
       name: Idempotency-Key
       in: header
@@ -1765,6 +1873,95 @@ components:
           type: string
           minLength: 1
           maxLength: 512
+    MigrationPlanCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [tenantId, workspaceId, fromVersion, toVersion, mode, failureSampleLimit]
+      properties:
+        tenantId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        workspaceId:
+          type: string
+          format: uuid
+        fromVersion:
+          type: integer
+          minimum: 1
+        toVersion:
+          type: integer
+          minimum: 2
+        mode:
+          type: string
+          enum: [DRY_RUN, APPLY]
+        failureSampleLimit:
+          type: integer
+          minimum: 1
+          maximum: 100
+    MigrationPlanCancelRequest:
+      type: object
+      additionalProperties: false
+      required: [tenantId, workspaceId]
+      properties:
+        tenantId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        workspaceId:
+          type: string
+          format: uuid
+    MigrationPlan:
+      type: object
+      additionalProperties: false
+      required: [planId, tenantId, workspaceId, schemaId, fromVersion, toVersion, mode, failureSampleLimit, compatibility, compatibilityHash, status, version, createdBy, updatedBy, createdAt, updatedAt]
+      properties:
+        planId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        tenantId:
+          type: string
+        workspaceId:
+          type: string
+        schemaId:
+          type: string
+        fromVersion:
+          type: integer
+          minimum: 1
+        toVersion:
+          type: integer
+          minimum: 2
+        mode:
+          type: string
+          enum: [DRY_RUN, APPLY]
+        failureSampleLimit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        compatibility:
+          $ref: "#/components/schemas/SchemaCompatibilityReport"
+        compatibilityHash:
+          type: string
+          pattern: "^sha256:[0-9a-f]{64}$"
+        status:
+          type: string
+          enum: [DRAFT, APPROVED, RUNNING, CANCEL_REQUESTED, CANCELLED, SUCCEEDED, FAILED]
+        version:
+          type: integer
+          minimum: 1
+        createdBy:
+          $ref: "#/components/schemas/IdentityKey"
+        updatedBy:
+          $ref: "#/components/schemas/IdentityKey"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        cancelRequestedAt:
+          type: string
+          format: date-time
     SchemaPublishRequest:
       type: object
       additionalProperties: false
