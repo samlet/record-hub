@@ -207,7 +207,7 @@ ID 和 workspace 内名称建立唯一约束。
 Record 写入要求 `Idempotency-Key`，返回 `ETag: "recordVersion"`；更新和删除必须带
 `If-Match`，过期版本返回 `409 RECORD_VERSION_CONFLICT`。Record data 在写入前按 table
 固定的已发布 JSON Schema 校验，projection table 的通用写操作返回
-`409 PROJECTION_READ_ONLY`。
+`409 PROJECTION_READ_ONLY`；该检查在 POST/PATCH/DELETE 的幂等键、版本和数据处理前执行。
 
 Relation 只保存 typed target（`system`、`type`、`id`）和 relation type；写入时排序去重，
 解析结果标记为 `CURRENT`、`BROKEN` 或 `FORBIDDEN`。`FORBIDDEN` 关系清除内部解析 ID，

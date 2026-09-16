@@ -376,15 +376,12 @@ func (service *Service) CreateRecord(ctx context.Context, principal identity.Pri
 	if err := service.recordDependencies(ctx, principal, input.TenantID, input.WorkspaceID, identity.ActionRecordWrite); err != nil {
 		return Record{}, err
 	}
-	if input.IdempotencyKey == "" {
-		return Record{}, ErrIdempotencyKeyRequired
-	}
-	table, err := service.tables.GetTable(ctx, input.TenantID, input.WorkspaceID, input.TableID)
+	table, err := service.writableTable(ctx, input.TenantID, input.WorkspaceID, input.TableID)
 	if err != nil {
 		return Record{}, err
 	}
-	if table.Kind == TableKindProjection {
-		return Record{}, ErrProjectionReadOnly
+	if input.IdempotencyKey == "" {
+		return Record{}, ErrIdempotencyKeyRequired
 	}
 	definition, err := service.publishedSchema(ctx, input.TenantID, table.SchemaID, table.SchemaVersion)
 	if err != nil {
@@ -437,18 +434,15 @@ func (service *Service) UpdateRecord(ctx context.Context, principal identity.Pri
 	if err := service.recordDependencies(ctx, principal, input.TenantID, input.WorkspaceID, identity.ActionRecordWrite); err != nil {
 		return Record{}, err
 	}
+	table, err := service.writableTable(ctx, input.TenantID, input.WorkspaceID, input.TableID)
+	if err != nil {
+		return Record{}, err
+	}
 	if input.IdempotencyKey == "" {
 		return Record{}, ErrIdempotencyKeyRequired
 	}
 	if expectedVersion < 1 {
 		return Record{}, ErrRecordVersionConflict
-	}
-	table, err := service.tables.GetTable(ctx, input.TenantID, input.WorkspaceID, input.TableID)
-	if err != nil {
-		return Record{}, err
-	}
-	if table.Kind == TableKindProjection {
-		return Record{}, ErrProjectionReadOnly
 	}
 	definition, err := service.publishedSchema(ctx, input.TenantID, table.SchemaID, table.SchemaVersion)
 	if err != nil {
@@ -506,6 +500,9 @@ func (service *Service) DeleteRecord(ctx context.Context, principal identity.Pri
 	if err := service.recordDependencies(ctx, principal, input.TenantID, input.WorkspaceID, identity.ActionRecordWrite); err != nil {
 		return Record{}, err
 	}
+	if _, err := service.writableTable(ctx, input.TenantID, input.WorkspaceID, input.TableID); err != nil {
+		return Record{}, err
+	}
 	if input.IdempotencyKey == "" {
 		return Record{}, ErrIdempotencyKeyRequired
 	}
@@ -519,13 +516,6 @@ func (service *Service) DeleteRecord(ctx context.Context, principal identity.Pri
 	}
 	if result, found, err := service.recordReceipt(ctx, input.TenantID, input.WorkspaceID, "record.delete", input.IdempotencyKey, requestHash); err != nil || found {
 		return result, err
-	}
-	table, err := service.tables.GetTable(ctx, input.TenantID, input.WorkspaceID, input.TableID)
-	if err != nil {
-		return Record{}, err
-	}
-	if table.Kind == TableKindProjection {
-		return Record{}, ErrProjectionReadOnly
 	}
 	existing, err := service.records.GetRecord(ctx, input.TenantID, input.WorkspaceID, input.RecordID)
 	if err != nil {
@@ -551,6 +541,17 @@ func (service *Service) recordDependencies(ctx context.Context, principal identi
 		return identity.ErrForbidden
 	}
 	return service.authorize(ctx, principal, tenantID, workspaceID, action)
+}
+
+func (service *Service) writableTable(ctx context.Context, tenantID, workspaceID, tableID string) (TableDefinition, error) {
+	table, err := service.tables.GetTable(ctx, tenantID, workspaceID, tableID)
+	if err != nil {
+		return TableDefinition{}, err
+	}
+	if table.Kind == TableKindProjection {
+		return TableDefinition{}, ErrProjectionReadOnly
+	}
+	return table, nil
 }
 
 func (service *Service) publishedSchema(ctx context.Context, tenantID, schemaID string, version int64) (schema.Definition, error) {
