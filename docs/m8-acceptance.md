@@ -49,6 +49,10 @@ CSRF、伪造 Session、nonce/issuer/audience/expiry、未知 projection consume
 gap/DLQ、Outbox ACK-loss 和两种 workflow retry/failure 测试；依赖故障注入仍需
 M8-085/086 的受监督拓扑。
 
+M8-085 runbook 位于 [m8-local-runbook.md](m8-local-runbook.md)，`make m8-local-smoke`
+默认执行全部代码级 gate；设置 `RECORD_HUB_M8_LOCAL_LIVE=1` 后才会启动本地
+Dex/MongoDB/NATS 并探测 Go API。Docker 不可用时不会伪报 live 通过。
+
 ## 本地启动
 
 先启动 Dex 并生成本地 secret：

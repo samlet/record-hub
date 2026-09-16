@@ -1,4 +1,4 @@
-.PHONY: build test lint openapi-lint generate-clients dependency-scan sbom secret-scan mongo-up mongo-smoke mongo-down schema-persistence-smoke records-persistence-smoke projection-persistence-smoke nats-up nats-init nats-smoke nats-permissions-smoke nats-down dex-env dex-up dex-smoke dex-down m8-happy-path m8-failure-path check ci clean
+.PHONY: build test lint openapi-lint generate-clients dependency-scan sbom secret-scan mongo-up mongo-smoke mongo-down schema-persistence-smoke records-persistence-smoke projection-persistence-smoke nats-up nats-init nats-smoke nats-permissions-smoke nats-down dex-env dex-up dex-smoke dex-down m8-happy-path m8-failure-path m8-local-smoke check ci clean
 
 BUILD_DIR := build
 BINARY := $(BUILD_DIR)/record-hub
@@ -79,6 +79,9 @@ m8-happy-path:
 
 m8-failure-path:
 	./scripts/verify-m8-failure-path.sh
+
+m8-local-smoke:
+	./scripts/verify-m8-local.sh
 
 check: lint openapi-lint test build
 
