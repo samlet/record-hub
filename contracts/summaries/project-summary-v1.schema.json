@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:record-hub:summary:project:v1",
+  "title": "Fluxion ProjectSummary v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["projectId", "type", "status", "currentStage", "workflowRef", "updatedAt", "version"],
+  "properties": {
+    "projectId": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "type": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "status": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "currentStage": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "workflowRef": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "version": { "type": "integer", "minimum": 1 }
+  }
+}

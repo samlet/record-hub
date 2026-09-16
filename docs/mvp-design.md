@@ -294,6 +294,21 @@ record-hub-bids-projection-v1
 Handler registry 按 `sourceSystem/eventType/schemaVersion` 精确匹配，注册键全局唯一；不允许
 按 source 或 event type 回退匹配，未注册事件直接 fail closed，避免未知事件误写投影。
 
+### 9.1 Summary handlers
+
+M4-046 内置三个 v1 summary handler，并将它们注册到上述 exact-key registry：
+
+| sourceSystem | eventType | schema | allowlisted payload |
+| --- | --- | --- | --- |
+| `approver` | `approver.application.summary-changed` | `urn:record-hub:summary:application:v1` | `applicationId`、`title`、`status`、`processRef`、`updatedAt`、`version` |
+| `fluxion` | `fluxion.project.summary-changed` | `urn:record-hub:summary:project:v1` | `projectId`、`type`、`status`、`currentStage`、`workflowRef`、`updatedAt`、`version` |
+| `bids` | `bids.tender.summary-changed` | `urn:record-hub:summary:tender:v1` | `tenderId`、`buyerOrganization`、`name`、`status`、`template`、`updatedAt`、`version` |
+
+三个 schema 都是 Draft 2020-12 且 `additionalProperties: false`。handler 先校验事件
+envelope、`kind=event`、source/type/version，再校验 payload；原始表单、联系人、报价、投标
+内容和文件 URL 不属于 v1 allowlist。每条 envelope 的硬上限为 256 KiB，校验失败只返回
+脱敏的 deterministic error，不能把 payload 带入日志或 DLQ。
+
 `MongoProjectionRepository.Apply` 将 Inbox 从 `PROCESSING` 原子推进到 `APPLIED`，并在同一
 Mongo session 中 upsert projection record、checkpoint 和 audit；任一步失败都会 abort，已
 `APPLIED` 的同一事件只返回幂等成功，不重复写副作用。

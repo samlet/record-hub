@@ -74,7 +74,7 @@
 | RH-M4-043 | Record Hub | projection transaction/checkpoint/audit | DONE | 042,M3-035 | Inbox APPLIED、projection record、checkpoint、audit 在同一 Mongo transaction；重复 APPLIED 幂等；Mongo/校验测试已覆盖 |
 | RH-M4-044 | Record Hub | aggregate version duplicate/gap recovery | DONE | 043 | `<= current` 事件标记 Inbox APPLIED 并忽略副作用；跳跃版本保留 PROCESSING、checkpoint 标记 GAP；补齐后按序恢复；规则/真实 Mongo 测试已覆盖 |
 | RH-M4-045 | Record Hub | retry/backoff/MaxDeliver/DLQ | DONE | 043 | deterministic/transient 分类；有界 backoff；按 delivery 次数与 MaxDeliver 终止；DLQ 仅含安全身份/原因不含 payload；fake runner 测试已覆盖 |
-| RH-M4-046 | Record Hub | 三种 summary schema/handlers | TODO | 042,M2 | allowlist、256 KiB bound、PII/敏感字段负向测试 |
+| RH-M4-046 | Record Hub | 三种 summary schema/handlers | DONE | 042,M2 | Draft 2020-12 `additionalProperties:false` allowlist；精确 source/type/version handler；256 KiB bound；PII/报价/文件 URL 负向测试 |
 | RH-M4-047 | Record Hub | Operations events API/UI | TODO | 044,045 | 积压、失败、gap 可查；payload/secret 不泄露 |
 
 ## 7. M5：三个业务系统生产者

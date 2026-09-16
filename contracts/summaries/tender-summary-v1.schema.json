@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:record-hub:summary:tender:v1",
+  "title": "Bids TenderSummary v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["tenderId", "buyerOrganization", "name", "status", "template", "updatedAt", "version"],
+  "properties": {
+    "tenderId": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "buyerOrganization": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "name": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "status": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "template": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "version": { "type": "integer", "minimum": 1 }
+  }
+}
