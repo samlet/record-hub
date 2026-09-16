@@ -90,7 +90,7 @@
 | RH-M5-056 | 双仓库 | Bids TenderSummary v1 契约镜像 | DONE | M0-005,M4-046 | schema/fixture 一致；投标/报价/联系人/文件 URL 等敏感字段负向校验通过 |
 | RH-M5-057 | Bids | 扩展现有 Outbox 产生 domain event | DONE | 056 | 复用 `outbox_events`；`TENDER_SUMMARY_CHANGED` 与 Conductor/Finance command 分区隔离 |
 | RH-M5-058 | Bids | JetStream relay | DONE | 057,M1-012 | 复用 lease/retry/dead；专用 subject、`Msg-Id` 和 ACK-loss 测试通过 |
-| RH-M5-059 | 四仓库 | 三投影联合 E2E | PARTIAL | 052,055,058 | 三 producer 已支持可选 workspace 元数据；`scripts/verify-m5-producers.sh`、`make m5-runtime-smoke` 与 `RECORD_HUB_M5_SUPERVISED_LIVE=1 make m5-supervised-live` 均通过；监督式 gate 已覆盖真实 relay→projection，但业务 HTTP/UI 入口触发仍待补齐 |
+| RH-M5-059 | 四仓库 | 三投影联合 E2E | PARTIAL | 052,055,058 | 三 producer 已支持可选 workspace 元数据；`scripts/verify-m5-producers.sh`、`make m5-runtime-smoke` 与 `RECORD_HUB_M5_SUPERVISED_LIVE=1 make m5-supervised-live` 均通过；监督式 gate 默认覆盖三个业务 HTTP API→事务 Outbox→relay→projection，浏览器 UI 入口仍待补齐 |
 
 ## 8. M6：Workflow Binding
 

@@ -23,7 +23,7 @@ Binding E2E 和 Next.js grid UI 仍是遗留项。
 | M2 | PARTIAL | Schema server/persistence/API 完成；Schema Web UI（M2-026）仍 TODO |
 | M3 | PARTIAL | workspace/table/record/view/index server 完成；grid/record UI（M3-036/037）仍 TODO |
 | M4 | DONE | durable projection、Inbox、事务 checkpoint、gap/retry/DLQ、Operations API/UI |
-| M5 | PARTIAL | 三 producer contract/outbox/relay gate、`make m5-runtime-smoke` 和 `make m5-supervised-live` 均通过；监督式真实 producer relay→projection 已有证据，但业务 HTTP/UI 入口触发仍未纳入 |
+| M5 | PARTIAL | 三 producer contract/outbox/relay gate、`make m5-runtime-smoke` 和 `make m5-supervised-live` 均通过；监督式 gate 默认已覆盖三业务 HTTP API→事务 Outbox→relay→projection，浏览器 UI 入口仍未纳入 |
 | M6 | PARTIAL | Temporal/Conductor diagnostic binding 与 client gate 通过；真实双引擎 + Record Hub 重启 E2E 待依赖 |
 | M7 | 混合 | scope/payload/metrics/Dex JWKS/bounds DONE；Mongo ACK loss、Record Hub native restart 与隔离 NATS outage/recovery 已有 live 证据；三业务进程完整重启保持 PARTIAL |
 | M8 | 混合 | OIDC/BFF/Operations 代码级 gate、native API repository/worker smoke 完成；happy/failure/live runbook 均明确 live 限制；Web UI 浏览器矩阵仍 PARTIAL |
@@ -69,7 +69,7 @@ make dex-smoke
 | 仓库 | 关键提交（均与 upstream HEAD 一致） |
 | --- | --- |
 | Record Hub | `af23b54` Web OIDC Session/CSRF；`9f28dc3` 资源路由；`bceb7b6` Operations consumer/scope；`0fd5859` M8 happy gate；`a4d8ce4` M8 failure gate；`37ce631` local runbook；`67f184a` recovery/rotation runbook |
-| Approver | `fa1cb54` ApplicationSummary contract；`75a682b` summary Outbox/Record Hub relay；`4c5cec9` workspace metadata；`4931941` dispatcher constructor；`188b470` local security filter wiring |
+| Approver | `fa1cb54` ApplicationSummary contract；`75a682b` summary Outbox/Record Hub relay；`4c5cec9` workspace metadata；`4931941` dispatcher constructor；`188b470` local security filter wiring；`71e7f4f` header filter order fix |
 | Fluxion | `4fb5cfb` ProjectSummary contract；`6ab93e1` summary relay；`6d496b0` Temporal diagnostic binding；`5f872de` workspace metadata |
 | Bids | `c88f719` TenderSummary contract；`1c5792b` summary relay；`2282766` tenant correction；`616e7fd` Conductor diagnostic binding；`21599a1` workspace metadata |
 
@@ -94,9 +94,10 @@ make dex-smoke
 
 ## 下一步建议
 
-1. 在监督式 gate 中进一步调用三个业务系统各自的 HTTP/UI 业务变更入口，让事务
-   Outbox 由真实业务动作产生；当前 gate 已覆盖真实 producer relay→projection，仍未将
-   入口动作纳入同一轮。
+1. 在监督式 gate 中继续扩展三个业务系统的 HTTP/UI 业务变更矩阵；当前 gate 已覆盖
+   Approver application、Fluxion project、Bids tender 的真实 HTTP API→事务 Outbox→relay→
+   projection，浏览器 UI 和完整用户旅程仍待补齐。使用 `..._API_MODE=required` 可在本地
+   依赖齐全时禁止 direct-outbox fallback。
 2. 完成 `web/` Next.js BFF/grid，复用本报告中的 Go auth/session/CSRF contract，
    把 OWNER/EDITOR/VIEWER 矩阵提升为真实浏览器测试。
 3. 按 `m8-recovery-runbook.md` 做一次原 event ID 的 GAP/DLQ 重放、ACK-loss、凭据

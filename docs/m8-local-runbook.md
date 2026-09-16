@@ -186,15 +186,20 @@ make m5-runtime-smoke
 ```
 
 监督式启动三个 producer relay 并验证真实 Outbox → JetStream → projection 链路（需要
-本机 PostgreSQL、Conductor、MongoDB 和 NATS；脚本只创建临时 producer 数据库）：
+本机 PostgreSQL、Conductor、MongoDB、NATS 和可选 MinIO；脚本只创建临时 producer 数据库）：
 
 ```bash
 RECORD_HUB_M5_SUPERVISED_LIVE=1 make m5-supervised-live
 ```
 
-该 gate 启动 Approver API、Fluxion API、Bids worker 与 Record Hub all-mode；业务系统的
-HTTP/UI 变更入口不在本 gate 中调用，测试数据直接写入各自事务 Outbox，因此不会伪称为
-完整业务 UI E2E。成功后脚本自动停止自己启动的进程并删除临时数据库。
+该 gate 启动 Approver API、Fluxion API、Bids worker/API 与 Record Hub all-mode。默认
+`RECORD_HUB_M5_SUPERVISED_API_MODE=auto` 会优先调用业务 API（Approver 创建临时流程
+application、Fluxion 创建 customer/project、Bids 完成 project approval 并创建 tender），
+随后等待各自事务 Outbox 经 relay 发布并落成 projection。Bids API 只有在本机 MinIO
+healthz 可用时才启动；缺少可选依赖时 auto 模式才回退到受控 Outbox seed。设置
+`RECORD_HUB_M5_SUPERVISED_API_MODE=required` 可禁止回退，设置为 `off` 可显式复现
+direct-outbox gate。该命令覆盖业务 HTTP API，不等于完整浏览器 UI E2E；成功后脚本自动
+停止自己启动的进程并删除临时数据库。
 
 验证 Record Hub 自身重启恢复（事件会在进程停止期间留在 JetStream，并在重启后按原
 event ID 幂等处理；脚本只会创建带时间租户名的测试记录）：

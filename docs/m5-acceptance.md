@@ -4,13 +4,13 @@
 
 M5-050..058 的代码、契约和确定性联合验收已完成。三个业务系统都从自己的业务事务 Outbox 产生只读 summary domain event，再由独立 relay 发布到 Record Hub JetStream；Record Hub 使用既有 summary handler 校验并进入 projection 消费管线。各仓库分别提交，未制造跨仓库原子提交。
 
-本批未改变 Temporal workflow 的业务语义，也没有从 Record Hub 向业务系统写回状态。RH-M5-059 的真实 MongoDB/JetStream 只读表联合 E2E 需要在本地依赖启动后显式执行，当前环境因此标记为 `PARTIAL`，而不是虚报为已完成。
+本批未改变 Temporal workflow 的业务语义，也没有从 Record Hub 向业务系统写回状态。RH-M5-059 的监督式 gate 已经可以优先走三个业务 HTTP API 产生事务 Outbox，再验证真实 MongoDB/JetStream 投影；浏览器 UI 入口仍不在范围内，因此任务继续标记为 `PARTIAL`。
 
 ## 契约与提交
 
 | 生产者 | 契约镜像 | Outbox/relay | 远端提交 |
 | --- | --- | --- | --- |
-| Approver | `application-summary-v1`；`sha256:c7c269943d0d84c090a00c1c624fa5f08c1e994df82016c8dd26ba3d16f621ae` | `APPLICATION_SUMMARY_CHANGED`；`events.approver.application.summary-changed.v1` | `fa1cb54`, `75a682b`, `4c5cec9`, `4931941`, `188b470` |
+| Approver | `application-summary-v1`；`sha256:c7c269943d0d84c090a00c1c624fa5f08c1e994df82016c8dd26ba3d16f621ae` | `APPLICATION_SUMMARY_CHANGED`；`events.approver.application.summary-changed.v1` | `fa1cb54`, `75a682b`, `4c5cec9`, `4931941`, `188b470`, `71e7f4f` |
 | Fluxion | `project-summary-v1`；`sha256:311dbb7d1c9b3841cacd0ada034fba1077c494841b24baaca18a19ffe196a398` | `PROJECT_SUMMARY_CHANGED`；`events.fluxion.project.summary-changed.v1` | `4fb5cfb`, `6ab93e1`, `5f872de` |
 | Bids | `tender-summary-v1`；`sha256:024524fa5b60f8a8deac700bf19745c121f450439532ba22d7ab0f882cad1fff` | `TENDER_SUMMARY_CHANGED`；`events.bids.tender.summary-changed.v1` | `c88f719`, `1c5792b`, `2282766`, `21599a1` |
 
@@ -74,21 +74,28 @@ RECORD_HUB_M5_LIVE=1 ./scripts/verify-m5-producers.sh
 RECORD_HUB_M5_SUPERVISED_LIVE=1 make m5-supervised-live
 ```
 
-该 gate 构建并启动 Approver API、Fluxion API、Bids worker 和 Record Hub all-mode；为
-Approver/Fluxion 创建临时 PostgreSQL 数据库，为 Bids 创建临时 SQLite 数据库，再向三个
-真实 source Outbox 插入带 `metadata.workspaceId` 的测试 envelope。三条 relay 均在真实
-进程中发布到 JetStream，Record Hub durable projection 最终写入三条 `CURRENT` Mongo
-record。gate 通过后会终止本次启动的进程并删除生成的临时数据库，不触碰既有业务库。
+该 gate 构建并启动 Approver API、Fluxion API、Bids worker/API 和 Record Hub all-mode；为
+Approver/Fluxion 创建临时 PostgreSQL 数据库，为 Bids 创建临时 SQLite 数据库。默认
+`RECORD_HUB_M5_SUPERVISED_API_MODE=auto` 会先通过业务 API：Approver 临时发布表单/流程定义
+并创建 application draft，Fluxion 登录后创建 customer/project，Bids 登录后完成 project
+审批并创建 tender。每个 API 事务产生的真实 source Outbox 都由 relay 发布到 JetStream，
+Record Hub durable projection 最终写入三条 `CURRENT` Mongo record。若本地 API 依赖不可用，
+auto 模式才回退到受控 Outbox seed；`..._API_MODE=required` 会将回退视为失败，
+`..._API_MODE=off` 可显式复现旧的 direct-outbox gate。成功后脚本会终止本次启动的进程、
+删除生成的临时数据库，不触碰既有业务库。
 
 ```text
 M5 supervised source outbox -> relay -> projection: PASS
 M5-059 supervised live producer -> relay -> projection gate: PASS
+M5 supervised: Approver application API created ...
+M5 supervised: Fluxion project API created ...
+M5 supervised: Bids tender API created ...
 ```
 
 本机 native Mongo 使用 `rs0`、无认证开发 URI；Docker 拓扑仍使用文档中的
 `record-hub-rs`、keyfile 和应用用户。M5-059 仍保持 `PARTIAL`：监督式 gate 已验证三个
-真实 producer relay 进程到 durable projection consumer 的联合链路，但测试 envelope 是
-直接写入 source Outbox 的受控数据，尚未覆盖三个业务系统各自 HTTP/UI 业务变更入口在
-同一轮中的端到端触发。
+真实 producer relay 进程到 durable projection consumer 的联合链路，并在 native 拓扑中覆盖
+了三个业务 HTTP API 的事务触发；浏览器 UI 入口、业务 API 的完整用户旅程和多实例认证拓扑
+仍待后续批次。
 M6 的 snapshot/binding、真实 Temporal/Conductor engine E2E，以及 M7 的 outage/rotation
 故障注入不属于本批范围。
