@@ -9,6 +9,7 @@ import {
   RecordItem,
   SchemaDefinition,
   TableDefinition,
+  ViewDefinition,
   Workspace,
 } from "../lib/api";
 
@@ -30,6 +31,9 @@ export function Console() {
   const [tables, setTables] = useState<TableDefinition[]>([]);
   const [tableId, setTableId] = useState("");
   const [records, setRecords] = useState<RecordItem[]>([]);
+  const [views, setViews] = useState<ViewDefinition[]>([]);
+  const [viewId, setViewId] = useState("");
+  const [viewForm, setViewForm] = useState({ id: "", name: "", columns: "" });
   const [tab, setTab] = useState<Tab>("records");
   const [consumer, setConsumer] = useState(consumerOptions[0][0]);
   const [operations, setOperations] = useState<OperationsSnapshot | null>(null);
@@ -108,6 +112,18 @@ export function Console() {
   }, [tenantId, workspaceId, authenticated]);
 
   useEffect(() => {
+    if (!tenantId || !workspaceId || !tableId || authenticated !== true) return;
+    run(async () => {
+      const response = await api.views(tenantId, workspaceId, tableId);
+      const next = items(response.body);
+      setViews(next);
+      setViewId((current) =>
+        next.some((item) => item.id === current) ? current : "",
+      );
+    });
+  }, [tenantId, workspaceId, tableId, authenticated]);
+
+  useEffect(() => {
     if (
       !tenantId ||
       !workspaceId ||
@@ -118,10 +134,10 @@ export function Console() {
       return;
     run(async () =>
       setRecords(
-        items((await api.records(tenantId, workspaceId, tableId)).body),
+        items((await api.records(tenantId, workspaceId, tableId, viewId)).body),
       ),
     );
-  }, [tenantId, workspaceId, tableId, authenticated, tab]);
+  }, [tenantId, workspaceId, tableId, viewId, authenticated, tab]);
 
   async function run(action: () => Promise<void>) {
     setBusy(true);
@@ -308,6 +324,10 @@ export function Console() {
               workspaceId={workspaceId}
               tableId={tableId}
               tables={tables}
+              views={views}
+              viewId={viewId}
+              viewForm={viewForm}
+              setViewForm={setViewForm}
               selectedTable={selectedTable}
               records={records}
               tableForm={tableForm}
@@ -315,6 +335,24 @@ export function Console() {
               recordForm={recordForm}
               setRecordForm={setRecordForm}
               onTableChange={setTableId}
+              onViewChange={setViewId}
+              onCreateView={(event) =>
+                submit(event, async () => {
+                  const created = await api.createView(tableId, {
+                    tenantId,
+                    workspaceId,
+                    id: viewForm.id,
+                    name: viewForm.name,
+                    columns: viewForm.columns
+                      .split(",")
+                      .map((column) => column.trim())
+                      .filter(Boolean),
+                  });
+                  setViews((current) => [...current, created.body]);
+                  setViewId(created.body.id);
+                  setViewForm({ id: "", name: "", columns: "" });
+                })
+              }
               onCreateTable={(event) =>
                 submit(event, async () => {
                   const created = await api.createTable(workspaceId, {
@@ -461,6 +499,10 @@ function RecordsPanel(props: {
   workspaceId: string;
   tableId: string;
   tables: TableDefinition[];
+  views: ViewDefinition[];
+  viewId: string;
+  viewForm: { id: string; name: string; columns: string };
+  setViewForm: (value: { id: string; name: string; columns: string }) => void;
   selectedTable?: TableDefinition;
   records: RecordItem[];
   tableForm: {
@@ -478,6 +520,8 @@ function RecordsPanel(props: {
   recordForm: { id: string; tags: string; data: string };
   setRecordForm: (value: { id: string; tags: string; data: string }) => void;
   onTableChange: (value: string) => void;
+  onViewChange: (value: string) => void;
+  onCreateView: (event: FormEvent) => void;
   onCreateTable: (event: FormEvent) => void;
   onCreateRecord: (event: FormEvent) => void;
 }) {
@@ -486,6 +530,10 @@ function RecordsPanel(props: {
     workspaceId,
     tableId,
     tables,
+    views,
+    viewId,
+    viewForm,
+    setViewForm,
     selectedTable,
     records,
     tableForm,
@@ -493,6 +541,8 @@ function RecordsPanel(props: {
     recordForm,
     setRecordForm,
     onTableChange,
+    onViewChange,
+    onCreateView,
     onCreateTable,
     onCreateRecord,
   } = props;
@@ -514,6 +564,18 @@ function RecordsPanel(props: {
           {tables.map((table) => (
             <option key={table.id} value={table.id}>
               {table.name}
+            </option>
+          ))}
+        </select>
+        <select
+          className="table-select"
+          value={viewId}
+          onChange={(event) => onViewChange(event.target.value)}
+        >
+          <option value="">所有记录</option>
+          {views.map((view) => (
+            <option key={view.id} value={view.id}>
+              视图：{view.name}
             </option>
           ))}
         </select>
@@ -586,6 +648,35 @@ function RecordsPanel(props: {
           />
           <button className="secondary-button" disabled={!tableId}>
             写入记录
+          </button>
+        </form>
+        <form className="inline-form" onSubmit={onCreateView}>
+          <h3>新建视图</h3>
+          <input
+            required
+            placeholder="view id"
+            value={viewForm.id}
+            onChange={(event) =>
+              setViewForm({ ...viewForm, id: event.target.value })
+            }
+          />
+          <input
+            required
+            placeholder="视图名称"
+            value={viewForm.name}
+            onChange={(event) =>
+              setViewForm({ ...viewForm, name: event.target.value })
+            }
+          />
+          <input
+            placeholder="列（逗号分隔，如 data.status）"
+            value={viewForm.columns}
+            onChange={(event) =>
+              setViewForm({ ...viewForm, columns: event.target.value })
+            }
+          />
+          <button className="secondary-button" disabled={!tableId}>
+            创建视图
           </button>
         </form>
       </div>
@@ -799,7 +890,10 @@ function SchemaPanel(props: {
           />
         </label>
         <div className="button-row">
-          <button className="primary-button" disabled={!workspaceId || !form.id}>
+          <button
+            className="primary-button"
+            disabled={!workspaceId || !form.id}
+          >
             {schema ? "保存草稿" : "创建草稿"}
           </button>
           {schema && schema.status !== "PUBLISHED" && (

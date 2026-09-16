@@ -33,6 +33,18 @@ export type RecordItem = {
   updatedAt: string;
 };
 
+export type ViewDefinition = {
+  id: string;
+  tenantId: string;
+  workspaceId: string;
+  tableId: string;
+  name: string;
+  columns: string[];
+  filters: Array<{ field: string; operator: string; value: unknown }>;
+  sorts: Array<{ field: string; direction: string }>;
+  version: number;
+};
+
 export type SchemaDefinition = {
   tenantId: string;
   schemaId: string;
@@ -182,9 +194,32 @@ export const api = {
       `/api/v1/workspaces/${encodeURIComponent(workspaceId)}/tables`,
       { method: "POST", body: JSON.stringify(input) },
     ),
-  records: (tenantId: string, workspaceId: string, tableId: string) =>
+  records: (
+    tenantId: string,
+    workspaceId: string,
+    tableId: string,
+    viewId?: string,
+  ) =>
     request<{ items: RecordItem[]; nextCursor?: string }>(
-      `/api/v1/tables/${encodeURIComponent(tableId)}/records?tenantId=${encodeURIComponent(tenantId)}&workspaceId=${encodeURIComponent(workspaceId)}&limit=100`,
+      `/api/v1/tables/${encodeURIComponent(tableId)}/records?tenantId=${encodeURIComponent(tenantId)}&workspaceId=${encodeURIComponent(workspaceId)}&limit=100${viewId ? `&viewId=${encodeURIComponent(viewId)}` : ""}`,
+    ),
+  views: (tenantId: string, workspaceId: string, tableId: string) =>
+    request<{ items: ViewDefinition[] }>(
+      `/api/v1/tables/${encodeURIComponent(tableId)}/views?tenantId=${encodeURIComponent(tenantId)}&workspaceId=${encodeURIComponent(workspaceId)}`,
+    ),
+  createView: (
+    tableId: string,
+    input: {
+      tenantId: string;
+      workspaceId: string;
+      id: string;
+      name: string;
+      columns: string[];
+    },
+  ) =>
+    request<ViewDefinition>(
+      `/api/v1/tables/${encodeURIComponent(tableId)}/views`,
+      { method: "POST", body: JSON.stringify({ ...input, tableId }) },
     ),
   createRecord: (
     tableId: string,
