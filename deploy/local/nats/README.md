@@ -15,9 +15,16 @@
 
 ## 启动与验收
 
+先为五个独立 identity 设置随机本地密码：
+
 ```bash
+export NATS_ADMIN_PASSWORD='<local-random-password>'
+export NATS_APPROVER_PASSWORD='<different-local-random-password>'
+export NATS_FLUXION_PASSWORD='<different-local-random-password>'
+export NATS_BIDS_PASSWORD='<different-local-random-password>'
+export NATS_RECORD_HUB_PASSWORD='<different-local-random-password>'
 make nats-up
-export RECORD_HUB_NATS_URL='nats://127.0.0.1:4222'
+export RECORD_HUB_NATS_URL='nats://record-hub-admin:<url-encoded-password>@127.0.0.1:4222'
 make nats-init
 make nats-smoke
 ```
@@ -30,4 +37,14 @@ make nats-smoke
 make nats-down
 ```
 
-身份与 subject 权限在 `RH-M1-012` 加入；在此之前 NATS 只允许绑定到本机回环地址，不得作为共享环境配置使用。
+## 权限负向验收
+
+三个 producer 只能发布各自的 `events.<system>.>`。Projector 只能使用三个预建 durable consumer 的精确 JetStream API、ACK subject 和 `dlq.record-hub.>`；不能直接订阅领域/命令 subject、发布领域事件或修改 topology。
+
+```bash
+export NATS_APPROVER_URL='nats://approver-relay:<url-encoded-password>@127.0.0.1:4222'
+export NATS_FLUXION_URL='nats://fluxion-relay:<url-encoded-password>@127.0.0.1:4222'
+export NATS_BIDS_URL='nats://bids-relay:<url-encoded-password>@127.0.0.1:4222'
+export NATS_RECORD_HUB_URL='nats://record-hub-projector:<url-encoded-password>@127.0.0.1:4222'
+make nats-permissions-smoke
+```
