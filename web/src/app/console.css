@@ -1,0 +1,25 @@
+.load-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.load-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.load-row label:first-child {
+  flex: 1;
+}
+
+@media (max-width: 650px) {
+  .load-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
