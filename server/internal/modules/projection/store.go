@@ -77,6 +77,9 @@ type MongoProjectionRepository struct {
 	records     *mongo.Collection
 	checkpoints *mongo.Collection
 	audit       *mongo.Collection
+	// afterCommit is a narrow fault-injection hook used by the live recovery
+	// test to model a lost client response after Mongo has committed.
+	afterCommit func() error
 }
 
 const checkpointCollectionName = "projection_checkpoints"
@@ -170,6 +173,16 @@ func (repository *MongoProjectionRepository) Apply(ctx context.Context, input Pr
 	})
 	if errors.Is(err, ErrProjectionAlreadyApplied) {
 		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if repository.afterCommit != nil {
+		hook := repository.afterCommit
+		repository.afterCommit = nil
+		if hookErr := hook(); hookErr != nil {
+			return hookErr
+		}
 	}
 	if err == nil && gapDetected {
 		return ErrProjectionVersionGap

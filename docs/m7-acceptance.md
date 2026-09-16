@@ -50,6 +50,20 @@ status、consumer 等有界维度，不使用 tenant/record/event/token/payload�
 go test ./server/internal/observability ./server/internal/app ./server/internal/modules/projection
 ```
 
+## M7-073 Mongo commit/ACK loss
+
+Projection repository 提供一个仅用于故障验收的 post-commit hook；live 测试先提交
+Inbox/record/checkpoint/audit，再模拟客户端响应丢失，随后用同一 event ID 重投。重投通过
+Inbox 的 `(consumer,eventId)` 去重，四类文档数量和 recordVersion 必须保持 1/原值。
+
+```bash
+./scripts/verify-m7-mongo-faults.sh
+```
+
+当前环境未提供 `RECORD_HUB_MONGODB_URI`，因此该项保持 `PARTIAL`；脚本默认只报告跳过，不
+伪报真实 Mongo 故障注入通过。启动本地 replica set 后设置
+`RECORD_HUB_M7_MONGO_LIVE=1` 执行 live gate。
+
 ## 边界说明
 
 binding 只接受 `system:type:id` 的稳定引用和已经由 projection/record owner 过滤后的 JSON
