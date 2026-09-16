@@ -81,16 +81,16 @@
 
 | ID | 仓库 | 任务 | 状态 | 依赖 | 验收 |
 | --- | --- | --- | --- | --- | --- |
-| RH-M5-050 | 双仓库 | Approver ApplicationSummary v1 契约镜像 | TODO | M0-005,M4-046 | Record Hub 已提供 schema/fixture/hash manifest；Approver 权威镜像与跨语言 hash 校验待完成 |
-| RH-M5-051 | Approver | Application summary Outbox 与事务写入 | TODO | 050 | 状态/安全摘要变化同事务；稳定 version/eventId |
-| RH-M5-052 | Approver | JetStream relay | TODO | 051,M1-012 | publish ack 后 sent；响应丢失原 ID 重发 |
-| RH-M5-053 | 双仓库 | Fluxion ProjectSummary v1 契约镜像 | TODO | M0-005,M4-046 | schema/fixture/hash 一致 |
-| RH-M5-054 | Fluxion | domain Outbox、Project 事务事件 | TODO | 053 | 不轮询 Temporal visibility；状态事务原子写 Outbox |
-| RH-M5-055 | Fluxion | JetStream relay | TODO | 054,M1-012 | lease/retry/dead、原 ID 重发 |
-| RH-M5-056 | 双仓库 | Bids TenderSummary v1 契约镜像 | TODO | M0-005,M4-046 | 不含投标/报价/联系人/文件 URL |
-| RH-M5-057 | Bids | 扩展现有 Outbox 产生 domain event | TODO | 056 | 与 Conductor/Finance command 分区隔离 |
-| RH-M5-058 | Bids | JetStream relay | TODO | 057,M1-012 | 复用 lease；subject 权限和响应丢失测试 |
-| RH-M5-059 | 四仓库 | 三投影联合 E2E | TODO | 052,055,058 | 三个真实事件出现在只读表，版本/时间正确 |
+| RH-M5-050 | 双仓库 | Approver ApplicationSummary v1 契约镜像 | DONE | M0-005,M4-046 | Approver 权威 schema/fixture 与 Record Hub 字节级一致；manifest hash 校验通过 |
+| RH-M5-051 | Approver | Application summary Outbox 与事务写入 | DONE | 050 | 状态/安全摘要变化与业务状态同事务；稳定 `summary_version`、`eventId` 和 PII-free payload |
+| RH-M5-052 | Approver | JetStream relay | DONE | 051,M1-012 | 专用 subject；publish ACK 后标记 SENT；ACK 丢失按原 event ID 重发 |
+| RH-M5-053 | 双仓库 | Fluxion ProjectSummary v1 契约镜像 | DONE | M0-005,M4-046 | schema/fixture 字节级一致，跨语言契约测试通过 |
+| RH-M5-054 | Fluxion | domain Outbox、Project 事务事件 | DONE | 053 | 不轮询 Temporal visibility；Project、project_events、Outbox 在同一事务写入 |
+| RH-M5-055 | Fluxion | JetStream relay | DONE | 054,M1-012 | lease/retry/dead；ACK 丢失按原 event ID 重发；daemon 接入 API/Worker |
+| RH-M5-056 | 双仓库 | Bids TenderSummary v1 契约镜像 | DONE | M0-005,M4-046 | schema/fixture 一致；投标/报价/联系人/文件 URL 等敏感字段负向校验通过 |
+| RH-M5-057 | Bids | 扩展现有 Outbox 产生 domain event | DONE | 056 | 复用 `outbox_events`；`TENDER_SUMMARY_CHANGED` 与 Conductor/Finance command 分区隔离 |
+| RH-M5-058 | Bids | JetStream relay | DONE | 057,M1-012 | 复用 lease/retry/dead；专用 subject、`Msg-Id` 和 ACK-loss 测试通过 |
+| RH-M5-059 | 四仓库 | 三投影联合 E2E | PARTIAL | 052,055,058 | `scripts/verify-m5-producers.sh` 的跨语言契约、三 producer envelope/handler gate 通过；真实 Mongo/JetStream 只读表 E2E 待依赖启动后执行 |
 
 ## 8. M6：Workflow Binding
 
