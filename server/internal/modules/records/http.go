@@ -36,10 +36,16 @@ type ViewHTTPService interface {
 	ListRecords(context.Context, identity.Principal, string, string, string, string, string, int) (RecordPage, error)
 }
 
+type IndexHTTPService interface {
+	CreateIndex(context.Context, identity.Principal, IndexInput) (IndexDefinition, error)
+	ListIndexes(context.Context, identity.Principal, string, string, string) ([]IndexDefinition, error)
+}
+
 type HTTPService interface {
 	MutationService
 	RecordHTTPService
 	ViewHTTPService
+	IndexHTTPService
 }
 
 type HTTPHandler struct {
@@ -61,6 +67,8 @@ func NewHTTPHandler(service MutationService) http.Handler {
 	mux.HandleFunc("POST /api/v1/tables/{tableID}/views", handler.createView)
 	mux.HandleFunc("GET /api/v1/tables/{tableID}/views", handler.listViews)
 	mux.HandleFunc("GET /api/v1/tables/{tableID}/records", handler.listRecords)
+	mux.HandleFunc("POST /api/v1/tables/{tableID}/indexes", handler.createIndex)
+	mux.HandleFunc("GET /api/v1/tables/{tableID}/indexes", handler.listIndexes)
 	return mux
 }
 
@@ -98,6 +106,14 @@ type viewRequest struct {
 	Columns     []string     `json:"columns"`
 	Filters     []ViewFilter `json:"filters"`
 	Sorts       []ViewSort   `json:"sorts"`
+}
+
+type indexRequest struct {
+	TenantID    string         `json:"tenantId"`
+	WorkspaceID string         `json:"workspaceId"`
+	ID          string         `json:"id"`
+	Field       string         `json:"field"`
+	Direction   IndexDirection `json:"direction"`
 }
 
 func (handler *HTTPHandler) createWorkspace(writer http.ResponseWriter, request *http.Request) {
@@ -367,6 +383,46 @@ func (handler *HTTPHandler) listRecords(writer http.ResponseWriter, request *htt
 	writeJSON(writer, http.StatusOK, map[string]interface{}{"items": items, "nextCursor": page.NextCursor})
 }
 
+func (handler *HTTPHandler) createIndex(writer http.ResponseWriter, request *http.Request) {
+	principal, ok := identity.PrincipalFromContext(request.Context())
+	if !ok {
+		writeError(writer, http.StatusUnauthorized, "AUTHENTICATION_REQUIRED", "Authentication is required.")
+		return
+	}
+	service, ok := handler.indexService(writer)
+	if !ok {
+		return
+	}
+	var input indexRequest
+	if !decodeJSON(writer, request, &input) {
+		return
+	}
+	index, err := service.CreateIndex(request.Context(), principal, IndexInput{TenantID: input.TenantID, WorkspaceID: input.WorkspaceID, TableID: request.PathValue("tableID"), ID: input.ID, Field: input.Field, Direction: input.Direction})
+	if err != nil {
+		writeRecordsError(writer, err)
+		return
+	}
+	writeJSON(writer, http.StatusCreated, index)
+}
+
+func (handler *HTTPHandler) listIndexes(writer http.ResponseWriter, request *http.Request) {
+	principal, ok := identity.PrincipalFromContext(request.Context())
+	if !ok {
+		writeError(writer, http.StatusUnauthorized, "AUTHENTICATION_REQUIRED", "Authentication is required.")
+		return
+	}
+	service, ok := handler.indexService(writer)
+	if !ok {
+		return
+	}
+	indexes, err := service.ListIndexes(request.Context(), principal, request.URL.Query().Get("tenantId"), request.URL.Query().Get("workspaceId"), request.PathValue("tableID"))
+	if err != nil {
+		writeRecordsError(writer, err)
+		return
+	}
+	writeJSON(writer, http.StatusOK, map[string]interface{}{"items": indexes})
+}
+
 func (input recordRequest) recordInput(request *http.Request, tableID, recordID string) (RecordInput, error) {
 	if recordID == "" {
 		recordID = input.ID
@@ -397,6 +453,15 @@ func (handler *HTTPHandler) viewService(writer http.ResponseWriter) (ViewHTTPSer
 	service, ok := handler.service.(ViewHTTPService)
 	if !ok || service == nil {
 		writeError(writer, http.StatusNotImplemented, "VIEW_API_UNAVAILABLE", "The view API is not configured.")
+		return nil, false
+	}
+	return service, true
+}
+
+func (handler *HTTPHandler) indexService(writer http.ResponseWriter) (IndexHTTPService, bool) {
+	service, ok := handler.service.(IndexHTTPService)
+	if !ok || service == nil {
+		writeError(writer, http.StatusNotImplemented, "INDEX_API_UNAVAILABLE", "The index API is not configured.")
 		return nil, false
 	}
 	return service, true
@@ -491,6 +556,14 @@ func writeRecordsError(writer http.ResponseWriter, err error) {
 		writeError(writer, http.StatusConflict, "VIEW_ALREADY_EXISTS", "The view already exists.")
 	case errors.Is(err, ErrViewNotFound):
 		writeError(writer, http.StatusNotFound, "VIEW_NOT_FOUND", "The view was not found.")
+	case errors.Is(err, ErrIndexExists):
+		writeError(writer, http.StatusConflict, "INDEX_ALREADY_EXISTS", "The index already exists.")
+	case errors.Is(err, ErrIndexLimit):
+		writeError(writer, http.StatusConflict, "INDEX_LIMIT_REACHED", "The table has reached its bounded index limit.")
+	case errors.Is(err, ErrIndexNotFound):
+		writeError(writer, http.StatusNotFound, "INDEX_NOT_FOUND", "The index was not found.")
+	case errors.Is(err, ErrIndexFieldNotAllowed):
+		writeError(writer, http.StatusBadRequest, "INDEX_FIELD_NOT_ALLOWED", "The index field is not an allowed published schema property.")
 	case errors.Is(err, ErrInvalidCursor):
 		writeError(writer, http.StatusBadRequest, "INVALID_CURSOR", "The record cursor is invalid or expired.")
 	case errors.Is(err, ErrIdempotencyKeyRequired):

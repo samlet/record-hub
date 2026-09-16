@@ -31,6 +31,7 @@ type Service struct {
 	receipts   RecordReceiptStore
 	audit      audit.Writer
 	views      ViewRepository
+	indexes    IndexRepository
 }
 
 func NewService(workspaces WorkspaceRepository, tables TableRepository, schemas SchemaReader, authorizer *identity.Authorizer) *Service {
@@ -48,6 +49,13 @@ func NewRecordService(workspaces WorkspaceRepository, tables TableRepository, sc
 func (service *Service) WithViewRepository(views ViewRepository) *Service {
 	if service != nil {
 		service.views = views
+	}
+	return service
+}
+
+func (service *Service) WithIndexRepository(indexes IndexRepository) *Service {
+	if service != nil {
+		service.indexes = indexes
 	}
 	return service
 }
@@ -203,6 +211,88 @@ func (service *Service) ListRecords(ctx context.Context, principal identity.Prin
 		view = ViewDefinition{TenantID: tenantID, WorkspaceID: workspaceID, TableID: tableID, Sorts: []ViewSort{{Field: "id", Direction: SortAscending}}}
 	}
 	return service.views.ListRecords(ctx, tenantID, workspaceID, tableID, view, cursor, limit)
+}
+
+type IndexInput struct {
+	TenantID    string
+	WorkspaceID string
+	TableID     string
+	ID          string
+	Field       string
+	Direction   IndexDirection
+}
+
+func (service *Service) CreateIndex(ctx context.Context, principal identity.Principal, input IndexInput) (IndexDefinition, error) {
+	if err := service.indexDependencies(ctx, principal, input.TenantID, input.WorkspaceID, identity.ActionWorkspaceManage); err != nil {
+		return IndexDefinition{}, err
+	}
+	table, err := service.tables.GetTable(ctx, input.TenantID, input.WorkspaceID, input.TableID)
+	if err != nil {
+		return IndexDefinition{}, err
+	}
+	definition, err := service.publishedSchema(ctx, input.TenantID, table.SchemaID, table.SchemaVersion)
+	if err != nil {
+		return IndexDefinition{}, err
+	}
+	field := normalizeIndexField(input.Field)
+	if err := validateIndexSchemaField(field, definition); err != nil {
+		return IndexDefinition{}, err
+	}
+	current, err := service.indexes.ListIndexes(ctx, input.TenantID, input.WorkspaceID, input.TableID)
+	if err != nil {
+		return IndexDefinition{}, err
+	}
+	requestedKey := indexKey(field, input.Direction)
+	for _, existing := range current {
+		if indexKey(existing.Field, existing.Direction) == requestedKey {
+			return IndexDefinition{}, ErrIndexExists
+		}
+	}
+	if len(current) >= maxIndexesPerTable {
+		return IndexDefinition{}, ErrIndexLimit
+	}
+	now := service.clock().UTC()
+	index := IndexDefinition{ID: strings.TrimSpace(input.ID), TenantID: strings.TrimSpace(input.TenantID), WorkspaceID: strings.TrimSpace(input.WorkspaceID), TableID: strings.TrimSpace(input.TableID), Field: field, Direction: input.Direction, Name: physicalIndexName(field, input.Direction), Version: 1, CreatedBy: principal.IdentityKey(), CreatedAt: now, UpdatedAt: now}
+	if err := index.Validate(); err != nil {
+		return IndexDefinition{}, err
+	}
+	if err := service.indexes.CreateIndex(ctx, index); err != nil {
+		return IndexDefinition{}, err
+	}
+	return index, nil
+}
+
+func (service *Service) ListIndexes(ctx context.Context, principal identity.Principal, tenantID, workspaceID, tableID string) ([]IndexDefinition, error) {
+	if err := service.indexDependencies(ctx, principal, tenantID, workspaceID, identity.ActionWorkspaceRead); err != nil {
+		return nil, err
+	}
+	return service.indexes.ListIndexes(ctx, tenantID, workspaceID, tableID)
+}
+
+func (service *Service) indexDependencies(ctx context.Context, principal identity.Principal, tenantID, workspaceID string, action identity.Action) error {
+	if service == nil || service.indexes == nil || service.tables == nil || service.schemas == nil {
+		return identity.ErrForbidden
+	}
+	return service.authorize(ctx, principal, tenantID, workspaceID, action)
+}
+
+func validateIndexSchemaField(field string, definition schema.Definition) error {
+	field = normalizeIndexField(field)
+	if isIndexEnvelopeField(field) {
+		return fmt.Errorf("%w: %q is a record envelope field", ErrIndexFieldNotAllowed, field)
+	}
+	var document map[string]interface{}
+	if err := json.Unmarshal(mustExtJSON(definition.JSONSchema), &document); err != nil {
+		return fmt.Errorf("%w: published schema is invalid", ErrIndexFieldNotAllowed)
+	}
+	properties, ok := document["properties"].(map[string]interface{})
+	if !ok || len(properties) == 0 {
+		return fmt.Errorf("%w: schema has no top-level properties", ErrIndexFieldNotAllowed)
+	}
+	if _, ok := properties[field]; !ok {
+		return fmt.Errorf("%w: %q is absent from the published schema", ErrIndexFieldNotAllowed, field)
+	}
+	return nil
 }
 
 func (service *Service) viewDependencies(ctx context.Context, principal identity.Principal, tenantID, workspaceID string, action identity.Action) error {

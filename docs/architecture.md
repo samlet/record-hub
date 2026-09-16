@@ -59,6 +59,7 @@ Temporal/Conductor Workflow
 | Schema Registry | Schema 草稿、发布、兼容性、语义映射 |
 | Record Service | 动态记录、版本、CAS、标签和关联 |
 | View Service | 过滤、排序、列配置和物化视图 |
+| Index Policy | 仅为已发布 schema 顶层字段创建 bounded Mongo 索引 |
 | Projection Consumer | 消费领域事件并更新只读投影 |
 | Workflow Binding | 解析引用、创建快照、返回 hash/版本 |
 | Command Gateway | 把受控写操作发送给 owner system |

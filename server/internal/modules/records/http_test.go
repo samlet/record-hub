@@ -89,7 +89,9 @@ func TestRecordsHTTPViewAndQueryContract(t *testing.T) {
 	tables := &memoryTableRepository{values: map[string]TableDefinition{"tenant-1:workspace-1:table-1": {ID: "table-1", TenantID: "tenant-1", WorkspaceID: "workspace-1", Name: "Custom", Kind: TableKindCustom, SchemaID: definition.SchemaID, SchemaVersion: 1}}}
 	recordStore := &memoryRecordRepository{values: make(map[string]Record)}
 	viewStore := &memoryViewRepository{views: make(map[string]ViewDefinition)}
+	indexStore := &memoryIndexRepository{values: make(map[string]IndexDefinition)}
 	service := NewRecordService(nil, tables, memorySchemaReader{definition: definition}, identity.NewAuthorizer(serviceMembershipReader{membership: identity.WorkspaceMembership{TenantID: "tenant-1", WorkspaceID: "workspace-1", Identity: principal.IdentityKey(), Role: identity.RoleOwner, Status: identity.MembershipActive}}), recordStore, &memoryRecordReceipts{values: make(map[string]RecordReceipt)}, &memoryRecordAudit{}).WithViewRepository(viewStore)
+	service.WithIndexRepository(indexStore)
 	handler := NewHTTPHandler(service)
 	createRecord := doRecordsRequestWithHeaders(handler, &principal, http.MethodPost, "/api/v1/tables/table-1/records", `{"tenantId":"tenant-1","workspaceId":"workspace-1","id":"record-1","data":{"title":"hello","count":1}}`, map[string]string{"Idempotency-Key": "view-record-1"})
 	if createRecord.Code != http.StatusCreated {
@@ -108,6 +110,15 @@ func TestRecordsHTTPViewAndQueryContract(t *testing.T) {
 	page := doRecordsRequest(handler, &principal, http.MethodGet, "/api/v1/tables/table-1/records?tenantId=tenant-1&workspaceId=workspace-1&viewId=view-1&limit=1", "")
 	if page.Code != http.StatusOK || !strings.Contains(page.Body.String(), `"record-1"`) {
 		t.Fatalf("view records status=%d body=%s", page.Code, page.Body.String())
+	}
+	indexBody := `{"tenantId":"tenant-1","workspaceId":"workspace-1","id":"index-1","field":"title","direction":"asc"}`
+	createdIndex := doRecordsRequest(handler, &principal, http.MethodPost, "/api/v1/tables/table-1/indexes", indexBody)
+	if createdIndex.Code != http.StatusCreated || !strings.Contains(createdIndex.Body.String(), `"field":"title"`) {
+		t.Fatalf("index create status=%d body=%s", createdIndex.Code, createdIndex.Body.String())
+	}
+	listedIndexes := doRecordsRequest(handler, &principal, http.MethodGet, "/api/v1/tables/table-1/indexes?tenantId=tenant-1&workspaceId=workspace-1", "")
+	if listedIndexes.Code != http.StatusOK || !strings.Contains(listedIndexes.Body.String(), `"index-1"`) {
+		t.Fatalf("index list status=%d body=%s", listedIndexes.Code, listedIndexes.Body.String())
 	}
 }
 

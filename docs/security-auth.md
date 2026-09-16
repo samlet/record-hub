@@ -32,9 +32,9 @@ Record Hub 的 OIDC verifier 只接受显式配置的 issuer、单一 audience �
 
 | Capability | OWNER | EDITOR | VIEWER |
 | --- | --- | --- | --- |
-| 读取 workspace/schema/record/view | 允许 | 允许 | 允许 |
+| 读取 workspace/schema/record/view/index | 允许 | 允许 | 允许 |
 | 写 custom record/view | 允许 | 允许 | 拒绝 |
-| 管理 workspace/membership/schema | 允许 | 拒绝 | 拒绝 |
+| 管理 workspace/membership/schema/index | 允许 | 拒绝 | 拒绝 |
 | 写 projection | 拒绝 | 拒绝 | 拒绝 |
 
 Projection 写入只属于事件 projector 的独立服务策略，不继承任何人类角色。membership 缺失、已撤销、tenant/workspace/identity 不匹配、未知角色或未知 action 均 fail closed。

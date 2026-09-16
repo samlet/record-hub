@@ -190,6 +190,8 @@ POST /api/v1/schemas/{schemaId}/publish
 POST   /api/v1/workspaces/{workspaceId}/tables
 GET    /api/v1/workspaces/{workspaceId}/tables
 POST   /api/v1/tables/{tableId}/views
+POST   /api/v1/tables/{tableId}/indexes
+GET    /api/v1/tables/{tableId}/indexes
 GET    /api/v1/tables/{tableId}/records
 POST   /api/v1/tables/{tableId}/records
 GET    /api/v1/records/{recordId}
@@ -215,6 +217,11 @@ ViewDefinition 只允许受控字段、`eq/ne/contains/in/gt/gte/lt/lte` 操作�
 排序键；schema 声明了 `properties` 时，columns/filter/sort 只能引用这些属性或有限的
 envelope 字段。记录查询使用 1--100 的 bounded page size，cursor 编码排序键并自动追加
 `id` 作为稳定 tie-breaker，不暴露 Mongo 查询表达式。
+
+动态字段索引是独立的受控资源：只有 OWNER 可以创建，字段必须是 table 当前已发布 schema
+中的顶层 property，每张表最多 16 个（同一字段的 asc/desc 分别计数）。服务端为索引生成
+确定性的物理名称，API 不接受 Mongo key、表达式或 partial filter；索引元数据和物理 DDL
+采用可重试的两步流程，DDL 失败时清理元数据。
 
 PATCH/DELETE 必须携带 record version；冲突返回 `409 RECORD_VERSION_CONFLICT`。Projection record 的写操作返回 `409 PROJECTION_READ_ONLY`。
 

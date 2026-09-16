@@ -99,7 +99,9 @@ Envelope 字段由服务控制。用户只能编辑 Schema 和权限允许的 `d
 - 记录版本 CAS 条件；
 - 常用 tag、投影状态和同步时间索引。
 
-任意动态字段索引必须由受控的 View/Index Policy 创建，不能由用户无限制创建索引。
+任意动态字段索引必须由受控的 View/Index Policy 创建，不能由用户无限制创建索引。MVP
+将其具体化为 OWNER-only API：仅允许当前已发布 schema 的顶层 property、asc/desc 两种
+方向和每表最多 16 个索引；物理 Mongo 名称由服务端哈希生成，避免把用户输入当作表达式。
 
 ## 6. Canonical JSON 与 Schema content hash
 

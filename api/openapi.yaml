@@ -269,6 +269,52 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+  /api/v1/tables/{tableId}/indexes:
+    parameters:
+      - $ref: "#/components/parameters/TableId"
+    get:
+      tags: [Records]
+      operationId: listIndexes
+      summary: List bounded dynamic field indexes for a table
+      parameters:
+        - $ref: "#/components/parameters/TenantIdQuery"
+        - $ref: "#/components/parameters/WorkspaceIdQuery"
+      responses:
+        "200":
+          description: Index definitions visible to the principal.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IndexList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Records]
+      operationId: createIndex
+      summary: Create an administrator-approved bounded field index
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IndexCreateRequest"
+      responses:
+        "201":
+          description: Index definition created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IndexDefinition"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
   /api/v1/records/{recordId}:
     parameters:
       - $ref: "#/components/parameters/RecordId"
@@ -969,6 +1015,74 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ViewDefinition"
+    IndexDirection:
+      type: string
+      enum: [asc, desc]
+    IndexCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [tenantId, workspaceId, id, field, direction]
+      properties:
+        tenantId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        workspaceId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        id:
+          type: string
+          minLength: 1
+          maxLength: 128
+        field:
+          type: string
+          pattern: "^[A-Za-z][A-Za-z0-9_.-]{0,127}$"
+          description: Top-level property in the table's published schema.
+        direction:
+          $ref: "#/components/schemas/IndexDirection"
+    IndexDefinition:
+      type: object
+      additionalProperties: false
+      required: [id, tenantId, workspaceId, tableId, field, direction, name, version, createdBy, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        workspaceId:
+          type: string
+        tableId:
+          type: string
+        field:
+          type: string
+        direction:
+          $ref: "#/components/schemas/IndexDirection"
+        name:
+          type: string
+          pattern: "^record_data_[a-f0-9]{16}$"
+          readOnly: true
+        version:
+          type: integer
+          minimum: 1
+        createdBy:
+          $ref: "#/components/schemas/IdentityKey"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    IndexList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          maxItems: 16
+          items:
+            $ref: "#/components/schemas/IndexDefinition"
     RecordPage:
       type: object
       additionalProperties: false

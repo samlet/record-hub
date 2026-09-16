@@ -31,6 +31,10 @@ var (
 	ErrViewNotFound           = errors.New("view not found")
 	ErrViewExists             = errors.New("view already exists")
 	ErrInvalidCursor          = errors.New("invalid record cursor")
+	ErrIndexNotFound          = errors.New("index not found")
+	ErrIndexExists            = errors.New("index already exists")
+	ErrIndexLimit             = errors.New("index limit reached")
+	ErrIndexFieldNotAllowed   = errors.New("index field is not allowed")
 )
 
 const (
@@ -38,6 +42,7 @@ const (
 	tableCollectionName     = "table_definitions"
 	recordCollectionName    = "records"
 	viewCollectionName      = "view_definitions"
+	indexCollectionName     = "index_definitions"
 )
 
 type WorkspaceRepository interface {
@@ -66,16 +71,22 @@ type ViewRepository interface {
 	ListRecords(context.Context, string, string, string, ViewDefinition, string, int) (RecordPage, error)
 }
 
+type IndexRepository interface {
+	CreateIndex(context.Context, IndexDefinition) error
+	ListIndexes(context.Context, string, string, string) ([]IndexDefinition, error)
+}
+
 type MongoRepository struct {
 	workspaces *mongo.Collection
 	tables     *mongo.Collection
 	records    *mongo.Collection
 	views      *mongo.Collection
+	indexes    *mongo.Collection
 	clock      func() time.Time
 }
 
 func NewMongoRepository(database *mongo.Database) *MongoRepository {
-	return &MongoRepository{workspaces: database.Collection(workspaceCollectionName), tables: database.Collection(tableCollectionName), records: database.Collection(recordCollectionName), views: database.Collection(viewCollectionName), clock: time.Now}
+	return &MongoRepository{workspaces: database.Collection(workspaceCollectionName), tables: database.Collection(tableCollectionName), records: database.Collection(recordCollectionName), views: database.Collection(viewCollectionName), indexes: database.Collection(indexCollectionName), clock: time.Now}
 }
 
 func (repository *MongoRepository) EnsureIndexes(ctx context.Context) error {
@@ -105,6 +116,12 @@ func (repository *MongoRepository) EnsureIndexes(ctx context.Context) error {
 		{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "workspaceId", Value: 1}, {Key: "tableId", Value: 1}, {Key: "name", Value: 1}}, Options: options.Index().SetName("view_table_name_unique").SetUnique(true)},
 	}); err != nil {
 		return fmt.Errorf("create view indexes: %w", err)
+	}
+	if _, err := repository.indexes.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "workspaceId", Value: 1}, {Key: "tableId", Value: 1}, {Key: "field", Value: 1}, {Key: "direction", Value: 1}}, Options: options.Index().SetName("index_table_field_direction_unique").SetUnique(true)},
+		{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "workspaceId", Value: 1}, {Key: "tableId", Value: 1}, {Key: "updatedAt", Value: -1}}, Options: options.Index().SetName("index_table_updated")},
+	}); err != nil {
+		return fmt.Errorf("create index metadata indexes: %w", err)
 	}
 	return nil
 }
@@ -310,6 +327,51 @@ func (repository *MongoRepository) ListViews(ctx context.Context, tenantID, work
 		return nil, fmt.Errorf("decode views: %w", err)
 	}
 	return views, nil
+}
+
+func (repository *MongoRepository) CreateIndex(ctx context.Context, definition IndexDefinition) error {
+	definition.Field = normalizeIndexField(definition.Field)
+	if definition.Name == "" {
+		definition.Name = physicalIndexName(definition.Field, definition.Direction)
+	}
+	if err := definition.Validate(); err != nil {
+		return err
+	}
+	if _, err := repository.indexes.InsertOne(ctx, definition); err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			return ErrIndexExists
+		}
+		return fmt.Errorf("insert index definition: %w", err)
+	}
+	direction := 1
+	if definition.Direction == IndexDescending {
+		direction = -1
+	}
+	if _, err := repository.records.Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys:    bson.D{{Key: "tenantId", Value: 1}, {Key: "workspaceId", Value: 1}, {Key: "tableId", Value: 1}, {Key: "data." + definition.Field, Value: direction}},
+		Options: options.Index().SetName(definition.Name),
+	}); err != nil {
+		// Metadata and the physical index are not part of a Mongo transaction;
+		// remove the metadata if DDL fails so a retry can safely repair it.
+		cleanupContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		_, _ = repository.indexes.DeleteOne(cleanupContext, bson.D{{Key: "_id", Value: definition.ID}, {Key: "tenantId", Value: definition.TenantID}, {Key: "workspaceId", Value: definition.WorkspaceID}, {Key: "tableId", Value: definition.TableID}})
+		cancel()
+		return fmt.Errorf("create record index: %w", err)
+	}
+	return nil
+}
+
+func (repository *MongoRepository) ListIndexes(ctx context.Context, tenantID, workspaceID, tableID string) ([]IndexDefinition, error) {
+	cursor, err := repository.indexes.Find(ctx, bson.D{{Key: "tenantId", Value: tenantID}, {Key: "workspaceId", Value: workspaceID}, {Key: "tableId", Value: tableID}}, options.Find().SetSort(bson.D{{Key: "field", Value: 1}, {Key: "direction", Value: 1}, {Key: "_id", Value: 1}}).SetLimit(maxIndexesPerTable))
+	if err != nil {
+		return nil, fmt.Errorf("list indexes: %w", err)
+	}
+	defer cursor.Close(ctx)
+	var definitions []IndexDefinition
+	if err := cursor.All(ctx, &definitions); err != nil {
+		return nil, fmt.Errorf("decode indexes: %w", err)
+	}
+	return definitions, nil
 }
 
 func (repository *MongoRepository) ListRecords(ctx context.Context, tenantID, workspaceID, tableID string, view ViewDefinition, cursorValue string, limit int) (RecordPage, error) {

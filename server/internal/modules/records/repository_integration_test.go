@@ -31,6 +31,7 @@ func TestMongoWorkspaceAndTablePersistence(t *testing.T) {
 		_ = repository.workspaces.Drop(context.Background())
 		_ = repository.tables.Drop(context.Background())
 		_ = repository.records.Drop(context.Background())
+		_ = repository.indexes.Drop(context.Background())
 		_ = client.Database("record_hub").Collection(recordReceiptCollectionName).Drop(context.Background())
 		_ = client.Database("record_hub").Collection("audit_entries").Drop(context.Background())
 	}()
@@ -120,7 +121,7 @@ func TestMongoWorkspaceAndTablePersistence(t *testing.T) {
 	if err := repository.CreateView(ctx, view); err != nil {
 		t.Fatal(err)
 	}
-	service.WithViewRepository(repository)
+	service.WithViewRepository(repository).WithIndexRepository(repository)
 	page, err := service.ListRecords(ctx, principal, workspace.TenantID, workspace.ID, recordTable.ID, view.ID, "", 1)
 	if err != nil || len(page.Items) != 1 || page.NextCursor == "" {
 		t.Fatalf("first view page = %#v, %v", page, err)
@@ -128,6 +129,17 @@ func TestMongoWorkspaceAndTablePersistence(t *testing.T) {
 	nextPage, err := service.ListRecords(ctx, principal, workspace.TenantID, workspace.ID, recordTable.ID, view.ID, page.NextCursor, 1)
 	if err != nil || len(nextPage.Items) != 1 || nextPage.Items[0].ID == page.Items[0].ID {
 		t.Fatalf("second view page = %#v, %v", nextPage, err)
+	}
+	index, err := service.CreateIndex(ctx, principal, IndexInput{TenantID: workspace.TenantID, WorkspaceID: workspace.ID, TableID: recordTable.ID, ID: "index-mongo", Field: "title", Direction: IndexAscending})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := repository.CreateIndex(ctx, index); !errors.Is(err, ErrIndexExists) {
+		t.Fatalf("duplicate index error = %v", err)
+	}
+	indexes, err := repository.ListIndexes(ctx, workspace.TenantID, workspace.ID, recordTable.ID)
+	if err != nil || len(indexes) != 1 || indexes[0].Name != index.Name {
+		t.Fatalf("list indexes = %#v, %v", indexes, err)
 	}
 	if _, err := service.DeleteRecord(ctx, principal, RecordDeleteInput{TenantID: workspace.TenantID, WorkspaceID: workspace.ID, TableID: recordTable.ID, RecordID: recordInput.ID, IdempotencyKey: "record-delete-mongo"}, 2); err != nil {
 		t.Fatal(err)
