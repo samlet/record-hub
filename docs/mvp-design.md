@@ -207,6 +207,10 @@ Record 写入要求 `Idempotency-Key`，返回 `ETag: "recordVersion"`；更新�
 固定的已发布 JSON Schema 校验，projection table 的通用写操作返回
 `409 PROJECTION_READ_ONLY`。
 
+Relation 只保存 typed target（`system`、`type`、`id`）和 relation type；写入时排序去重，
+解析结果标记为 `CURRENT`、`BROKEN` 或 `FORBIDDEN`。`FORBIDDEN` 关系清除内部解析 ID，
+防止越权侧信道。
+
 PATCH/DELETE 必须携带 record version；冲突返回 `409 RECORD_VERSION_CONFLICT`。Projection record 的写操作返回 `409 PROJECTION_READ_ONLY`。
 
 ### 7.4 Binding

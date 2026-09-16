@@ -58,6 +58,12 @@ type RecordSource struct {
 	Version int64  `bson:"version" json:"version"`
 }
 
+type RelationTarget struct {
+	System string `bson:"system" json:"system"`
+	Type   string `bson:"type" json:"type"`
+	ID     string `bson:"id" json:"id"`
+}
+
 type RelationStatus string
 
 const (
@@ -67,7 +73,7 @@ const (
 )
 
 type RecordRelation struct {
-	Target           RecordSource   `bson:"target" json:"target"`
+	Target           RelationTarget `bson:"target" json:"target"`
 	RelationType     string         `bson:"relationType" json:"relationType"`
 	ResolvedRecordID string         `bson:"resolvedRecordId,omitempty" json:"resolvedRecordId,omitempty"`
 	Status           RelationStatus `bson:"status" json:"status"`
@@ -121,12 +127,25 @@ func (record Record) Validate() error {
 		}
 	}
 	for _, relation := range record.Relations {
-		if strings.TrimSpace(relation.Target.System) == "" || strings.TrimSpace(relation.Target.Type) == "" || strings.TrimSpace(relation.Target.ID) == "" || strings.TrimSpace(relation.RelationType) == "" {
-			return errors.New("record relation requires target and relation type")
+		if err := relation.Validate(); err != nil {
+			return err
 		}
-		if relation.Target.Version < 1 {
-			return errors.New("record relation target version must be positive")
+	}
+	return nil
+}
+
+func (relation RecordRelation) Validate() error {
+	if strings.TrimSpace(relation.Target.System) == "" || strings.TrimSpace(relation.Target.Type) == "" || strings.TrimSpace(relation.Target.ID) == "" || strings.TrimSpace(relation.RelationType) == "" {
+		return errors.New("record relation requires target and relation type")
+	}
+	switch relation.Status {
+	case "", RelationCurrent, RelationBroken:
+	case RelationForbidden:
+		if relation.ResolvedRecordID != "" {
+			return errors.New("forbidden relation cannot expose a resolved record")
 		}
+	default:
+		return errors.New("record relation status must be CURRENT, BROKEN, or FORBIDDEN")
 	}
 	return nil
 }

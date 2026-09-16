@@ -850,7 +850,7 @@ components:
       required: [target, relationType]
       properties:
         target:
-          $ref: "#/components/schemas/RecordSource"
+          $ref: "#/components/schemas/RelationTarget"
         relationType:
           type: string
           minLength: 1
@@ -859,6 +859,20 @@ components:
         status:
           type: string
           enum: [CURRENT, BROKEN, FORBIDDEN]
+    RelationTarget:
+      type: object
+      additionalProperties: false
+      required: [system, type, id]
+      properties:
+        system:
+          type: string
+          minLength: 1
+        type:
+          type: string
+          minLength: 1
+        id:
+          type: string
+          minLength: 1
     ProjectionState:
       type: object
       additionalProperties: false

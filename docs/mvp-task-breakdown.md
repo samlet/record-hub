@@ -57,7 +57,7 @@
 | --- | --- | --- | --- | --- | --- |
 | RH-M3-030 | Record Hub | Workspace/TableDefinition persistence/API | DONE | M1-016,M2 | tenant/workspace scope；Mongo unique indexes；published schema reference；CUSTOM/PROJECTION sourcePolicy 约束；OWNER 创建、成员只读访问 |
 | RH-M3-031 | Record Hub | Record envelope、CRUD、schema validation | DONE | 030 | 自有 Record envelope；发布 schema 校验；Idempotency-Key replay/conflict；recordVersion/If-Match CAS；create/update/delete 与 audit 在 Mongo transaction 中提交 |
-| RH-M3-032 | Record Hub | tag 与 typed relation | TODO | 031 | 去重、broken/forbidden relation 状态 |
+| RH-M3-032 | Record Hub | tag 与 typed relation | DONE | 031 | tags 规范化排序去重；稳定 system/type/id relation target；CURRENT/BROKEN/FORBIDDEN 状态；FORBIDDEN 不暴露 resolvedRecordId |
 | RH-M3-033 | Record Hub | ViewDefinition、分页、排序、过滤 | TODO | 031 | 查询 allowlist、稳定 cursor、bounded page size |
 | RH-M3-034 | Record Hub | 动态字段索引策略 | TODO | 033 | 只允许管理员批准的 bounded indexes |
 | RH-M3-035 | Record Hub | Projection record 写保护 | TODO | 031 | 通用 POST/PATCH/DELETE 全部拒绝 |

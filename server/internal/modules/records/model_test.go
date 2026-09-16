@@ -44,3 +44,20 @@ func TestWorkspaceValidation(t *testing.T) {
 		t.Fatal("zero workspace version should fail")
 	}
 }
+
+func TestRelationsNormalizeAndProtectForbiddenTargets(t *testing.T) {
+	relations, err := normalizeRelations([]RecordRelation{
+		{Target: RelationTarget{System: "fluxion", Type: "PROJECT", ID: "p-1"}, RelationType: "approval-for"},
+		{Target: RelationTarget{System: "fluxion", Type: "PROJECT", ID: "p-1"}, RelationType: "approval-for", Status: RelationCurrent},
+		{Target: RelationTarget{System: "bids", Type: "TENDER", ID: "t-1"}, RelationType: "related-to", Status: RelationForbidden, ResolvedRecordID: "must-not-leak"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(relations) != 2 || relations[0].ResolvedRecordID != "" || relations[1].Status != RelationCurrent {
+		t.Fatalf("unexpected normalized relations: %#v", relations)
+	}
+	if _, err := normalizeRelations([]RecordRelation{{Target: RelationTarget{System: "fluxion", Type: "PROJECT", ID: "p-1"}, RelationType: "approval-for", Status: "UNKNOWN"}}); err == nil {
+		t.Fatal("unknown relation status should fail")
+	}
+}

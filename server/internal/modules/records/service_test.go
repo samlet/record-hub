@@ -219,9 +219,9 @@ func TestRecordServiceCRUDIdempotencyAndCAS(t *testing.T) {
 	service := NewRecordService(nil, tables, memorySchemaReader{definition: definition}, identity.NewAuthorizer(serviceMembershipReader{membership: membership}), store, receipts, audits)
 	ctx := context.Background()
 	data := mustRecordData(t, `{"title":"hello","count":1}`)
-	input := RecordInput{TenantID: "tenant-1", WorkspaceID: "workspace-1", TableID: "table-1", ID: "record-1", Data: data, Tags: []string{"urgent", "urgent"}, IdempotencyKey: "create-1"}
+	input := RecordInput{TenantID: "tenant-1", WorkspaceID: "workspace-1", TableID: "table-1", ID: "record-1", Data: data, Tags: []string{"urgent", "urgent"}, Relations: []RecordRelation{{Target: RelationTarget{System: "fluxion", Type: "PROJECT", ID: "project-1"}, RelationType: "tracks"}, {Target: RelationTarget{System: "fluxion", Type: "PROJECT", ID: "project-1"}, RelationType: "tracks", Status: RelationCurrent}}, IdempotencyKey: "create-1"}
 	created, err := service.CreateRecord(ctx, principal, input)
-	if err != nil || created.RecordVersion != 1 || len(created.Tags) != 1 {
+	if err != nil || created.RecordVersion != 1 || len(created.Tags) != 1 || len(created.Relations) != 1 || created.Relations[0].Status != RelationCurrent {
 		t.Fatalf("create record = %#v, %v", created, err)
 	}
 	if _, err := service.CreateRecord(ctx, principal, input); err != nil {

@@ -178,6 +178,11 @@ func (service *Service) CreateRecord(ctx context.Context, principal identity.Pri
 	if err != nil {
 		return Record{}, err
 	}
+	relations, err := normalizeRelations(input.Relations)
+	if err != nil {
+		return Record{}, err
+	}
+	input.Relations = relations
 	if err := validateRecordData(definition, input.Data); err != nil {
 		return Record{}, err
 	}
@@ -189,7 +194,7 @@ func (service *Service) CreateRecord(ctx context.Context, principal identity.Pri
 		return result, err
 	}
 	now := service.clock().UTC()
-	record := Record{ID: strings.TrimSpace(input.ID), TenantID: input.TenantID, WorkspaceID: input.WorkspaceID, TableID: input.TableID, SchemaID: table.SchemaID, SchemaVersion: table.SchemaVersion, RecordVersion: 1, Tags: tags, Data: input.Data, Relations: input.Relations, CreatedBy: principal.IdentityKey(), UpdatedBy: principal.IdentityKey(), CreatedAt: now, UpdatedAt: now}
+	record := Record{ID: strings.TrimSpace(input.ID), TenantID: input.TenantID, WorkspaceID: input.WorkspaceID, TableID: input.TableID, SchemaID: table.SchemaID, SchemaVersion: table.SchemaVersion, RecordVersion: 1, Tags: tags, Data: input.Data, Relations: relations, CreatedBy: principal.IdentityKey(), UpdatedBy: principal.IdentityKey(), CreatedAt: now, UpdatedAt: now}
 	if err := record.Validate(); err != nil {
 		return Record{}, err
 	}
@@ -237,6 +242,11 @@ func (service *Service) UpdateRecord(ctx context.Context, principal identity.Pri
 	if err != nil {
 		return Record{}, err
 	}
+	relations, err := normalizeRelations(input.Relations)
+	if err != nil {
+		return Record{}, err
+	}
+	input.Relations = relations
 	if err := validateRecordData(definition, input.Data); err != nil {
 		return Record{}, err
 	}
@@ -257,7 +267,7 @@ func (service *Service) UpdateRecord(ctx context.Context, principal identity.Pri
 	updated := existing
 	updated.Data = input.Data
 	updated.Tags = tags
-	updated.Relations = input.Relations
+	updated.Relations = relations
 	updated.UpdatedBy = principal.IdentityKey()
 	updated.UpdatedAt = service.clock().UTC()
 	if err := updated.Validate(); err != nil {
@@ -388,6 +398,44 @@ func normalizeTags(tags []string) ([]string, error) {
 	}
 	sort.Strings(result)
 	return result, nil
+}
+
+func normalizeRelations(relations []RecordRelation) ([]RecordRelation, error) {
+	seen := make(map[string]struct{}, len(relations))
+	result := make([]RecordRelation, 0, len(relations))
+	for _, relation := range relations {
+		relation.Target.System = strings.TrimSpace(relation.Target.System)
+		relation.Target.Type = strings.TrimSpace(relation.Target.Type)
+		relation.Target.ID = strings.TrimSpace(relation.Target.ID)
+		relation.RelationType = strings.TrimSpace(relation.RelationType)
+		relation.ResolvedRecordID = strings.TrimSpace(relation.ResolvedRecordID)
+		if relation.Status == "" {
+			relation.Status = RelationCurrent
+		}
+		if relation.Status == RelationForbidden {
+			relation.ResolvedRecordID = ""
+		}
+		if err := relation.Validate(); err != nil {
+			return nil, err
+		}
+		key := relation.Target.System + "\x00" + relation.Target.Type + "\x00" + relation.Target.ID + "\x00" + relation.RelationType
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
+		result = append(result, relation)
+	}
+	if len(result) > 64 {
+		return nil, errors.New("record cannot have more than 64 relations")
+	}
+	sort.Slice(result, func(left, right int) bool {
+		return relationKey(result[left]) < relationKey(result[right])
+	})
+	return result, nil
+}
+
+func relationKey(relation RecordRelation) string {
+	return relation.Target.System + "\x00" + relation.Target.Type + "\x00" + relation.Target.ID + "\x00" + relation.RelationType
 }
 
 func validateRecordData(definition schema.Definition, data bson.Raw) error {
