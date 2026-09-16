@@ -1,7 +1,23 @@
 # M6 Workflow Binding 验收记录
 
 Record Hub 基础能力（M6-060～063）、Fluxion Temporal 适配（M6-064～065）与 Bids
-Conductor Worker（M6-066）已完成；双引擎 E2E 留在后续批次。
+Conductor Worker（M6-066）已完成。M6-067 已提供跨仓库 contract gate 和可选 live smoke，
+但真实 Record Hub/Mongo/Dex/双引擎重启恢复尚未在当前环境执行，因此保持 PARTIAL。
+
+## 双引擎 E2E（M6-067，PARTIAL）
+
+`scripts/verify-m6-bindings.sh` 先运行 Fluxion Temporal 与 Bids Conductor 的定向测试，避免把
+本地 fake 当成跨服务验收。设置 `RECORD_HUB_M6_LIVE=1` 并提供 Record Hub URL、Dex machine
+token、tenant/workspace、project/tender ID 后，它会对两个 schema 执行真实 snapshot + 相同
+operation ID replay；在人工重启 Record Hub 后追加 `RECORD_HUB_M6_VERIFY_RESTART=1`，验证
+snapshot GET 仍能读取同一 ID。
+
+```bash
+./scripts/verify-m6-bindings.sh
+```
+
+默认 gate 已通过；live smoke 需要 Record Hub API 已接入 Mongo store、Mongo replica set 和
+Dex service principals，当前主机缺少这些可用依赖，不能安全伪报通过。
 
 ## Bids Conductor 适配（M6-066）
 
