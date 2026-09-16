@@ -93,6 +93,20 @@ audience 和过期 token 均拒绝。测试 issuer 不依赖真实 Dex，避免�
 设置 `RECORD_HUB_M7_DEX_LIVE=1` 会在上述 verifier 测试后追加本地 Dex discovery/PKCE smoke；
 当前 M7-075 的核心 rotation/outage 验收已由 deterministic verifier 测试完成。
 
+## M7-076 API/worker/Mongo/NATS restart
+
+`scripts/verify-m7-restart.sh` 构建当前二进制，分别启动/停止两次 API 与 worker，验证
+`SIGTERM` 下 API 健康探针可恢复、worker 可有界退出。Projection runner 的 durable consumer
+重连和 in-flight drain 由 M7-074 gate 覆盖。
+
+```bash
+./scripts/verify-m7-restart.sh
+```
+
+Mongo/NATS 的真实进程重启还需要本地 replica set、JetStream 和业务 outbox 同时运行，并应
+在受控环境记录 backlog、lease 和 event ID；当前只完成 API/worker process smoke，因此
+M7-076 保持 `PARTIAL`，不把 idle worker 当成完整业务 worker 验收。
+
 ## 边界说明
 
 binding 只接受 `system:type:id` 的稳定引用和已经由 projection/record owner 过滤后的 JSON
