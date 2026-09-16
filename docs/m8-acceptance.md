@@ -30,8 +30,8 @@ HTTP handlers 收敛到单一 `/api/v1` 浏览器入口，`/api/v1/schemas` 及�
 仍来自同一 Session middleware，OWNER/EDITOR/VIEWER allow/deny 仍由本地
 membership authorizer 决定。`web/` 已补上 Next.js 控制台基础：同源 `/api`/`/auth`
 rewrite、Dex 登录入口、tenant/workspace/table 选择、自定义表和记录写入、Schema
-草稿/ETag 发布、View 多条件过滤/排序/列显隐、投影运维摘要与只读网格；所有浏览器
-写操作自动带 CSRF、幂等键和请求 ID。Schema 读取也提供 workspace-scoped
+草稿/ETag 发布、六类 Schema 字段编辑、View 多条件过滤/排序/列显隐、投影运维摘要
+与只读网格；所有浏览器写操作自动带 CSRF、幂等键和请求 ID。Schema 读取也提供 workspace-scoped
 `GET /api/v1/schemas/{schemaId}`。
 真实 Dex 回调、多角色和投影数据的浏览器矩阵仍保持 PARTIAL。
 

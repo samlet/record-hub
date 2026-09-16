@@ -84,9 +84,10 @@ make dex-smoke
    新 summary 事件可通过各自环境变量写入 `metadata.workspaceId`；未配置的历史事件
    仍需受校验的 tenant→workspace map 或显式 fallback，不能隐式猜 scope。
 2. `web/` Next.js 控制台已落地最小闭环（登录入口、workspace/table/record、Schema
-   草稿/发布、View 多条件过滤/排序/列显隐、projection operations）；M2-026、
-   M3-036、M3-037 的字段类型、grid、tag、filter、projection freshness 真实浏览器
-   路径尚未形成矩阵，M8-081 相应保持 PARTIAL。
+   草稿/发布、六类 Schema 字段编辑、View 多条件过滤/排序/列显隐、projection
+   operations）；M2-026、M3-036、M3-037 的字段列表、grid 字段类型渲染、tag、
+   filter、projection freshness 真实浏览器路径尚未形成矩阵，M8-081 相应保持
+   PARTIAL。
 3. pending OIDC state 当前是有界一次性内存 store；多实例部署前需替换共享短期 store。
    Session secret 当前单 key，轮换会使所有浏览器 session 失效。
 4. Dex 2.45.1 machine `client_credentials` 仍延期，不得以 password grant 冒充机器身份。
@@ -99,7 +100,7 @@ make dex-smoke
    Approver application、Fluxion project、Bids tender 的真实 HTTP API→事务 Outbox→relay→
    projection，浏览器 UI 和完整用户旅程仍待补齐。使用 `..._API_MODE=required` 可在本地
    依赖齐全时禁止 direct-outbox fallback。
-2. 在 `web/` Next.js 基础上补字段类型、视图持久化编辑和真实 Dex/Mongo/NATS/Temporal/Conductor
+2. 在 `web/` Next.js 基础上补 grid 字段类型渲染、视图持久化编辑和真实 Dex/Mongo/NATS/Temporal/Conductor
    监督式浏览器路径，复用本报告中的 Go auth/session/CSRF contract，把
    OWNER/EDITOR/VIEWER 矩阵提升为真实浏览器测试。
 3. 按 `m8-recovery-runbook.md` 做一次原 event ID 的 GAP/DLQ 重放、ACK-loss、凭据
