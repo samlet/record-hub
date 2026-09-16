@@ -853,6 +853,7 @@ function RecordsPanel(props: {
           </div>
           <RecordGrid
             records={records}
+            selectedView={views.find((view) => view.id === viewId)}
             onEdit={onEditRecord}
             onDelete={onDeleteRecord}
           />
@@ -866,10 +867,12 @@ function RecordsPanel(props: {
 
 function RecordGrid({
   records,
+  selectedView,
   onEdit,
   onDelete,
 }: {
   records: RecordItem[];
+  selectedView?: ViewDefinition;
   onEdit: (record: RecordItem) => void;
   onDelete: (record: RecordItem) => void;
 }) {
@@ -879,13 +882,20 @@ function RecordGrid({
         暂无记录。创建一条记录或等待投影事件到达。
       </div>
     );
+  const columns = selectedView?.columns.length
+    ? selectedView.columns
+    : Array.from(
+        new Set(records.flatMap((record) => Object.keys(record.data))),
+      ).slice(0, 32);
   return (
     <div className="table-wrap">
       <table>
         <thead>
           <tr>
             <th>ID</th>
-            <th>数据</th>
+            {columns.map((column) => (
+              <th key={column}>{column}</th>
+            ))}
             <th>标签</th>
             <th>版本</th>
             <th>投影状态</th>
@@ -904,9 +914,13 @@ function RecordGrid({
                   </small>
                 )}
               </td>
-              <td>
-                <pre>{JSON.stringify(record.data, null, 2)}</pre>
-              </td>
+              {columns.map((column) => (
+                <td key={column}>
+                  <span className="cell-value">
+                    {formatCell(readPath(record.data, column))}
+                  </span>
+                </td>
+              ))}
               <td>
                 {record.tags.map((tag) => (
                   <span className="tag" key={tag}>
@@ -921,6 +935,11 @@ function RecordGrid({
                 >
                   {record.projection?.status ?? "CUSTOM"}
                 </span>
+                {record.projection?.syncedAt && (
+                  <small>
+                    {new Date(record.projection.syncedAt).toLocaleString()}
+                  </small>
+                )}
               </td>
               <td>{new Date(record.updatedAt).toLocaleString()}</td>
               <td>
@@ -945,6 +964,31 @@ function RecordGrid({
       </table>
     </div>
   );
+}
+
+function readPath(data: Record<string, unknown>, path: string): unknown {
+  const parts = path
+    .replace(/^data\./, "")
+    .split(".")
+    .filter(Boolean);
+  return parts.reduce<unknown>(
+    (current, part) =>
+      current && typeof current === "object"
+        ? (current as Record<string, unknown>)[part]
+        : undefined,
+    data,
+  );
+}
+
+function formatCell(value: unknown): string {
+  if (value === undefined || value === null) return "—";
+  if (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  )
+    return String(value);
+  return JSON.stringify(value);
 }
 
 type SchemaField = { name: string; type: string; required: boolean };
