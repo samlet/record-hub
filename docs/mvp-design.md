@@ -48,6 +48,11 @@ MVP 支持：
 - 记录详情展示 source reference、关系、版本和同步新鲜度；
 - Schema 草稿与发布。
 
+Schema mutation 的提交边界是 MongoDB transaction：schema definition、audit entry 和
+idempotency receipt 必须一起提交；任一写入失败都回滚，客户端只有在三者同时持久化后才
+收到成功响应。`Idempotency-Key` 按 tenant/workspace/operation 隔离，重复请求返回原始
+definition，输入哈希变化则拒绝为冲突。
+
 ## 3. 明确不做
 
 - 外部业务状态写回和 Command Gateway；
@@ -361,4 +366,3 @@ MVP 更新采用普通 HTTP 刷新或轻量 SSE；不实现 Presence/Broadcast�
 - 无跨系统写回，无业务系统通过 Record Hub 修改最终事实。
 - 安全负向测试、故障注入、重启恢复和契约兼容测试通过。
 - 提供本地启动、升级、备份、DLQ/gap 恢复和 credential rotation runbook。
-

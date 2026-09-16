@@ -44,7 +44,7 @@
 | ID | 仓库 | 任务 | 状态 | 依赖 | 验收 |
 | --- | --- | --- | --- | --- | --- |
 | RH-M2-020 | Record Hub | SchemaDefinition persistence 与索引 | DONE | M1-010 | tenant/name/version 与 tenant/schemaId/version 唯一；draft CAS；published/deprecated immutable，真实 MongoDB 验收通过 |
-| RH-M2-021 | Record Hub | Draft create/update/publish API | TODO | 020,M1-016 | idempotency、If-Match、审计和角色检查 |
+| RH-M2-021 | Record Hub | Draft create/update/publish API | DONE | 020,M1-016 | REST/OpenAPI mutation endpoints；Idempotency-Key replay/conflict；If-Match revision CAS；OWNER/EDITOR authorization；Mongo transaction atomically commits schema、audit 和 receipt |
 | RH-M2-022 | Record Hub | JSON Schema 2020-12 validation | DONE | 020 | 强制 Draft 2020-12；text/number/boolean/date-time/enum/reference 正负 fixture；非法 UTF-8/尾随 JSON 拒绝 |
 | RH-M2-023 | Record Hub | compatibility checker | DONE | 022 | optional additive、required 放宽、integer→number/enum 扩展兼容；删除/改名/type/required/enum/约束收窄判 breaking |
 | RH-M2-024 | Record Hub | semanticTypes/Schema.org URI mapping | DONE | 020 | Schema.org HTTPS canonicalization、HTTPS custom URI/URN、排序去重；不影响结构校验结果 |

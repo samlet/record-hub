@@ -26,6 +26,21 @@ type MongoRepository struct {
 	clock      func() time.Time
 }
 
+// WithTransaction lets mutation services atomically couple a registry change
+// with its audit entry and idempotency receipt. Context passed to fn is a
+// mongo.SessionContext and must be used by every participating adapter.
+func (repository *MongoRepository) WithTransaction(ctx context.Context, fn func(context.Context) error) error {
+	session, err := repository.collection.Database().Client().StartSession()
+	if err != nil {
+		return fmt.Errorf("start schema transaction: %w", err)
+	}
+	defer session.EndSession(context.Background())
+	_, err = session.WithTransaction(ctx, func(transactionContext context.Context) (interface{}, error) {
+		return nil, fn(transactionContext)
+	})
+	return err
+}
+
 func NewMongoRepository(database *mongo.Database) *MongoRepository {
 	return &MongoRepository{collection: database.Collection(collectionName), clock: time.Now}
 }

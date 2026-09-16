@@ -87,9 +87,11 @@ func TestMongoPersistenceAdapters(t *testing.T) {
 	}
 	defer func() { _ = client.Disconnect(context.Background()) }()
 	database := client.Database("record_hub")
+	registry := NewMongoRepository(database)
 	receipts := NewMongoReceiptStore(database)
 	auditWriter := audit.NewMongoWriter(database)
 	defer func() {
+		_ = registry.collection.Drop(context.Background())
 		_ = receipts.collection.Drop(context.Background())
 		_ = database.Collection("audit_entries").Drop(context.Background())
 	}()
@@ -120,6 +122,42 @@ func TestMongoPersistenceAdapters(t *testing.T) {
 	if err := auditWriter.Append(ctx, entry); err != nil {
 		t.Fatal(err)
 	}
+
+	if err := registry.EnsureIndexes(ctx); err != nil {
+		t.Fatal(err)
+	}
+	principal := identity.Principal{Kind: identity.PrincipalUser, Issuer: "https://issuer.example", Subject: "owner-1"}
+	service := NewService(registry, identity.NewAuthorizer(serviceMembershipReader{membership: identity.WorkspaceMembership{
+		TenantID: "tenant-1", WorkspaceID: "workspace-1", Identity: principal.IdentityKey(), Role: identity.RoleOwner, Status: identity.MembershipActive,
+	}}), receipts, auditWriter)
+	input := draftInput(t)
+	input.SchemaID = "urn:record-hub:test:transaction"
+	input.IdempotencyKey = "transaction-create"
+	if _, err := service.CreateDraft(ctx, principal, input); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.CreateDraft(ctx, principal, input); err != nil {
+		t.Fatalf("transactional idempotent replay: %v", err)
+	}
+
+	failingService := NewService(registry, identity.NewAuthorizer(serviceMembershipReader{membership: identity.WorkspaceMembership{
+		TenantID: "tenant-1", WorkspaceID: "workspace-1", Identity: principal.IdentityKey(), Role: identity.RoleOwner, Status: identity.MembershipActive,
+	}}), receipts, failingAuditWriter{})
+	failedInput := input
+	failedInput.SchemaID = "urn:record-hub:test:transaction-rollback"
+	failedInput.IdempotencyKey = "transaction-rollback"
+	if _, err := failingService.CreateDraft(ctx, principal, failedInput); err == nil {
+		t.Fatal("audit failure should fail mutation")
+	}
+	if _, err := registry.Get(ctx, failedInput.TenantID, failedInput.SchemaID, failedInput.Version); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("audit failure left schema behind: %v", err)
+	}
+}
+
+type failingAuditWriter struct{}
+
+func (failingAuditWriter) Append(context.Context, audit.Entry) error {
+	return errors.New("audit unavailable")
 }
 
 func schemaFixture(t *testing.T, status Status) Definition {

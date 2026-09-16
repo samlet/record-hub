@@ -27,6 +27,11 @@ type Registry interface {
 	PublishDefinition(context.Context, string, string, int64, int64, identity.IdentityKey, string) (Definition, error)
 }
 
+type TransactionalRegistry interface {
+	Registry
+	WithTransaction(context.Context, func(context.Context) error) error
+}
+
 type Receipt struct {
 	TenantID       string     `bson:"tenantId"`
 	WorkspaceID    string     `bson:"workspaceId"`
@@ -91,10 +96,16 @@ func (service *Service) CreateDraft(ctx context.Context, principal identity.Prin
 		Status: StatusDraft, JSONSchema: input.JSONSchema, SemanticTypes: normalized,
 		CreatedBy: principal.IdentityKey(), CreatedAt: now, UpdatedAt: now,
 	}
-	if err := service.registry.Create(ctx, definition); err != nil {
-		return Definition{}, err
-	}
-	return service.complete(ctx, input, "schema.create", requestHash, definition, audit.Entry{TenantID: input.TenantID, WorkspaceID: input.WorkspaceID, Action: "schema.create", Actor: principal.IdentityKey(), ResourceType: "SchemaDefinition", ResourceID: input.SchemaID, ResourceVersion: definition.Version, RequestID: input.RequestID, IdempotencyKey: input.IdempotencyKey, AfterHash: requestHash, CreatedAt: now})
+	var result Definition
+	err = service.inTransaction(ctx, func(transactionContext context.Context) error {
+		if err := service.registry.Create(transactionContext, definition); err != nil {
+			return err
+		}
+		var completeErr error
+		result, completeErr = service.complete(transactionContext, input, "schema.create", requestHash, definition, audit.Entry{TenantID: input.TenantID, WorkspaceID: input.WorkspaceID, Action: "schema.create", Actor: principal.IdentityKey(), ResourceType: "SchemaDefinition", ResourceID: input.SchemaID, ResourceVersion: definition.Version, RequestID: input.RequestID, IdempotencyKey: input.IdempotencyKey, AfterHash: requestHash, CreatedAt: now})
+		return completeErr
+	})
+	return result, err
 }
 
 func (service *Service) UpdateDraft(ctx context.Context, principal identity.Principal, input DraftInput, expectedRevision int64) (Definition, error) {
@@ -124,12 +135,18 @@ func (service *Service) UpdateDraft(ctx context.Context, principal identity.Prin
 	definition.Name = input.Name
 	definition.JSONSchema = input.JSONSchema
 	definition.SemanticTypes = normalized
-	updated, err := service.registry.UpdateDraft(ctx, definition, expectedRevision)
-	if err != nil {
-		return Definition{}, err
-	}
 	now := service.clock().UTC()
-	return service.complete(ctx, input, "schema.update", requestHash, updated, audit.Entry{TenantID: input.TenantID, WorkspaceID: input.WorkspaceID, Action: "schema.update", Actor: principal.IdentityKey(), ResourceType: "SchemaDefinition", ResourceID: input.SchemaID, ResourceVersion: updated.Version, RequestID: input.RequestID, IdempotencyKey: input.IdempotencyKey, BeforeHash: hashDefinition(existing), AfterHash: requestHash, CreatedAt: now})
+	var result Definition
+	err = service.inTransaction(ctx, func(transactionContext context.Context) error {
+		updated, updateErr := service.registry.UpdateDraft(transactionContext, definition, expectedRevision)
+		if updateErr != nil {
+			return updateErr
+		}
+		var completeErr error
+		result, completeErr = service.complete(transactionContext, input, "schema.update", requestHash, updated, audit.Entry{TenantID: input.TenantID, WorkspaceID: input.WorkspaceID, Action: "schema.update", Actor: principal.IdentityKey(), ResourceType: "SchemaDefinition", ResourceID: input.SchemaID, ResourceVersion: updated.Version, RequestID: input.RequestID, IdempotencyKey: input.IdempotencyKey, BeforeHash: hashDefinition(existing), AfterHash: requestHash, CreatedAt: now})
+		return completeErr
+	})
+	return result, err
 }
 
 func (service *Service) Publish(ctx context.Context, principal identity.Principal, input DraftInput, expectedRevision int64) (Definition, error) {
@@ -157,12 +174,18 @@ func (service *Service) Publish(ctx context.Context, principal identity.Principa
 	if err != nil {
 		return Definition{}, err
 	}
-	published, err := service.registry.PublishDefinition(ctx, input.TenantID, input.SchemaID, input.Version, expectedRevision, principal.IdentityKey(), contentHash)
-	if err != nil {
-		return Definition{}, err
-	}
 	now := service.clock().UTC()
-	return service.complete(ctx, input, "schema.publish", requestHash, published, audit.Entry{TenantID: input.TenantID, WorkspaceID: input.WorkspaceID, Action: "schema.publish", Actor: principal.IdentityKey(), ResourceType: "SchemaDefinition", ResourceID: input.SchemaID, ResourceVersion: published.Version, RequestID: input.RequestID, IdempotencyKey: input.IdempotencyKey, BeforeHash: hashDefinition(existing), AfterHash: contentHash, CreatedAt: now})
+	var result Definition
+	err = service.inTransaction(ctx, func(transactionContext context.Context) error {
+		published, publishErr := service.registry.PublishDefinition(transactionContext, input.TenantID, input.SchemaID, input.Version, expectedRevision, principal.IdentityKey(), contentHash)
+		if publishErr != nil {
+			return publishErr
+		}
+		var completeErr error
+		result, completeErr = service.complete(transactionContext, input, "schema.publish", requestHash, published, audit.Entry{TenantID: input.TenantID, WorkspaceID: input.WorkspaceID, Action: "schema.publish", Actor: principal.IdentityKey(), ResourceType: "SchemaDefinition", ResourceID: input.SchemaID, ResourceVersion: published.Version, RequestID: input.RequestID, IdempotencyKey: input.IdempotencyKey, BeforeHash: hashDefinition(existing), AfterHash: contentHash, CreatedAt: now})
+		return completeErr
+	})
+	return result, err
 }
 
 func (service *Service) authorize(ctx context.Context, principal identity.Principal, tenantID, workspaceID string) error {
@@ -171,6 +194,13 @@ func (service *Service) authorize(ctx context.Context, principal identity.Princi
 	}
 	_, err := service.authorizer.Authorize(ctx, principal, tenantID, workspaceID, identity.ActionSchemaManage)
 	return err
+}
+
+func (service *Service) inTransaction(ctx context.Context, fn func(context.Context) error) error {
+	if transactional, ok := service.registry.(TransactionalRegistry); ok {
+		return transactional.WithTransaction(ctx, fn)
+	}
+	return fn(ctx)
 }
 
 func (service *Service) receipt(ctx context.Context, input DraftInput, operation, requestHash string) (Definition, bool, error) {
