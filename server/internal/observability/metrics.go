@@ -262,6 +262,9 @@ func HTTPMiddleware(registry *Registry, next http.Handler) http.Handler {
 		if status == http.StatusUnauthorized || status == http.StatusForbidden {
 			registry.IncCounter("record_hub_auth_failures_total", Labels{"status": strconv.Itoa(status)})
 		}
+		if status == http.StatusTooManyRequests {
+			registry.IncCounter("record_hub_rate_limited_total", nil)
+		}
 	})
 }
 
