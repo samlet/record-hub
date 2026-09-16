@@ -128,7 +128,7 @@
 | RH-M8-083 | 四仓库 | MVP happy-path E2E 脚本 | PARTIAL | M5,M6,M8-081 | 代码级 gate 可重复；真实浏览器/API 联合 E2E 待 M8-085 拓扑 |
 | RH-M8-084 | 四仓库 | MVP failure-path E2E 脚本 | PARTIAL | M7 | 代码级负向 gate 通过；真实 outage/duplicate/bad token E2E 待 M8-085/086 |
 | RH-M8-085 | Record Hub | 本地运行与排障文档 | PARTIAL | M8-083 | fresh machine 代码级/依赖 smoke 可按文档执行；完整浏览器/API 仍需受监督拓扑 |
-| RH-M8-086 | Record Hub | DLQ/gap/credential rotation runbook | TODO | M7 | 恢复步骤只使用原 event/operation ID |
+| RH-M8-086 | Record Hub | DLQ/gap/credential rotation runbook | PARTIAL | M7 | 恢复步骤只使用原 event/operation ID；真实 outage/轮换待受监督拓扑 |
 | RH-M8-087 | 四仓库 | MVP 验收报告与 commit/hash 清单 | TODO | 083-086 | 证据、限制、遗留风险完整 |
 
 ## 11. M9：明确延期

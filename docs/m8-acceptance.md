@@ -53,6 +53,11 @@ M8-085 runbook 位于 [m8-local-runbook.md](m8-local-runbook.md)，`make m8-loca
 默认执行全部代码级 gate；设置 `RECORD_HUB_M8_LOCAL_LIVE=1` 后才会启动本地
 Dex/MongoDB/NATS 并探测 Go API。Docker 不可用时不会伪报 live 通过。
 
+M8-086 恢复与轮换步骤位于 [m8-recovery-runbook.md](m8-recovery-runbook.md)，明确
+GAP、DLQ、ACK loss、NATS/Mongo/Dex 和 Session secret 的边界；DLQ 摘要不含 payload，
+恢复只能回到 source Outbox/原 subject 使用原 event ID。真实故障注入和滚动轮换仍保持
+`PARTIAL`，直到受监督拓扑完成。
+
 ## 本地启动
 
 先启动 Dex 并生成本地 secret：
