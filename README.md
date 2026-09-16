@@ -52,9 +52,11 @@ HTTP 契约以 [`api/openapi.yaml`](api/openapi.yaml) 为准。`make generate-cl
 - [实施路线](docs/roadmap.md)
 - [下一期方案评估](docs/phase-2-evaluation.md)
 - [下一期需求设计](docs/phase-2-requirements.md)
+- [下一期任务分解](docs/phase-2-task-breakdown.md)
 - [参考资料](docs/references.md)
 - [ADR-0001：独立仓库与事实所有权](docs/adr/0001-independent-service-and-data-ownership.md)
 - [ADR-0002：Go 服务端](docs/adr/0002-go-server.md)
+- [ADR-0003：分离 Human 与 Workload Identity](docs/adr/0003-separate-human-and-workload-identity.md)
 
 公共事件 envelope 契约位于 [contracts/eventenvelope/event-envelope-v1.schema.json](contracts/eventenvelope/event-envelope-v1.schema.json)。
 

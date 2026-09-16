@@ -105,6 +105,7 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 			policies = append(policies, binding.MachinePolicy{
 				Identity:       identity.IdentityKey{Issuer: policy.Issuer, Subject: policy.Subject},
 				Audience:       policy.Audience,
+				Scope:          policy.Scope,
 				TenantID:       policy.TenantID,
 				WorkspaceID:    policy.WorkspaceID,
 				Purpose:        policy.Purpose,

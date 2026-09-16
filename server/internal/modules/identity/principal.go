@@ -23,6 +23,7 @@ type Principal struct {
 	Name              string
 	PreferredUsername string
 	Groups            []string
+	Scopes            []string
 }
 
 // IdentityKey is safe to use as a local membership lookup key.

@@ -53,6 +53,7 @@ type PolicyAuthorizer interface {
 type MachinePolicy struct {
 	Identity       identity.IdentityKey
 	Audience       string
+	Scope          string
 	TenantID       string
 	WorkspaceID    string
 	Purpose        string
@@ -79,7 +80,7 @@ func (authorizer *StaticMachinePolicyAuthorizer) Authorize(_ context.Context, pr
 		if policy.Identity != principal.IdentityKey() || policy.TenantID != request.TenantID || policy.WorkspaceID != request.WorkspaceID || policy.Purpose != request.Purpose || policy.ResourceSystem != request.ResourceSystem || policy.ResourceType != request.ResourceType {
 			continue
 		}
-		if policy.Audience == "" || !contains(principal.Audience, policy.Audience) {
+		if policy.Audience == "" || !contains(principal.Audience, policy.Audience) || policy.Scope == "" || !contains(principal.Scopes, policy.Scope) {
 			continue
 		}
 		return nil

@@ -96,6 +96,7 @@ func (v *OIDCVerifier) verify(ctx context.Context, rawToken, expectedNonce strin
 		PreferredUsername string   `json:"preferred_username"`
 		Groups            []string `json:"groups"`
 		Nonce             string   `json:"nonce"`
+		Scope             string   `json:"scope"`
 	}
 	if err := verified.Claims(&claims); err != nil {
 		return Principal{}, fmt.Errorf("%w: decode claims", ErrInvalidToken)
@@ -114,6 +115,7 @@ func (v *OIDCVerifier) verify(ctx context.Context, rawToken, expectedNonce strin
 		Name:              claims.Name,
 		PreferredUsername: claims.PreferredUsername,
 		Groups:            append([]string(nil), claims.Groups...),
+		Scopes:            strings.Fields(claims.Scope),
 	}, nil
 }
 

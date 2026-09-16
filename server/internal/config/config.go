@@ -54,6 +54,7 @@ type BindingMachinePolicyConfig struct {
 	Issuer         string `json:"issuer"`
 	Subject        string `json:"subject"`
 	Audience       string `json:"audience"`
+	Scope          string `json:"scope"`
 	TenantID       string `json:"tenantId"`
 	WorkspaceID    string `json:"workspaceId"`
 	Purpose        string `json:"purpose"`
@@ -244,12 +245,13 @@ func parseBindingMachinePolicies(raw string, cfg Config) ([]BindingMachinePolicy
 		policy.Issuer = strings.TrimSpace(policy.Issuer)
 		policy.Subject = strings.TrimSpace(policy.Subject)
 		policy.Audience = strings.TrimSpace(policy.Audience)
+		policy.Scope = strings.TrimSpace(policy.Scope)
 		policy.TenantID = strings.TrimSpace(policy.TenantID)
 		policy.WorkspaceID = strings.TrimSpace(policy.WorkspaceID)
 		policy.Purpose = strings.TrimSpace(policy.Purpose)
 		policy.ResourceSystem = strings.TrimSpace(policy.ResourceSystem)
 		policy.ResourceType = strings.TrimSpace(policy.ResourceType)
-		fields := []string{policy.Issuer, policy.Subject, policy.Audience, policy.TenantID, policy.WorkspaceID, policy.Purpose, policy.ResourceSystem, policy.ResourceType}
+		fields := []string{policy.Issuer, policy.Subject, policy.Audience, policy.Scope, policy.TenantID, policy.WorkspaceID, policy.Purpose, policy.ResourceSystem, policy.ResourceType}
 		for _, field := range fields {
 			if field == "" || strings.Contains(field, "*") {
 				return nil, fmt.Errorf("RECORD_HUB_BINDING_MACHINE_POLICIES[%d] requires non-empty exact fields without wildcards", index)

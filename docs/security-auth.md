@@ -2,9 +2,13 @@
 
 ## 1. 结论
 
-本地开发和联合测试可以使用一套本机 Dex，为 Approver、Fluxion、Bids 和 Record Hub 提供统一 OIDC issuer。
+本地开发和联合测试可以使用一套本机 Dex，为 Approver、Fluxion、Bids 和 Record Hub 的
+浏览器用户提供统一 human OIDC issuer。服务身份使用独立 workload issuer；决策与 token
+contract 见 [ADR-0003](adr/0003-separate-human-and-workload-identity.md)。
 
-Dex 承担身份认证和 token 签发；各系统仍负责自己的租户映射、角色、资源和字段授权。Dex group 只能作为角色映射输入，不能成为唯一授权事实。
+Dex 承担人类身份认证和用户 token 签发；独立 workload issuer 签发服务 token。各系统仍
+负责自己的租户映射、角色、资源和字段授权。Dex group 只能作为角色映射输入，不能成为
+唯一授权事实。
 
 ## 2. 人类用户登录
 
@@ -56,17 +60,21 @@ approver-to-fluxion
 approver-to-bids
 ```
 
-Dex 2.45.1 的稳定版尚未实现 `client_credentials`；该能力目前只存在于 Dex 未发布的开发分支，不能因为文档已经提前出现就把稳定镜像视为支持。因此 `RH-M1-014` 暂缓，禁止用已废弃的 password grant 冒充机器身份。后续必须通过 ADR 在“等待含该能力的 Dex 稳定版”“专用 Authorization Server”或“mTLS/workload identity”之间选择。
+Dex 2.45.1 的稳定版尚未实现 `client_credentials`；该能力在其后合并到开发分支，不能因为
+在线文档已经提前出现就把本机稳定版视为支持。因此 workload identity 已按 ADR-0003 从
+human Dex 分离：本地/CI 使用临时测试 issuer，Beta 使用正式独立 Authorization Server，
+生产平台阶段再评估 SPIFFE。禁止用 password grant 冒充机器身份。
 
-若后续选定的 Authorization Server 支持 client credentials，仍须满足：
+workload Authorization Server 必须满足：
 
-- 每个 client 使用独立 secret 和 audience，只请求所选 issuer 当前支持且确有需要的最小 scope；
+- 每个 client 使用独立 secret；token 使用 Record Hub resource audience，只请求最小 scope；
 - Dex 的 scope 集合不是通用业务权限模型；API 依据 client identity、audience 和本地 client-capability/tenant mapping 授权；
 - requester 用户身份作为独立业务字段传递，不能冒充机器 token subject；
 - token 短时有效，secret 支持双版本轮换；
 - 禁止复用浏览器 Session、BFF secret、NATS credential 或 MongoDB credential。
 
-启用前必须把所选 issuer 实际签发的 client-credentials token 固化为契约测试，验证 `iss/sub/aud/exp/scope` 的真实形态，不能从用户 token 的 claims 推测机器 token。
+启用任何 Beta issuer 前必须把其实际签发的 client-credentials token 固化为契约测试，验证
+`iss/sub/aud/exp/scope` 的真实形态，不能从用户 token 的 claims 推测机器 token。
 
 如果生产环境需要动态 client 注册、丰富的自定义 OAuth scope、细粒度 consent 或完整 service-account 生命周期，应重新评估专用 Authorization Server；不能为了沿用本地 Dex 而把业务授权编码进非标准 claims。
 

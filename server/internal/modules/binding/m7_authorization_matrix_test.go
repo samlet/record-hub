@@ -59,6 +59,7 @@ func TestM7SnapshotScopeMatrixDeniesMachineCrossScopeAndIdentity(t *testing.T) {
 		{name: "wrong purpose", editRequest: func(request *SnapshotRequest) { request.Purpose = "write-command" }},
 		{name: "wrong resource type", editRequest: func(request *SnapshotRequest) { request.RecordRef = "fluxion:TENDER:tender-1" }},
 		{name: "wrong audience", editPrincipal: func(principal *identity.Principal) { principal.Audience = []string{"other-service"} }},
+		{name: "wrong scope", editPrincipal: func(principal *identity.Principal) { principal.Scopes = []string{"recordhub.command.submit"} }},
 		{name: "wrong identity", editPrincipal: func(principal *identity.Principal) { principal.Subject = "other-service" }},
 	} {
 		t.Run(test.name, func(t *testing.T) {

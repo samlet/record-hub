@@ -82,7 +82,7 @@ func bindingUser() identity.Principal {
 }
 
 func bindingService() identity.Principal {
-	return identity.Principal{Kind: identity.PrincipalService, Issuer: "https://issuer.example", Subject: "fluxion-to-record-hub", Audience: []string{"record-hub"}}
+	return identity.Principal{Kind: identity.PrincipalService, Issuer: "https://issuer.example", Subject: "fluxion-to-record-hub", Audience: []string{"record-hub"}, Scopes: []string{"recordhub.binding.snapshot"}}
 }
 
 func validSourceRecord() SourceRecord {
@@ -90,7 +90,7 @@ func validSourceRecord() SourceRecord {
 }
 
 func newBindingService(reader RecordReader, store SnapshotStore) *Service {
-	service := NewService(reader, store, bindingUserAuthorizer(), NewStaticMachinePolicyAuthorizer(MachinePolicy{Identity: bindingService().IdentityKey(), Audience: "record-hub", TenantID: "tenant-1", WorkspaceID: "workspace-1", Purpose: "diagnostic", ResourceSystem: "fluxion", ResourceType: "PROJECT"}))
+	service := NewService(reader, store, bindingUserAuthorizer(), NewStaticMachinePolicyAuthorizer(MachinePolicy{Identity: bindingService().IdentityKey(), Audience: "record-hub", Scope: "recordhub.binding.snapshot", TenantID: "tenant-1", WorkspaceID: "workspace-1", Purpose: "diagnostic", ResourceSystem: "fluxion", ResourceType: "PROJECT"}))
 	return service.WithClock(func() time.Time { return time.Date(2026, 9, 16, 12, 0, 0, 0, time.UTC) }).WithIDGenerator(func() (string, error) { return "snapshot-1", nil })
 }
 
@@ -199,6 +199,12 @@ func TestMachinePolicyIsExactAcrossScopePurposeAndResource(t *testing.T) {
 	request.OperationID = "op-audience"
 	if _, _, err := service.CreateSnapshot(context.Background(), wrongAudience, request); !errors.Is(err, ErrMachinePolicyDenied) {
 		t.Fatalf("wrong audience error = %v", err)
+	}
+	wrongScope := bindingService()
+	wrongScope.Scopes = []string{"recordhub.command.submit"}
+	request.OperationID = "op-scope"
+	if _, _, err := service.CreateSnapshot(context.Background(), wrongScope, request); !errors.Is(err, ErrMachinePolicyDenied) {
+		t.Fatalf("wrong scope error = %v", err)
 	}
 }
 
