@@ -26,9 +26,11 @@ Dex 承担身份认证和 token 签发；各系统仍负责自己的租户映射
 - 每个系统把 `(iss, sub)` 映射为本地 tenant membership 和角色；
 - group claim 的变化不得绕过本地资源级授权。
 
+Record Hub 的 OIDC verifier 只接受显式配置的 issuer、单一 audience 和 RS256。它以 `(iss, sub)` 构造稳定身份，缓存已经验证过的 JWKS key，并在遇到未知 `kid` 时刷新 JWKS。错误 issuer/audience/expiry、空 subject、未知 key 且 JWKS 不可用时均 fail closed。本地 HTTP issuer 必须显式开启开发例外，其他环境只接受 HTTPS。
+
 ## 3. 服务间身份
 
-本地 Dex 可显式启用 `client_credentials`。每个信任方向使用独立 client，不共享一个超级 client：
+目标模型是每个信任方向使用独立 machine identity，不共享一个超级 client：
 
 ```text
 approver-to-record-hub
@@ -43,16 +45,17 @@ approver-to-fluxion
 approver-to-bids
 ```
 
-最小要求：
+Dex 2.45.1 的稳定版尚未实现 `client_credentials`；该能力目前只存在于 Dex 未发布的开发分支，不能因为文档已经提前出现就把稳定镜像视为支持。因此 `RH-M1-014` 暂缓，禁止用已废弃的 password grant 冒充机器身份。后续必须通过 ADR 在“等待含该能力的 Dex 稳定版”“专用 Authorization Server”或“mTLS/workload identity”之间选择。
 
-- 本地启动 Dex 时显式设置 `DEX_CLIENT_CREDENTIAL_GRANT_ENABLED_BY_DEFAULT=true`；
-- 每个 client 使用独立 secret 和 audience，只请求 Dex 当前支持且确有需要的最小 scope；
+若后续选定的 Authorization Server 支持 client credentials，仍须满足：
+
+- 每个 client 使用独立 secret 和 audience，只请求所选 issuer 当前支持且确有需要的最小 scope；
 - Dex 的 scope 集合不是通用业务权限模型；API 依据 client identity、audience 和本地 client-capability/tenant mapping 授权；
 - requester 用户身份作为独立业务字段传递，不能冒充机器 token subject；
 - token 短时有效，secret 支持双版本轮换；
 - 禁止复用浏览器 Session、BFF secret、NATS credential 或 MongoDB credential。
 
-启用前必须把当前 Dex 版本实际签发的 client-credentials token 固化为契约测试，验证 `iss/sub/aud/exp/scope` 的真实形态，不能从用户 token 的 claims 推测机器 token。
+启用前必须把所选 issuer 实际签发的 client-credentials token 固化为契约测试，验证 `iss/sub/aud/exp/scope` 的真实形态，不能从用户 token 的 claims 推测机器 token。
 
 如果生产环境需要动态 client 注册、丰富的自定义 OAuth scope、细粒度 consent 或完整 service-account 生命周期，应重新评估专用 Authorization Server；不能为了沿用本地 Dex 而把业务授权编码进非标准 claims。
 
