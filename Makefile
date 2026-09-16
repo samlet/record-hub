@@ -1,4 +1,4 @@
-.PHONY: build test lint openapi-lint generate-clients dependency-scan sbom secret-scan mongo-up mongo-smoke mongo-down schema-persistence-smoke records-persistence-smoke projection-persistence-smoke nats-up nats-init nats-smoke nats-permissions-smoke nats-down dex-env dex-up dex-smoke dex-down m5-runtime-smoke m8-happy-path m8-failure-path m8-local-smoke m8-native-smoke check ci clean
+.PHONY: build test lint openapi-lint generate-clients dependency-scan sbom secret-scan mongo-up mongo-smoke mongo-down schema-persistence-smoke records-persistence-smoke projection-persistence-smoke nats-up nats-init nats-smoke nats-permissions-smoke nats-down dex-env dex-up dex-smoke dex-down m5-runtime-smoke m7-native-restart m8-happy-path m8-failure-path m8-local-smoke m8-native-smoke check ci clean
 
 BUILD_DIR := build
 BINARY := $(BUILD_DIR)/record-hub
@@ -64,6 +64,9 @@ nats-down:
 
 m5-runtime-smoke:
 	./scripts/verify-m5-runtime.sh
+
+m7-native-restart:
+	./scripts/verify-m7-native-restart.sh
 
 dex-env:
 	./deploy/local/dex/initialize-env.sh

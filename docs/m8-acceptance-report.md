@@ -24,7 +24,7 @@ Binding E2E 和 Next.js grid UI 仍是遗留项。
 | M4 | DONE | durable projection、Inbox、事务 checkpoint、gap/retry/DLQ、Operations API/UI |
 | M5 | PARTIAL | 三 producer contract/outbox/relay gate 与 `make m5-runtime-smoke` 的真实 API/all-mode、Mongo、JetStream 三源 projection gate 通过；三业务进程同时运行的 producer→relay→projection 仍待受监督拓扑 |
 | M6 | PARTIAL | Temporal/Conductor diagnostic binding 与 client gate 通过；真实双引擎 + Record Hub 重启 E2E 待依赖 |
-| M7 | 混合 | scope/payload/metrics/Dex JWKS/bounds DONE；Mongo ACK loss 已有 native live 证据；NATS outage、完整分进程重启保持 PARTIAL |
+| M7 | 混合 | scope/payload/metrics/Dex JWKS/bounds DONE；Mongo ACK loss 与 Record Hub native restart 已有 live 证据；NATS outage、完整分进程重启保持 PARTIAL |
 | M8 | 混合 | OIDC/BFF/Operations 代码级 gate、native API repository/worker smoke 完成；happy/failure/live runbook 均明确 live 限制；Web UI 浏览器矩阵仍 PARTIAL |
 | M9 | DEFERRED | Command Gateway、审批迁移、Storage Gateway、Functions、Presence、GraphQL、生产 HA |
 
@@ -48,6 +48,7 @@ WARN/异常栈，但测试结果为通过。
 ```bash
 make m8-native-smoke
 make m5-runtime-smoke
+make m7-native-restart
 RECORD_HUB_M5_LIVE=1 RECORD_HUB_MONGODB_URI='mongodb://127.0.0.1:27017/record_hub?replicaSet=rs0&directConnection=true' ./scripts/verify-m5-producers.sh
 RECORD_HUB_M7_MONGO_LIVE=1 RECORD_HUB_MONGODB_URI='mongodb://127.0.0.1:27017/record_hub?replicaSet=rs0&directConnection=true' ./scripts/verify-m7-mongo-faults.sh
 RECORD_HUB_M7_NATS_LIVE=1 RECORD_HUB_NATS_URL='nats://127.0.0.1:4222' ./scripts/verify-m7-nats-recovery.sh
@@ -55,7 +56,7 @@ RECORD_HUB_M8_LOCAL_LIVE=1 ./scripts/verify-m8-local.sh
 make dex-smoke
 ```
 
-其中 `make m8-native-smoke`、`make m5-runtime-smoke`、M5 live gate、M7 Mongo fault gate 和 M7 NATS live gate
+其中 `make m8-native-smoke`、`make m5-runtime-smoke`、`make m7-native-restart`、M5 live gate、M7 Mongo fault gate 和 M7 NATS live gate
 已通过。默认 `RECORD_HUB_M8_LOCAL_LIVE=1` 仍走 Docker；要连接本机进程请使用
 `RECORD_HUB_M8_RUNTIME=native`。Dex live gate 尚未执行，因为当前运行的 Dex 是其他
 项目配置。`make secret-scan` 仍依赖 Docker gitleaks 镜像。
@@ -84,7 +85,8 @@ make dex-smoke
 3. pending OIDC state 当前是有界一次性内存 store；多实例部署前需替换共享短期 store。
    Session secret 当前单 key，轮换会使所有浏览器 session 失效。
 4. Dex 2.45.1 machine `client_credentials` 仍延期，不得以 password grant 冒充机器身份。
-5. Mongo/NATS 单节点本地拓扑不代表生产 HA、PITR、TLS、跨地域或容量结论。
+5. Mongo/NATS 单节点本地拓扑不代表生产 HA、PITR、TLS、跨地域或容量结论；native restart
+   gate 只覆盖 Record Hub 进程重启，不等于三业务进程和依赖同时重启。
 
 ## 下一步建议
 
@@ -93,6 +95,7 @@ make dex-smoke
 2. 完成 `web/` Next.js BFF/grid，复用本报告中的 Go auth/session/CSRF contract，
    把 OWNER/EDITOR/VIEWER 矩阵提升为真实浏览器测试。
 3. 按 `m8-recovery-runbook.md` 做一次原 event ID 的 GAP/DLQ 重放、ACK-loss、凭据
-   滚动轮换并保存 backlog/lease/audit 证据。
+   滚动轮换并保存 backlog/lease/audit 证据；再将 native restart gate 扩展到三业务
+   进程和依赖的受监督重启矩阵。
 4. 单独评审 M1-014 machine identity 方案后，再决定 Dex stable、专用 Authorization
    Server 或 mTLS/workload identity；不要因为本地 Dex 可用而扩大其生产职责。

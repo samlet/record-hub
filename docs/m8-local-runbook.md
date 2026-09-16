@@ -164,6 +164,17 @@ Mongo，而是按确定性错误重投并最终进入 `dlq.record-hub.<consumer>
 make m5-runtime-smoke
 ```
 
+验证 Record Hub 自身重启恢复（事件会在进程停止期间留在 JetStream，并在重启后按原
+event ID 幂等处理；脚本只会创建带时间租户名的测试记录）：
+
+```bash
+make m7-native-restart
+```
+
+该 gate 会先投影版本 1，停止并重新启动 Record Hub，再投影版本 2（重复发送一次），
+最后检查 Mongo 中记录、checkpoint、Inbox 和 audit 均无重复且状态为 `CURRENT`。它不
+停止 MongoDB/NATS，也不覆盖已有租户数据。
+
 ## 4. 停止与排障
 
 ```bash
