@@ -51,7 +51,26 @@ type Config struct {
 	HTTPAddress     string
 	LogLevel        slog.Level
 	ShutdownTimeout time.Duration
-	Web             WebAuthConfig
+	// MongoURI and MongoDatabase enable the real repository data plane. They
+	// remain optional so the dependency-free API boundary can still be used
+	// for contract and health checks.
+	MongoURI      string
+	MongoDatabase string
+	// NATSURL enables the durable projection worker. The worker only connects
+	// when this value is present; it never silently falls back to an embedded
+	// broker.
+	NATSURL string
+	// ProjectionWorkspaceID is the local fallback for events whose envelope
+	// predates an explicit workspace metadata field. Production deployments
+	// should prefer an allowlisted per-tenant mapping or include workspaceId in
+	// event metadata.
+	ProjectionWorkspaceID string
+	// Optional bearer OIDC settings. Browser/BFF settings remain in Web.
+	OIDCIssuer              string
+	OIDCAudience            string
+	OIDCPrincipalKind       string
+	OIDCAllowInsecureIssuer bool
+	Web                     WebAuthConfig
 }
 
 // Load reads configuration from the process environment and fails closed when
@@ -101,6 +120,45 @@ func load(lookup lookupEnv) (Config, error) {
 			errs = append(errs, fmt.Errorf("RECORD_HUB_SHUTDOWN_TIMEOUT must be a positive duration; got %q", value))
 		} else {
 			cfg.ShutdownTimeout = duration
+		}
+	}
+
+	if value, present := optional(lookup, "RECORD_HUB_MONGODB_URI"); present {
+		cfg.MongoURI = value
+	}
+	cfg.MongoDatabase = "record_hub"
+	if value, present := optional(lookup, "RECORD_HUB_MONGODB_DATABASE"); present {
+		cfg.MongoDatabase = value
+	}
+	if value, present := optional(lookup, "RECORD_HUB_NATS_URL"); present {
+		cfg.NATSURL = value
+	}
+	if value, present := optional(lookup, "RECORD_HUB_PROJECTION_WORKSPACE_ID"); present {
+		cfg.ProjectionWorkspaceID = value
+	}
+	if value, present := optional(lookup, "RECORD_HUB_OIDC_ISSUER"); present {
+		cfg.OIDCIssuer = value
+	}
+	if value, present := optional(lookup, "RECORD_HUB_OIDC_AUDIENCE"); present {
+		cfg.OIDCAudience = value
+	}
+	if value, present := optional(lookup, "RECORD_HUB_OIDC_PRINCIPAL_KIND"); present {
+		cfg.OIDCPrincipalKind = strings.ToLower(value)
+	}
+	if value, present, err := optionalBool(lookup, "RECORD_HUB_OIDC_ALLOW_INSECURE_ISSUER"); err != nil {
+		errs = append(errs, err)
+	} else if present {
+		cfg.OIDCAllowInsecureIssuer = value
+	}
+	if cfg.OIDCIssuer != "" || cfg.OIDCAudience != "" || cfg.OIDCPrincipalKind != "" {
+		if cfg.OIDCIssuer == "" || cfg.OIDCAudience == "" {
+			errs = append(errs, errors.New("RECORD_HUB_OIDC_ISSUER and RECORD_HUB_OIDC_AUDIENCE are required together"))
+		}
+		if cfg.OIDCPrincipalKind == "" {
+			cfg.OIDCPrincipalKind = "user"
+		}
+		if cfg.OIDCPrincipalKind != "user" && cfg.OIDCPrincipalKind != "service" {
+			errs = append(errs, errors.New("RECORD_HUB_OIDC_PRINCIPAL_KIND must be user or service"))
 		}
 	}
 

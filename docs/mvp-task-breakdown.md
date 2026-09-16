@@ -90,7 +90,7 @@
 | RH-M5-056 | 双仓库 | Bids TenderSummary v1 契约镜像 | DONE | M0-005,M4-046 | schema/fixture 一致；投标/报价/联系人/文件 URL 等敏感字段负向校验通过 |
 | RH-M5-057 | Bids | 扩展现有 Outbox 产生 domain event | DONE | 056 | 复用 `outbox_events`；`TENDER_SUMMARY_CHANGED` 与 Conductor/Finance command 分区隔离 |
 | RH-M5-058 | Bids | JetStream relay | DONE | 057,M1-012 | 复用 lease/retry/dead；专用 subject、`Msg-Id` 和 ACK-loss 测试通过 |
-| RH-M5-059 | 四仓库 | 三投影联合 E2E | PARTIAL | 052,055,058 | `scripts/verify-m5-producers.sh` 的跨语言契约、三 producer envelope/handler gate 通过；真实 Mongo/JetStream 只读表 E2E 待依赖启动后执行 |
+| RH-M5-059 | 四仓库 | 三投影联合 E2E | PARTIAL | 052,055,058 | `scripts/verify-m5-producers.sh` 的跨语言契约 gate 与 `make m5-runtime-smoke` 的真实 API/all-mode、Mongo、JetStream 三源 projection gate 通过；真实三业务进程同时运行的 producer→relay→projection 仍待受监督拓扑 |
 
 ## 8. M6：Workflow Binding
 
@@ -127,7 +127,7 @@
 | RH-M8-082 | Record Hub Web | 三投影与 Operations 页面 | DONE | M4,M5,M8-080 | freshness/gap/DLQ 安全展示 |
 | RH-M8-083 | 四仓库 | MVP happy-path E2E 脚本 | PARTIAL | M5,M6,M8-081 | 代码级 gate 可重复；真实浏览器/API 联合 E2E 待 M8-085 拓扑 |
 | RH-M8-084 | 四仓库 | MVP failure-path E2E 脚本 | PARTIAL | M7 | 代码级负向 gate 通过；真实 outage/duplicate/bad token E2E 待 M8-085/086 |
-| RH-M8-085 | Record Hub | 本地运行与排障文档 | PARTIAL | M8-083 | fresh machine 代码级/依赖 smoke 可按文档执行；完整浏览器/API 仍需受监督拓扑 |
+| RH-M8-085 | Record Hub | 本地运行与排障文档 | PARTIAL | M8-083 | fresh machine 代码级、native Mongo/NATS、真实 API repository/worker projection smoke 可按文档执行；完整浏览器/API 仍需受监督拓扑 |
 | RH-M8-086 | Record Hub | DLQ/gap/credential rotation runbook | PARTIAL | M7 | 恢复步骤只使用原 event/operation ID；真实 outage/轮换待受监督拓扑 |
 | RH-M8-087 | 四仓库 | MVP 验收报告与 commit/hash 清单 | PARTIAL | 083-086 | 报告与 hash 清单完成；live 依赖与 Web UI 遗留风险已明确 |
 

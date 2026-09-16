@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -61,6 +62,43 @@ func (client *Client) Consumer(ctx context.Context, stream, durable string) (Pul
 		return nil, errors.New("JetStream client is not configured")
 	}
 	return client.jetstream.Consumer(ctx, stream, durable)
+}
+
+// Check is a bounded readiness probe. It verifies that the reconnecting
+// connection can complete a server round trip without exposing broker
+// addresses or credentials to the HTTP response.
+func (client *Client) Check(ctx context.Context) error {
+	if client == nil || client.connection == nil || client.jetstream == nil {
+		return errors.New("NATS client is not configured")
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if err := client.connection.FlushTimeout(timeoutFromContext(ctx)); err != nil {
+		return fmt.Errorf("flush NATS connection: %w", err)
+	}
+	return nil
+}
+
+func timeoutFromContext(ctx context.Context) time.Duration {
+	if deadline, ok := ctx.Deadline(); ok {
+		remaining := time.Until(deadline)
+		if remaining > 0 {
+			return remaining
+		}
+		return time.Millisecond
+	}
+	return 2 * time.Second
+}
+
+// Publisher exposes the constrained JetStream publishing facade used only by
+// the projection DLQ adapter. Callers cannot access the underlying
+// reconnecting connection or alter consumer topology through this method.
+func (client *Client) Publisher() jetstream.Publisher {
+	if client == nil {
+		return nil
+	}
+	return client.jetstream
 }
 
 func (client *Client) Close() {
@@ -165,6 +203,15 @@ type PullRunner struct {
 	handler  MessageHandler
 	dlq      DeadLetterPublisher
 	metrics  *observability.Registry
+	logger   *slog.Logger
+}
+
+// Name lets a runner participate in the app's common service lifecycle.
+func (runner *PullRunner) Name() string {
+	if runner == nil || runner.config.Durable == "" {
+		return "projection"
+	}
+	return "projection-" + runner.config.Durable
 }
 
 func NewPullRunner(provider ConsumerProvider, config PullRunnerConfig, handler MessageHandler) (*PullRunner, error) {
@@ -194,6 +241,16 @@ func (runner *PullRunner) WithMetrics(registry *observability.Registry) *PullRun
 	return runner
 }
 
+// WithLogger enables safe lifecycle diagnostics. Raw payloads and transport
+// errors are intentionally excluded from logs; only bounded consumer state is
+// recorded.
+func (runner *PullRunner) WithLogger(logger *slog.Logger) *PullRunner {
+	if runner != nil {
+		runner.logger = logger
+	}
+	return runner
+}
+
 // Run keeps a durable pull consumer alive until ctx is cancelled. Fetch and
 // consumer lookup failures are treated as reconnectable; messages are ACKed
 // only after the handler succeeds, using DoubleAck to make the server receipt
@@ -210,6 +267,9 @@ func (runner *PullRunner) Run(ctx context.Context) error {
 		if consumer == nil {
 			loaded, err := runner.provider.Consumer(ctx, runner.config.Stream, runner.config.Durable)
 			if err != nil {
+				if runner.logger != nil {
+					runner.logger.Warn("projection consumer lookup failed", "consumer", runner.config.Durable)
+				}
 				if ctx.Err() != nil {
 					return nil
 				}
@@ -229,8 +289,11 @@ func (runner *PullRunner) Run(ctx context.Context) error {
 
 		fetchContext, cancelFetch := context.WithTimeout(ctx, runner.config.FetchTimeout)
 		batch, err := consumer.Fetch(runner.config.BatchSize, jetstream.FetchContext(fetchContext))
-		cancelFetch()
 		if err != nil {
+			cancelFetch()
+			if runner.logger != nil {
+				runner.logger.Warn("projection consumer fetch failed", "consumer", runner.config.Durable)
+			}
 			if ctx.Err() != nil {
 				return nil
 			}
@@ -244,6 +307,7 @@ func (runner *PullRunner) Run(ctx context.Context) error {
 			continue
 		}
 		if batch == nil {
+			cancelFetch()
 			consumer = nil
 			if !waitForRetry(ctx, runner.config.RetryDelay) {
 				return nil
@@ -254,14 +318,27 @@ func (runner *PullRunner) Run(ctx context.Context) error {
 		reconnect := false
 		for message := range batch.Messages() {
 			if ctx.Err() != nil {
+				cancelFetch()
 				return nil
 			}
+			if runner.logger != nil {
+				runner.logger.Debug("projection message received", "consumer", runner.config.Durable)
+			}
 			handled, timedOut := runner.handle(ctx, message)
+			if runner.logger != nil {
+				runner.logger.Debug("projection message handler returned", "consumer", runner.config.Durable, "failed", handled != nil, "timedOut", timedOut)
+			}
 			if timedOut {
+				cancelFetch()
 				return nil
 			}
 			if handled != nil {
+				if runner.logger != nil {
+					_, safe := errorClass(handled)
+					runner.logger.Warn("projection message handling failed", "consumer", runner.config.Durable, "reason", safe)
+				}
 				if ctx.Err() != nil {
+					cancelFetch()
 					return nil
 				}
 				if err := runner.retryMessage(ctx, message, handled); err != nil {
@@ -276,6 +353,7 @@ func (runner *PullRunner) Run(ctx context.Context) error {
 			cancelAck()
 			if ackErr != nil {
 				if ctx.Err() != nil {
+					cancelFetch()
 					return nil
 				}
 				consumer = nil
@@ -287,6 +365,10 @@ func (runner *PullRunner) Run(ctx context.Context) error {
 			consumer = nil
 			reconnect = true
 		}
+		// FetchContext also controls the lifetime of the batch's message
+		// channel. Cancel only after all delivered messages have been handled;
+		// cancelling immediately after Fetch silently discards the batch.
+		cancelFetch()
 		if reconnect && !waitForRetry(ctx, runner.config.RetryDelay) {
 			return nil
 		}

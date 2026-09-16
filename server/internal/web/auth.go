@@ -88,8 +88,10 @@ func (h *Handler) Middleware(next http.Handler) http.Handler {
 // context contract used by bearer-token API middleware.
 func (h *Handler) SessionMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if principal, ok := h.sessions.PrincipalFromRequest(r); ok {
-			r = r.WithContext(identity.WithPrincipal(r.Context(), principal))
+		if _, alreadyAuthenticated := identity.PrincipalFromContext(r.Context()); !alreadyAuthenticated {
+			if principal, ok := h.sessions.PrincipalFromRequest(r); ok {
+				r = r.WithContext(identity.WithPrincipal(r.Context(), principal))
+			}
 		}
 		next.ServeHTTP(w, r)
 	})

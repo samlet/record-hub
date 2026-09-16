@@ -5,10 +5,10 @@
 ## 结论
 
 四个仓库的代码级契约、Outbox、Binding、projection、Web/BFF 安全边界和负向 gate
-均可重复执行；本机已补齐 Homebrew 原生 MongoDB，并完成真实 Mongo/NATS smoke 与
-Mongo ACK-loss gate。MVP **尚未整体验收通过**：当前主机没有 Docker daemon，Dex
+均可重复执行；本机已补齐 Homebrew 原生 MongoDB，并完成真实 Mongo/NATS smoke、
+Mongo ACK-loss gate，以及 API/all-mode 三源 runtime projection gate。MVP **尚未整体验收通过**：当前主机没有 Docker daemon，Dex
 配置与 Record Hub 默认 issuer/client 不一致，NATS outage、凭据滚动轮换、真实双引擎
-Binding E2E、Record Hub repository wiring 和 Next.js grid UI 仍是遗留项。
+Binding E2E 和 Next.js grid UI 仍是遗留项。
 
 因此本报告把“代码级 DONE”“依赖 live PARTIAL”“明确 DEFERRED”分开，不把 fake 或
 单元测试当成跨进程 E2E。
@@ -22,10 +22,10 @@ Binding E2E、Record Hub repository wiring 和 Next.js grid UI 仍是遗留项�
 | M2 | PARTIAL | Schema server/persistence/API 完成；Schema Web UI（M2-026）仍 TODO |
 | M3 | PARTIAL | workspace/table/record/view/index server 完成；grid/record UI（M3-036/037）仍 TODO |
 | M4 | DONE | durable projection、Inbox、事务 checkpoint、gap/retry/DLQ、Operations API/UI |
-| M5 | PARTIAL | 三 producer contract/outbox/relay gate 通过；真实 Mongo/JetStream 联合表 E2E 待依赖 |
+| M5 | PARTIAL | 三 producer contract/outbox/relay gate 与 `make m5-runtime-smoke` 的真实 API/all-mode、Mongo、JetStream 三源 projection gate 通过；三业务进程同时运行的 producer→relay→projection 仍待受监督拓扑 |
 | M6 | PARTIAL | Temporal/Conductor diagnostic binding 与 client gate 通过；真实双引擎 + Record Hub 重启 E2E 待依赖 |
 | M7 | 混合 | scope/payload/metrics/Dex JWKS/bounds DONE；Mongo ACK loss 已有 native live 证据；NATS outage、完整分进程重启保持 PARTIAL |
-| M8 | 混合 | OIDC/BFF/Operations 代码级 gate 完成；happy/failure/live runbook 均明确 live 限制；Web UI 浏览器矩阵仍 PARTIAL |
+| M8 | 混合 | OIDC/BFF/Operations 代码级 gate、native API repository/worker smoke 完成；happy/failure/live runbook 均明确 live 限制；Web UI 浏览器矩阵仍 PARTIAL |
 | M9 | DEFERRED | Command Gateway、审批迁移、Storage Gateway、Functions、Presence、GraphQL、生产 HA |
 
 ## 可重复证据
@@ -47,6 +47,7 @@ WARN/异常栈，但测试结果为通过。
 
 ```bash
 make m8-native-smoke
+make m5-runtime-smoke
 RECORD_HUB_M5_LIVE=1 RECORD_HUB_MONGODB_URI='mongodb://127.0.0.1:27017/record_hub?replicaSet=rs0&directConnection=true' ./scripts/verify-m5-producers.sh
 RECORD_HUB_M7_MONGO_LIVE=1 RECORD_HUB_MONGODB_URI='mongodb://127.0.0.1:27017/record_hub?replicaSet=rs0&directConnection=true' ./scripts/verify-m7-mongo-faults.sh
 RECORD_HUB_M7_NATS_LIVE=1 RECORD_HUB_NATS_URL='nats://127.0.0.1:4222' ./scripts/verify-m7-nats-recovery.sh
@@ -54,7 +55,7 @@ RECORD_HUB_M8_LOCAL_LIVE=1 ./scripts/verify-m8-local.sh
 make dex-smoke
 ```
 
-其中 `make m8-native-smoke`、M5 live gate、M7 Mongo fault gate 和 M7 NATS live gate
+其中 `make m8-native-smoke`、`make m5-runtime-smoke`、M5 live gate、M7 Mongo fault gate 和 M7 NATS live gate
 已通过。默认 `RECORD_HUB_M8_LOCAL_LIVE=1` 仍走 Docker；要连接本机进程请使用
 `RECORD_HUB_M8_RUNTIME=native`。Dex live gate 尚未执行，因为当前运行的 Dex 是其他
 项目配置。`make secret-scan` 仍依赖 Docker gitleaks 镜像。
@@ -73,9 +74,10 @@ make dex-smoke
 
 ## 已知遗留风险
 
-1. `server/internal/web` 已提供可挂载的 Go BFF auth/resource/Operations boundary，
-   但 `server/internal/app` 尚未实例化 Mongo repositories、projection consumers 和
-   records/schema service；因此不能把当前 API 进程视为完整生产数据平面。
+1. `server/internal/app` 现在会在配置 Mongo/NATS URI 时实例化 Mongo repositories、
+   records/schema/binding/Operations handlers 和三个 durable projection consumers；
+   未配置 URI 时仍保留 dependency-free contract boundary。生产事件目前没有顶层
+   workspaceId，需通过 metadata 或显式 fallback 配置，不能隐式猜 scope。
 2. `web/` Next.js 项目尚未落地，M2-026、M3-036、M3-037 的字段编辑、grid、tag、
    filter、projection freshness 浏览器路径未形成真实 UI 矩阵；M8-081 相应保持
    PARTIAL。
@@ -86,8 +88,8 @@ make dex-smoke
 
 ## 下一步建议
 
-1. 先接入真实 Mongo/NATS repositories 与 projection worker wiring，使 native smoke
-   能覆盖完整 API/worker 数据平面，再按 `m8-local-runbook.md` 执行 M5/M6/M7/M8 live gate。
+1. 让三个业务系统在同一受监督拓扑中运行各自 outbox/relay，并按原 event ID 执行
+   producer→relay→projection E2E；当前 Record Hub runtime gate 已可直接复用。
 2. 完成 `web/` Next.js BFF/grid，复用本报告中的 Go auth/session/CSRF contract，
    把 OWNER/EDITOR/VIEWER 矩阵提升为真实浏览器测试。
 3. 按 `m8-recovery-runbook.md` 做一次原 event ID 的 GAP/DLQ 重放、ACK-loss、凭据

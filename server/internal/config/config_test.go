@@ -27,6 +27,41 @@ func TestLoadAllMode(t *testing.T) {
 	}
 }
 
+func TestLoadRuntimeDependencyConfig(t *testing.T) {
+	env := map[string]string{
+		"RECORD_HUB_MODE":                       "all",
+		"RECORD_HUB_HTTP_ADDRESS":               "127.0.0.1:8080",
+		"RECORD_HUB_MONGODB_URI":                "mongodb://127.0.0.1:27017/record_hub",
+		"RECORD_HUB_MONGODB_DATABASE":           "record_hub_local",
+		"RECORD_HUB_NATS_URL":                   "nats://127.0.0.1:4222",
+		"RECORD_HUB_PROJECTION_WORKSPACE_ID":    "workspace-local",
+		"RECORD_HUB_OIDC_ISSUER":                "http://127.0.0.1:5556",
+		"RECORD_HUB_OIDC_AUDIENCE":              "record-hub-api-local",
+		"RECORD_HUB_OIDC_PRINCIPAL_KIND":        "user",
+		"RECORD_HUB_OIDC_ALLOW_INSECURE_ISSUER": "true",
+	}
+	cfg, err := load(mapLookup(env))
+	if err != nil {
+		t.Fatalf("load() error = %v", err)
+	}
+	if cfg.MongoURI == "" || cfg.MongoDatabase != "record_hub_local" || cfg.NATSURL == "" || cfg.ProjectionWorkspaceID != "workspace-local" {
+		t.Fatalf("runtime config = %+v", cfg)
+	}
+	if cfg.OIDCIssuer == "" || cfg.OIDCAudience == "" || cfg.OIDCPrincipalKind != "user" || !cfg.OIDCAllowInsecureIssuer {
+		t.Fatalf("OIDC config = %+v", cfg)
+	}
+}
+
+func TestLoadRejectsPartialBearerOIDCConfig(t *testing.T) {
+	_, err := load(mapLookup(map[string]string{
+		"RECORD_HUB_MODE":        "worker",
+		"RECORD_HUB_OIDC_ISSUER": "http://127.0.0.1:5556",
+	}))
+	if err == nil || !strings.Contains(err.Error(), "required together") {
+		t.Fatalf("load() error = %v", err)
+	}
+}
+
 func TestLoadWorkerDefaults(t *testing.T) {
 	cfg, err := load(mapLookup(map[string]string{"RECORD_HUB_MODE": "worker"}))
 	if err != nil {

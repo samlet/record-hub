@@ -37,6 +37,10 @@ Homebrew 的 `mongodb-community@8.0` 默认使用单节点 replica set `rs0`。�
 ```bash
 export RECORD_HUB_MONGODB_URI='mongodb://127.0.0.1:27017/record_hub?replicaSet=rs0&directConnection=true'
 export RECORD_HUB_NATS_URL='nats://127.0.0.1:4222'
+# Producer contracts currently carry tenant scope but not workspace scope.
+# Set an explicit local fallback for the projection worker; new producers
+# should instead add metadata.workspaceId.
+export RECORD_HUB_PROJECTION_WORKSPACE_ID='workspace-local'
 ```
 
 直接运行 native 依赖/API smoke（不会启动、停止或删除本机服务）：
@@ -45,8 +49,9 @@ export RECORD_HUB_NATS_URL='nats://127.0.0.1:4222'
 make m8-native-smoke
 ```
 
-该命令验证 Mongo transaction/unique-index/CAS/change-stream、NATS JetStream topology 和
-Record Hub API health/metrics。Dex/Web smoke 需要与当前运行 Dex 的 issuer、client 和
+该命令验证 Mongo transaction/unique-index/CAS/change-stream、NATS JetStream topology、
+Record Hub API health/metrics 以及 API 进程对 native repositories 的启动接线。完整的
+worker 投影可用下方 `all` 模式命令验证。Dex/Web smoke 需要与当前运行 Dex 的 issuer、client 和
 redirect URI 完全匹配时才启用：
 
 ```bash
@@ -113,6 +118,10 @@ export RECORD_HUB_WEB_REDIRECT_URL=http://127.0.0.1:8080/auth/callback
 export RECORD_HUB_WEB_SESSION_SECRET="$(openssl rand -hex 32)"
 export RECORD_HUB_WEB_SECURE_COOKIES=false
 export RECORD_HUB_WEB_ALLOW_INSECURE_ENDPOINTS=true
+# API 使用真实 Mongo repositories；如需在同一进程消费 projection，再设置 NATS 和
+# workspace fallback，并将 mode 改为 all。
+export RECORD_HUB_MONGODB_URI='mongodb://127.0.0.1:27017/record_hub?replicaSet=rs0&directConnection=true'
+export RECORD_HUB_MONGODB_DATABASE=record_hub
 ./build/record-hub serve
 ```
 
@@ -132,6 +141,27 @@ curl -i http://127.0.0.1:8080/auth/login
 
 ```bash
 RECORD_HUB_M8_LOCAL_LIVE=1 ./scripts/verify-m8-local.sh
+```
+
+单独启动 projection worker（API 与 worker 也可以用 `RECORD_HUB_MODE=all` 合并）：
+
+```bash
+export RECORD_HUB_MODE=worker
+export RECORD_HUB_MONGODB_URI='mongodb://127.0.0.1:27017/record_hub?replicaSet=rs0&directConnection=true'
+export RECORD_HUB_MONGODB_DATABASE=record_hub
+export RECORD_HUB_NATS_URL='nats://127.0.0.1:4222'
+export RECORD_HUB_PROJECTION_WORKSPACE_ID=workspace-local
+./build/record-hub serve
+```
+
+worker 只接受三种已注册的 summary event；缺失 workspace scope 的事件不会写入
+Mongo，而是按确定性错误重投并最终进入 `dlq.record-hub.<consumer>`。
+
+三 producer 的 live runtime gate（会生成带时间租户名的本地测试记录，不会删除现有业务
+数据）可执行：
+
+```bash
+make m5-runtime-smoke
 ```
 
 ## 4. 停止与排障

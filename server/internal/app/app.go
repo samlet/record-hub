@@ -30,19 +30,22 @@ type App struct {
 	services        []Service
 }
 
-// New assembles the responsibilities selected by mode. Concrete API and
-// worker services replace the idle boundaries as their modules are delivered.
+// New assembles the responsibilities selected by mode. When runtime
+// dependency URLs are configured it wires the Mongo repositories, NATS
+// durable consumers, and resource handlers; without them the dependency-free
+// health/auth boundary remains available for contract smoke tests.
 func New(cfg config.Config, logger *slog.Logger) *App {
 	services := make([]Service, 0, 2)
 	if cfg.Mode == config.ModeAPI || cfg.Mode == config.ModeAll {
 		mux := http.NewServeMux()
 		metrics := observability.NewRegistry()
 		mux.Handle("/metrics", metrics.Handler())
-		health.NewHandler(2*time.Second, map[health.Dependency]health.Checker{
-			health.MongoDB: health.Pending(),
-			health.NATS:    health.Pending(),
-			health.Dex:     health.Pending(),
-		}).Routes(mux)
+		runtime, runtimeErr := newRuntime(cfg, metrics, logger)
+		if runtimeErr != nil {
+			services = append(services, failedService{err: runtimeErr})
+			runtime = &runtimeDependencies{checks: map[health.Dependency]health.Checker{health.MongoDB: health.Pending(), health.NATS: health.Pending(), health.Dex: health.Pending()}}
+		}
+		health.NewHandler(2*time.Second, runtime.checks).Routes(mux)
 		var webMiddleware func(http.Handler) http.Handler
 		if cfg.Web.Enabled {
 			sessions, err := web.NewSessionManager([]byte(cfg.Web.SessionSecret), cfg.Web.SessionTTL, cfg.Web.SecureCookies)
@@ -83,14 +86,41 @@ func New(cfg config.Config, logger *slog.Logger) *App {
 			}
 		}
 		limiter := observability.NewRateLimiter(120, time.Minute)
+		resourceHandler := web.NewConsoleRouter(runtime.records, runtime.schema, runtime.operations)
+		if runtime.binding != nil {
+			mux.Handle("/api/v1/bindings/", runtime.binding)
+		}
+		mux.Handle("/", resourceHandler)
 		handler := observability.HTTPMiddleware(metrics, observability.RateLimitMiddleware(limiter, mux))
 		if webMiddleware != nil {
 			handler = webMiddleware(handler)
 		}
+		if runtime.webVerifier != nil {
+			handler = identity.BearerMiddleware(runtime.webVerifier, handler)
+		}
 		services = append(services, httpapi.New(cfg.HTTPAddress, handler, cfg.ShutdownTimeout))
+		if runtime.closer != nil {
+			services = append(services, runtime.closer)
+		}
+		if cfg.Mode == config.ModeAll {
+			services = append(services, runtime.workers...)
+		}
 	}
-	if cfg.Mode == config.ModeWorker || cfg.Mode == config.ModeAll {
-		services = append(services, idleService("worker"))
+	if cfg.Mode == config.ModeWorker {
+		metrics := observability.NewRegistry()
+		runtime, runtimeErr := newRuntime(cfg, metrics, logger)
+		if runtimeErr != nil {
+			services = append(services, failedService{err: runtimeErr})
+		} else {
+			if len(runtime.workers) == 0 {
+				services = append(services, idleService("worker"))
+			} else {
+				services = append(services, runtime.workers...)
+			}
+			if runtime.closer != nil {
+				services = append(services, runtime.closer)
+			}
+		}
 	}
 	return newWithServices(logger, cfg.ShutdownTimeout, services...)
 }
