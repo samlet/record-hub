@@ -1,4 +1,4 @@
-.PHONY: build test lint openapi-lint generate-clients dependency-scan sbom secret-scan mongo-up mongo-smoke mongo-down check ci clean
+.PHONY: build test lint openapi-lint generate-clients dependency-scan sbom secret-scan mongo-up mongo-smoke mongo-down nats-up nats-init nats-smoke nats-down check ci clean
 
 BUILD_DIR := build
 BINARY := $(BUILD_DIR)/record-hub
@@ -30,13 +30,25 @@ secret-scan:
 	./scripts/scan-secrets.sh
 
 mongo-up:
-	docker compose -f deploy/local/compose.yaml up -d --wait mongodb mongodb-init
+	docker compose -f deploy/local/mongodb/compose.yaml up -d --wait mongodb mongodb-init
 
 mongo-smoke:
 	go run ./tools/mongo-smoke
 
 mongo-down:
-	docker compose -f deploy/local/compose.yaml down
+	docker compose -f deploy/local/mongodb/compose.yaml down
+
+nats-up:
+	docker compose -f deploy/local/nats/compose.yaml up -d --wait nats
+
+nats-init:
+	go run ./tools/nats-init
+
+nats-smoke:
+	go run ./tools/nats-init --smoke
+
+nats-down:
+	docker compose -f deploy/local/nats/compose.yaml down
 
 check: lint openapi-lint test build
 

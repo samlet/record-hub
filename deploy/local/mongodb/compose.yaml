@@ -1,4 +1,4 @@
-name: record-hub
+name: record-hub-mongodb
 
 services:
   mongodb-keyfile:
@@ -67,7 +67,7 @@ services:
       RECORD_HUB_MONGODB_PASSWORD: ${RECORD_HUB_MONGODB_PASSWORD:?set RECORD_HUB_MONGODB_PASSWORD}
     entrypoint: ["/bin/bash", "/scripts/initialize-mongodb.sh"]
     volumes:
-      - ./mongodb/initialize-mongodb.sh:/scripts/initialize-mongodb.sh:ro
+      - ./initialize-mongodb.sh:/scripts/initialize-mongodb.sh:ro
 
 volumes:
   mongodb-data:

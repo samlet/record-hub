@@ -1,0 +1,22 @@
+name: record-hub-nats
+
+services:
+  nats:
+    image: nats:2.14.6-alpine
+    restart: unless-stopped
+    command: ["--config", "/etc/nats/nats-server.conf"]
+    ports:
+      - "127.0.0.1:${RECORD_HUB_NATS_PORT:-4222}:4222"
+      - "127.0.0.1:${RECORD_HUB_NATS_MONITOR_PORT:-8222}:8222"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1:8222/healthz?js-enabled-only=true"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 2s
+    volumes:
+      - ./nats-server.conf:/etc/nats/nats-server.conf:ro
+      - nats-data:/data/jetstream
+
+volumes:
+  nats-data:

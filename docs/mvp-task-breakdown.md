@@ -32,7 +32,7 @@
 | ID | 仓库 | 任务 | 状态 | 依赖 | 验收 |
 | --- | --- | --- | --- | --- | --- |
 | RH-M1-010 | Record Hub | MongoDB replica set 本地配置与初始化 | DONE | M0 | MongoDB 8.0.32；幂等 replica set/应用用户初始化；transaction、唯一索引、CAS、change stream smoke |
-| RH-M1-011 | Record Hub | NATS JetStream stream/consumer 初始化 | TODO | M0 | DOMAIN_EVENTS、DLQ、durable consumer 幂等创建 |
+| RH-M1-011 | Record Hub | NATS JetStream stream/consumer 初始化 | DONE | M0 | NATS 2.14.6 file storage；DOMAIN_EVENTS、DEAD_LETTERS、三个 durable pull consumer 幂等创建及 smoke |
 | RH-M1-012 | Record Hub | NATS users/subject 权限 | TODO | 011 | 三生产者不能发布彼此 subject；RH 只订阅 allowlist |
 | RH-M1-013 | Record Hub | Dex 本地 issuer 与四个 Web client | TODO | M0 | discovery/JWKS/code+PKCE/redirect 负向测试 |
 | RH-M1-014 | Record Hub | Dex machine clients 与 token contract fixture | TODO | 013 | client credentials；固定 iss/sub/aud/exp/scope 实际形态 |
