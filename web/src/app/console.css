@@ -33,9 +33,54 @@
   color: #8c6b1a;
 }
 
+.schema-fields {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.schema-fields .subheading {
+  margin: 0 0 12px;
+}
+
+.schema-field-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.schema-field-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 130px 86px auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.required-field {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.required-field input {
+  accent-color: var(--accent);
+}
+
+.field-error {
+  color: var(--danger);
+  background: #fff0ef;
+  border-radius: 6px;
+  padding: 9px;
+  font-size: 12px;
+}
+
 @media (max-width: 650px) {
   .load-row {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .schema-field-row {
+    grid-template-columns: 1fr 1fr;
   }
 }

@@ -947,6 +947,89 @@ function RecordGrid({
   );
 }
 
+type SchemaField = { name: string; type: string; required: boolean };
+
+function parseSchemaFields(raw: string): {
+  fields: SchemaField[];
+  error?: string;
+} {
+  try {
+    const document = JSON.parse(raw) as {
+      properties?: Record<string, unknown>;
+      required?: unknown;
+    };
+    if (!document || typeof document !== "object" || Array.isArray(document)) {
+      return { fields: [], error: "Schema 根节点必须是对象" };
+    }
+    const properties = document.properties;
+    if (properties === undefined) return { fields: [] };
+    if (
+      !properties ||
+      typeof properties !== "object" ||
+      Array.isArray(properties)
+    ) {
+      return { fields: [], error: "properties 必须是对象" };
+    }
+    const required = new Set(
+      Array.isArray(document.required)
+        ? document.required.filter(
+            (item): item is string => typeof item === "string",
+          )
+        : [],
+    );
+    return {
+      fields: Object.entries(properties).map(([name, value]) => ({
+        name,
+        type:
+          value &&
+          typeof value === "object" &&
+          !Array.isArray(value) &&
+          typeof (value as { type?: unknown }).type === "string"
+            ? String((value as { type: string }).type)
+            : "string",
+        required: required.has(name),
+      })),
+    };
+  } catch {
+    return { fields: [], error: "JSON 尚未闭合，字段编辑器暂不可用" };
+  }
+}
+
+function writeSchemaFields(raw: string, fields: SchemaField[]): string {
+  let document: Record<string, unknown>;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+      return raw;
+    document = { ...(parsed as Record<string, unknown>) };
+  } catch {
+    return raw;
+  }
+  const current =
+    document.properties &&
+    typeof document.properties === "object" &&
+    !Array.isArray(document.properties)
+      ? (document.properties as Record<string, unknown>)
+      : {};
+  const properties: Record<string, unknown> = {};
+  for (const field of fields) {
+    const existing =
+      current[field.name] &&
+      typeof current[field.name] === "object" &&
+      !Array.isArray(current[field.name])
+        ? (current[field.name] as Record<string, unknown>)
+        : {};
+    properties[field.name] = { ...existing, type: field.type };
+  }
+  document.properties = properties;
+  const required = fields
+    .filter((field) => field.required)
+    .map((field) => field.name);
+  if (required.length > 0) document.required = required;
+  else delete document.required;
+  return JSON.stringify(document, null, 2);
+}
+
 function SchemaPanel(props: {
   tenantId: string;
   workspaceId: string;
@@ -982,6 +1065,9 @@ function SchemaPanel(props: {
     onReset,
     onPublish,
   } = props;
+  const fieldResult = useMemo(() => parseSchemaFields(form.data), [form.data]);
+  const updateFields = (fields: SchemaField[]) =>
+    setForm({ ...form, data: writeSchemaFields(form.data, fields) });
   return (
     <div className="panel">
       <div className="panel-heading">
@@ -1080,6 +1166,101 @@ function SchemaPanel(props: {
             onChange={(event) => setForm({ ...form, data: event.target.value })}
           />
         </label>
+        <section className="schema-fields">
+          <div className="subheading">
+            <div>
+              <h3>字段编辑器</h3>
+              <span className="muted">
+                快速维护顶层 properties；复杂约束仍可在 JSON 编辑器中调整。
+              </span>
+            </div>
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={Boolean(fieldResult.error)}
+              onClick={() =>
+                updateFields([
+                  ...fieldResult.fields,
+                  {
+                    name: `field_${fieldResult.fields.length + 1}`,
+                    type: "string",
+                    required: false,
+                  },
+                ])
+              }
+            >
+              添加字段
+            </button>
+          </div>
+          {fieldResult.error ? (
+            <p className="field-error">{fieldResult.error}</p>
+          ) : fieldResult.fields.length === 0 ? (
+            <p className="muted">暂无顶层字段，点击“添加字段”开始建模。</p>
+          ) : (
+            <div className="schema-field-list">
+              {fieldResult.fields.map((field, index) => (
+                <div
+                  className="schema-field-row"
+                  key={`${field.name}-${index}`}
+                >
+                  <input
+                    aria-label={`字段 ${index + 1} 名称`}
+                    value={field.name}
+                    onChange={(event) => {
+                      const next = [...fieldResult.fields];
+                      next[index] = { ...field, name: event.target.value };
+                      updateFields(next);
+                    }}
+                  />
+                  <select
+                    aria-label={`字段 ${index + 1} 类型`}
+                    value={field.type}
+                    onChange={(event) => {
+                      const next = [...fieldResult.fields];
+                      next[index] = { ...field, type: event.target.value };
+                      updateFields(next);
+                    }}
+                  >
+                    <option value="string">string</option>
+                    <option value="number">number</option>
+                    <option value="integer">integer</option>
+                    <option value="boolean">boolean</option>
+                    <option value="object">object</option>
+                    <option value="array">array</option>
+                  </select>
+                  <label className="required-field">
+                    <input
+                      type="checkbox"
+                      checked={field.required}
+                      onChange={(event) => {
+                        const next = [...fieldResult.fields];
+                        next[index] = {
+                          ...field,
+                          required: event.target.checked,
+                        };
+                        updateFields(next);
+                      }}
+                    />{" "}
+                    必填
+                  </label>
+                  <button
+                    type="button"
+                    className="ghost-button danger-button"
+                    onClick={() =>
+                      updateFields(
+                        fieldResult.fields.filter(
+                          (_, candidate) => candidate !== index,
+                        ),
+                      )
+                    }
+                  >
+                    移除
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
         <div className="button-row">
           <button
             className="primary-button"
