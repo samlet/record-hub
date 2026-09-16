@@ -17,6 +17,8 @@ import (
 var (
 	ErrProjectionRecordRequired = errors.New("projection record is required")
 	ErrProjectionAlreadyApplied = errors.New("projection event is already applied")
+	ErrProjectionVersionGap     = errors.New("projection aggregate version gap")
+	ErrProjectionVersionStale   = errors.New("projection aggregate version is stale")
 )
 
 type CheckpointStatus string
@@ -111,6 +113,7 @@ func (repository *MongoProjectionRepository) Apply(ctx context.Context, input Pr
 		return fmt.Errorf("start projection transaction: %w", err)
 	}
 	defer session.EndSession(context.Background())
+	gapDetected := false
 	_, err = session.WithTransaction(ctx, func(transactionContext context.Context) (interface{}, error) {
 		var existing InboxEvent
 		if findErr := repository.inbox.FindOne(transactionContext, bson.D{{Key: "eventId", Value: input.InboxEvent.EventID}, {Key: "consumer", Value: input.InboxEvent.Consumer}}).Decode(&existing); findErr != nil {
@@ -128,14 +131,35 @@ func (repository *MongoProjectionRepository) Apply(ctx context.Context, input Pr
 		if existing.Status != InboxProcessing {
 			return nil, ErrInboxStateConflict
 		}
+		checkpointFilter := projectionCheckpointFilter(input.Checkpoint)
+		var current ProjectionCheckpoint
+		checkpointErr := repository.checkpoints.FindOne(transactionContext, checkpointFilter).Decode(&current)
+		if checkpointErr != nil && !errors.Is(checkpointErr, mongo.ErrNoDocuments) {
+			return nil, fmt.Errorf("load projection checkpoint: %w", checkpointErr)
+		}
+		decision := classifyCheckpoint(current, checkpointErr == nil, input.Checkpoint.SourceVersion)
 		appliedAt := input.Checkpoint.SyncedAt.UTC()
+		if decision == projectionVersionStale {
+			if _, updateErr := repository.inbox.UpdateOne(transactionContext, bson.D{{Key: "eventId", Value: input.InboxEvent.EventID}, {Key: "consumer", Value: input.InboxEvent.Consumer}, {Key: "status", Value: InboxProcessing}}, bson.D{{Key: "$set", Value: bson.D{{Key: "status", Value: InboxApplied}, {Key: "appliedAt", Value: appliedAt}}}}); updateErr != nil {
+				return nil, fmt.Errorf("mark stale inbox event applied: %w", updateErr)
+			}
+			return nil, nil
+		}
+		if decision == projectionVersionGap {
+			if checkpointErr == nil {
+				if _, updateErr := repository.checkpoints.UpdateOne(transactionContext, checkpointFilter, bson.D{{Key: "$set", Value: bson.D{{Key: "status", Value: CheckpointGap}}}}); updateErr != nil {
+					return nil, fmt.Errorf("mark projection checkpoint gap: %w", updateErr)
+				}
+			}
+			gapDetected = true
+			return nil, nil
+		}
 		if _, updateErr := repository.inbox.UpdateOne(transactionContext, bson.D{{Key: "eventId", Value: input.InboxEvent.EventID}, {Key: "consumer", Value: input.InboxEvent.Consumer}, {Key: "status", Value: InboxProcessing}}, bson.D{{Key: "$set", Value: bson.D{{Key: "status", Value: InboxApplied}, {Key: "appliedAt", Value: appliedAt}}}}); updateErr != nil {
 			return nil, fmt.Errorf("mark inbox event applied: %w", updateErr)
 		}
 		if _, replaceErr := repository.records.ReplaceOne(transactionContext, bson.D{{Key: "tenantId", Value: input.Record.TenantID}, {Key: "workspaceId", Value: input.Record.WorkspaceID}, {Key: "tableId", Value: input.Record.TableID}, {Key: "_id", Value: input.Record.ID}}, input.Record, options.Replace().SetUpsert(true)); replaceErr != nil {
 			return nil, fmt.Errorf("upsert projection record: %w", replaceErr)
 		}
-		checkpointFilter := bson.D{{Key: "tenantId", Value: input.Checkpoint.TenantID}, {Key: "workspaceId", Value: input.Checkpoint.WorkspaceID}, {Key: "consumer", Value: input.Checkpoint.Consumer}, {Key: "sourceSystem", Value: input.Checkpoint.SourceSystem}, {Key: "aggregateType", Value: input.Checkpoint.AggregateType}, {Key: "aggregateId", Value: input.Checkpoint.AggregateID}}
 		if _, checkpointErr := repository.checkpoints.UpdateOne(transactionContext, checkpointFilter, bson.D{{Key: "$set", Value: input.Checkpoint}}, options.UpdateOne().SetUpsert(true)); checkpointErr != nil {
 			return nil, fmt.Errorf("upsert projection checkpoint: %w", checkpointErr)
 		}
@@ -147,7 +171,36 @@ func (repository *MongoProjectionRepository) Apply(ctx context.Context, input Pr
 	if errors.Is(err, ErrProjectionAlreadyApplied) {
 		return nil
 	}
+	if err == nil && gapDetected {
+		return ErrProjectionVersionGap
+	}
 	return err
+}
+
+type projectionVersionDecision uint8
+
+const (
+	projectionVersionApply projectionVersionDecision = iota
+	projectionVersionStale
+	projectionVersionGap
+)
+
+func classifyCheckpoint(current ProjectionCheckpoint, exists bool, incomingVersion int64) projectionVersionDecision {
+	currentVersion := int64(0)
+	if exists {
+		currentVersion = current.SourceVersion
+	}
+	if incomingVersion <= currentVersion {
+		return projectionVersionStale
+	}
+	if incomingVersion != currentVersion+1 {
+		return projectionVersionGap
+	}
+	return projectionVersionApply
+}
+
+func projectionCheckpointFilter(checkpoint ProjectionCheckpoint) bson.D {
+	return bson.D{{Key: "tenantId", Value: checkpoint.TenantID}, {Key: "workspaceId", Value: checkpoint.WorkspaceID}, {Key: "consumer", Value: checkpoint.Consumer}, {Key: "sourceSystem", Value: checkpoint.SourceSystem}, {Key: "aggregateType", Value: checkpoint.AggregateType}, {Key: "aggregateId", Value: checkpoint.AggregateID}}
 }
 
 func validateProjectionApply(input ProjectionApply) error {

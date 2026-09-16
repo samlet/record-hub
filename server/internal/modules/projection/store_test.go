@@ -57,3 +57,22 @@ func TestMongoProjectionRepositoryWithoutDatabaseFailsClosed(t *testing.T) {
 		t.Fatal("unconfigured projection repository should fail")
 	}
 }
+
+func TestProjectionCheckpointVersionRules(t *testing.T) {
+	if got := classifyCheckpoint(ProjectionCheckpoint{}, false, 1); got != projectionVersionApply {
+		t.Fatalf("initial version decision = %d", got)
+	}
+	current := ProjectionCheckpoint{SourceVersion: 4}
+	if got := classifyCheckpoint(current, true, 4); got != projectionVersionStale {
+		t.Fatalf("duplicate version decision = %d", got)
+	}
+	if got := classifyCheckpoint(current, true, 3); got != projectionVersionStale {
+		t.Fatalf("older version decision = %d", got)
+	}
+	if got := classifyCheckpoint(current, true, 5); got != projectionVersionApply {
+		t.Fatalf("next version decision = %d", got)
+	}
+	if got := classifyCheckpoint(current, true, 7); got != projectionVersionGap {
+		t.Fatalf("gap version decision = %d", got)
+	}
+}

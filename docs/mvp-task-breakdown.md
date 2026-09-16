@@ -72,7 +72,7 @@
 | RH-M4-041 | Record Hub | InboxEvent claim/payloadHash 冲突 | DONE | 040,M1-010 | `(consumer,eventId)` 唯一 claim；相同 payload hash duplicate success；不同 payload 冲突；PROCESSING/APPLIED/REJECTED 状态；Mongo/内存测试已覆盖 |
 | RH-M4-042 | Record Hub | 投影 handler registry | DONE | 041 | 精确 `sourceSystem/eventType/schemaVersion` 唯一注册；重复注册和 unknown event fail closed；并发安全单元测试已覆盖 |
 | RH-M4-043 | Record Hub | projection transaction/checkpoint/audit | DONE | 042,M3-035 | Inbox APPLIED、projection record、checkpoint、audit 在同一 Mongo transaction；重复 APPLIED 幂等；Mongo/校验测试已覆盖 |
-| RH-M4-044 | Record Hub | aggregate version duplicate/gap recovery | TODO | 043 | 落后忽略、跳跃 GAP、补齐恢复 |
+| RH-M4-044 | Record Hub | aggregate version duplicate/gap recovery | DONE | 043 | `<= current` 事件标记 Inbox APPLIED 并忽略副作用；跳跃版本保留 PROCESSING、checkpoint 标记 GAP；补齐后按序恢复；规则/真实 Mongo 测试已覆盖 |
 | RH-M4-045 | Record Hub | retry/backoff/MaxDeliver/DLQ | TODO | 043 | deterministic/transient 分类和安全错误 |
 | RH-M4-046 | Record Hub | 三种 summary schema/handlers | TODO | 042,M2 | allowlist、256 KiB bound、PII/敏感字段负向测试 |
 | RH-M4-047 | Record Hub | Operations events API/UI | TODO | 044,045 | 积压、失败、gap 可查；payload/secret 不泄露 |

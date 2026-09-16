@@ -64,4 +64,42 @@ func TestMongoProjectionApplyTransaction(t *testing.T) {
 	if err := repository.Apply(ctx, input); !errors.Is(err, ErrInboxPayloadConflict) {
 		t.Fatalf("applied payload conflict = %v", err)
 	}
+	// A future event is retained in PROCESSING while the checkpoint advertises
+	// a gap; once the missing version arrives, the future event can be applied.
+	gapInput := input
+	gapInput.InboxEvent = InboxEvent{EventID: "event-3", Consumer: input.InboxEvent.Consumer, Subject: input.InboxEvent.Subject, PayloadHash: "", Status: InboxProcessing, ReceivedAt: time.Now().UTC()}
+	gapInput.Record.ID = "record-3"
+	gapInput.Record.Projection = &records.ProjectionState{LastEventID: "event-3", SyncedAt: gapInput.InboxEvent.ReceivedAt, Status: "CURRENT"}
+	gapInput.Checkpoint.SourceVersion = 3
+	gapInput.Checkpoint.LastEventID = "event-3"
+	gapInput.Checkpoint.SyncedAt = gapInput.InboxEvent.ReceivedAt
+	gapInput.Audit.ResourceID = gapInput.Record.ID
+	gapPayload := []byte(`{"eventId":"event-3"}`)
+	gapClaim, err := (&MongoInboxRepository{collection: database.Collection(inboxCollectionName)}).Claim(ctx, InboxClaim{EventID: "event-3", Consumer: input.InboxEvent.Consumer, Subject: input.InboxEvent.Subject, Payload: gapPayload, ReceivedAt: gapInput.InboxEvent.ReceivedAt})
+	if err != nil {
+		t.Fatal(err)
+	}
+	gapInput.InboxEvent = gapClaim.Event
+	if err := repository.Apply(ctx, gapInput); !errors.Is(err, ErrProjectionVersionGap) {
+		t.Fatalf("version gap = %v", err)
+	}
+	missingInput := input
+	missingInput.InboxEvent = InboxEvent{EventID: "event-2", Consumer: input.InboxEvent.Consumer, Subject: input.InboxEvent.Subject, Status: InboxProcessing, ReceivedAt: time.Now().UTC()}
+	missingInput.Record.ID = "record-2"
+	missingInput.Record.Projection = &records.ProjectionState{LastEventID: "event-2", SyncedAt: missingInput.InboxEvent.ReceivedAt, Status: "CURRENT"}
+	missingInput.Checkpoint.SourceVersion = 2
+	missingInput.Checkpoint.LastEventID = "event-2"
+	missingInput.Checkpoint.SyncedAt = missingInput.InboxEvent.ReceivedAt
+	missingInput.Audit.ResourceID = missingInput.Record.ID
+	missingClaim, err := (&MongoInboxRepository{collection: database.Collection(inboxCollectionName)}).Claim(ctx, InboxClaim{EventID: "event-2", Consumer: input.InboxEvent.Consumer, Subject: input.InboxEvent.Subject, Payload: []byte(`{"eventId":"event-2"}`), ReceivedAt: missingInput.InboxEvent.ReceivedAt})
+	if err != nil {
+		t.Fatal(err)
+	}
+	missingInput.InboxEvent = missingClaim.Event
+	if err := repository.Apply(ctx, missingInput); err != nil {
+		t.Fatalf("missing version apply = %v", err)
+	}
+	if err := repository.Apply(ctx, gapInput); err != nil {
+		t.Fatalf("gap recovery apply = %v", err)
+	}
 }

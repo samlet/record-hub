@@ -298,6 +298,10 @@ Handler registry 按 `sourceSystem/eventType/schemaVersion` 精确匹配，注�
 Mongo session 中 upsert projection record、checkpoint 和 audit；任一步失败都会 abort，已
 `APPLIED` 的同一事件只返回幂等成功，不重复写副作用。
 
+Checkpoint 更新遵循连续版本规则：`aggregateVersion <= current` 只确认 Inbox、不重复写入；
+跳跃版本保留 Inbox `PROCESSING` 并将已有 checkpoint 标为 `GAP`，返回可重试错误；缺失版本
+补齐后，后续事件按 `current + 1` 顺序恢复。
+
 MVP 单消息上限暂定 256 KiB；压测后才能提高。
 
 ## 10. 三个生产者接入
