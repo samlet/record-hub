@@ -44,6 +44,11 @@ Fluxion、Bids 的 summary contract、Outbox、Binding/diagnostic workflow/worke
 NATS + Dex + Temporal/Conductor 联合路径必须由 M8-085 runbook 运行，不能由此
 gate 冒充 live E2E。
 
+M8-084 的 failure-path gate 已完成，入口为 `make m8-failure-path`。它覆盖坏 state、
+CSRF、伪造 Session、nonce/issuer/audience/expiry、未知 projection consumer/scope、
+gap/DLQ、Outbox ACK-loss 和两种 workflow retry/failure 测试；依赖故障注入仍需
+M8-085/086 的受监督拓扑。
+
 ## 本地启动
 
 先启动 Dex 并生成本地 secret：
