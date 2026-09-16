@@ -114,7 +114,7 @@
 | RH-M7-072 | Record Hub | metrics 与 structured logging | DONE | M4 | 延迟、积压、重投、gap、DLQ、auth failure |
 | RH-M7-073 | Record Hub | Mongo commit/ACK loss 故障注入 | PARTIAL | M4 | 重投无重复记录/版本/审计 |
 | RH-M7-074 | 四仓库 | NATS outage/outbox recovery | PARTIAL | M5 | 业务事务继续；恢复后积压清空 |
-| RH-M7-075 | Record Hub | Dex/JWKS rotation/outage | TODO | M1 | cache 边界、过期 fail closed、恢复成功 |
+| RH-M7-075 | Record Hub | Dex/JWKS rotation/outage | DONE | M1 | cache 边界、过期 fail closed、恢复成功 |
 | RH-M7-076 | Record Hub | API/worker/Mongo/NATS 分进程重启 | TODO | M4,M6 | 无消息丢失，无永久 lease |
 | RH-M7-077 | Record Hub | bounded query/payload/rate limit | TODO | M3,M4 | 大页、深过滤、大消息和滥用受控 |
 

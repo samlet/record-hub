@@ -79,6 +79,20 @@ ACK loss 后保留同一 outbox/event ID，等待 lease/retry。业务事务与 
 PostgreSQL/NATS 全部启动后执行；设置 `RECORD_HUB_M7_NATS_LIVE=1` 会追加 NATS connectivity
 smoke，但当前环境尚未完成真实 outage/recovery，因此 M7-074 保持 `PARTIAL`。
 
+## M7-075 Dex/JWKS rotation/outage
+
+OIDC verifier 的自动化验收覆盖：已缓存旧 key 在轮换后仍可验证、新 `kid` 触发 JWKS 刷新、
+JWKS outage 下已缓存 key 可继续使用、未知 key 在 outage 下 fail closed，以及错误 issuer、
+audience 和过期 token 均拒绝。测试 issuer 不依赖真实 Dex，避免把本地服务状态误当成缓存边界
+证据；旧 key 缓存回归测试位于 `server/internal/modules/identity/verifier_test.go`。
+
+```bash
+./scripts/verify-m7-dex-rotation.sh
+```
+
+设置 `RECORD_HUB_M7_DEX_LIVE=1` 会在上述 verifier 测试后追加本地 Dex discovery/PKCE smoke；
+当前 M7-075 的核心 rotation/outage 验收已由 deterministic verifier 测试完成。
+
 ## 边界说明
 
 binding 只接受 `system:type:id` 的稳定引用和已经由 projection/record owner 过滤后的 JSON
