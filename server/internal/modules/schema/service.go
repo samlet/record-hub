@@ -109,6 +109,34 @@ func (service *Service) ListDefinitions(ctx context.Context, principal identity.
 	return lister.List(ctx, tenantID, limit)
 }
 
+// CompareCompatibility returns a deterministic field-level compatibility
+// report against one published schema version. The candidate is deliberately
+// kept in memory so a preview cannot create an untracked schema version.
+func (service *Service) CompareCompatibility(ctx context.Context, principal identity.Principal, tenantID, workspaceID, schemaID string, publishedVersion int64, candidate bson.Raw) (CompatibilityReport, error) {
+	if service == nil || service.registry == nil || service.authorizer == nil {
+		return CompatibilityReport{}, identity.ErrForbidden
+	}
+	if strings.TrimSpace(tenantID) == "" || strings.TrimSpace(workspaceID) == "" || strings.TrimSpace(schemaID) == "" || publishedVersion < 1 || len(candidate) == 0 || candidate.Validate() != nil {
+		return CompatibilityReport{}, ErrNotFound
+	}
+	if _, err := service.authorizer.Authorize(ctx, principal, tenantID, workspaceID, identity.ActionSchemaManage); err != nil {
+		return CompatibilityReport{}, err
+	}
+	published, err := service.registry.Get(ctx, tenantID, schemaID, publishedVersion)
+	if err != nil {
+		return CompatibilityReport{}, err
+	}
+	publishedJSON, err := bson.MarshalExtJSON(published.JSONSchema, false, false)
+	if err != nil {
+		return CompatibilityReport{}, fmt.Errorf("encode published schema: %w", err)
+	}
+	candidateJSON, err := bson.MarshalExtJSON(candidate, false, false)
+	if err != nil {
+		return CompatibilityReport{}, fmt.Errorf("encode candidate schema: %w", err)
+	}
+	return CheckBackwardCompatibility(publishedJSON, candidateJSON)
+}
+
 func (service *Service) CreateDraft(ctx context.Context, principal identity.Principal, input DraftInput) (Definition, error) {
 	if err := service.authorize(ctx, principal, input.TenantID, input.WorkspaceID); err != nil {
 		return Definition{}, err

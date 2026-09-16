@@ -29,6 +29,10 @@ type ListService interface {
 	ListDefinitions(context.Context, identity.Principal, string, string, int64) ([]Definition, error)
 }
 
+type CompatibilityService interface {
+	CompareCompatibility(context.Context, identity.Principal, string, string, string, int64, bson.Raw) (CompatibilityReport, error)
+}
+
 type HTTPHandler struct {
 	service MutationService
 }
@@ -39,6 +43,7 @@ func NewHTTPHandler(service MutationService) http.Handler {
 	mux.HandleFunc("POST /api/v1/schemas", handler.create)
 	mux.HandleFunc("GET /api/v1/schemas", handler.list)
 	mux.HandleFunc("GET /api/v1/schemas/{schemaID}", handler.get)
+	mux.HandleFunc("POST /api/v1/schemas/{schemaID}/compatibility", handler.compatibility)
 	mux.HandleFunc("PUT /api/v1/schemas/{schemaID}/draft", handler.update)
 	mux.HandleFunc("POST /api/v1/schemas/{schemaID}/publish", handler.publish)
 	return mux
@@ -99,6 +104,50 @@ func (handler *HTTPHandler) get(writer http.ResponseWriter, request *http.Reques
 		return
 	}
 	writeDefinition(writer, http.StatusOK, definition)
+}
+
+type compatibilityRequest struct {
+	TenantID         string          `json:"tenantId"`
+	WorkspaceID      string          `json:"workspaceId"`
+	PublishedVersion int64           `json:"publishedVersion"`
+	CandidateSchema  json.RawMessage `json:"candidateSchema"`
+}
+
+func (handler *HTTPHandler) compatibility(writer http.ResponseWriter, request *http.Request) {
+	principal, ok := identity.PrincipalFromContext(request.Context())
+	if !ok {
+		writeAPIError(writer, http.StatusUnauthorized, "AUTHENTICATION_REQUIRED", "Authentication is required.")
+		return
+	}
+	service, ok := handler.service.(CompatibilityService)
+	if !ok || service == nil {
+		writeAPIError(writer, http.StatusNotImplemented, "SCHEMA_COMPATIBILITY_UNAVAILABLE", "The schema compatibility API is not configured.")
+		return
+	}
+	var input compatibilityRequest
+	if !decodeMutationRequest(writer, request, &input) {
+		return
+	}
+	if strings.TrimSpace(input.TenantID) == "" || strings.TrimSpace(input.WorkspaceID) == "" || input.PublishedVersion < 1 || len(input.CandidateSchema) == 0 {
+		writeAPIError(writer, http.StatusBadRequest, "INVALID_REQUEST", "tenantId, workspaceId, publishedVersion, and candidateSchema are required.")
+		return
+	}
+	var candidate bson.Raw
+	if err := bson.UnmarshalExtJSON(input.CandidateSchema, false, &candidate); err != nil || len(candidate) == 0 || candidate.Validate() != nil {
+		writeAPIError(writer, http.StatusBadRequest, "INVALID_SCHEMA", "candidateSchema must be a valid JSON Schema object.")
+		return
+	}
+	report, err := service.CompareCompatibility(request.Context(), principal, input.TenantID, input.WorkspaceID, request.PathValue("schemaID"), input.PublishedVersion, candidate)
+	if err != nil {
+		writeSchemaError(writer, err)
+		return
+	}
+	changes := make([]compatibilityChangeResponse, 0, len(report.Changes))
+	for _, change := range report.Changes {
+		changes = append(changes, compatibilityChangeResponse{Path: change.Path, Kind: change.Kind, Message: change.Message})
+	}
+	writer.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(writer).Encode(compatibilityResponse{Compatible: report.Compatible, Changes: changes})
 }
 
 type mutationRequest struct {
@@ -254,6 +303,17 @@ type definitionResponse struct {
 	CreatedAt     string                `json:"createdAt"`
 	UpdatedAt     string                `json:"updatedAt"`
 	PublishedAt   *string               `json:"publishedAt,omitempty"`
+}
+
+type compatibilityResponse struct {
+	Compatible bool                          `json:"compatible"`
+	Changes    []compatibilityChangeResponse `json:"changes"`
+}
+
+type compatibilityChangeResponse struct {
+	Path    string `json:"path"`
+	Kind    string `json:"kind"`
+	Message string `json:"message"`
 }
 
 type definitionSummaryResponse struct {

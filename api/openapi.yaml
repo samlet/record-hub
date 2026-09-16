@@ -629,6 +629,34 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+  /api/v1/schemas/{schemaId}/compatibility:
+    post:
+      tags: [Schema]
+      operationId: compareSchemaCompatibility
+      summary: Compare a candidate schema with a published version
+      parameters:
+        - $ref: "#/components/parameters/SchemaId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SchemaCompatibilityRequest"
+      responses:
+        "200":
+          description: Deterministic field-level compatibility report.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SchemaCompatibilityReport"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /api/v1/schemas/{schemaId}/draft:
     put:
       tags: [Schema]
@@ -1691,6 +1719,52 @@ components:
           items:
             type: string
             minLength: 1
+    SchemaCompatibilityRequest:
+      type: object
+      additionalProperties: false
+      required: [tenantId, workspaceId, publishedVersion, candidateSchema]
+      properties:
+        tenantId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        workspaceId:
+          type: string
+          format: uuid
+        publishedVersion:
+          type: integer
+          minimum: 1
+        candidateSchema:
+          type: object
+          additionalProperties: true
+    SchemaCompatibilityReport:
+      type: object
+      additionalProperties: false
+      required: [compatible, changes]
+      properties:
+        compatible:
+          type: boolean
+        changes:
+          type: array
+          maxItems: 256
+          items:
+            $ref: "#/components/schemas/SchemaCompatibilityChange"
+    SchemaCompatibilityChange:
+      type: object
+      additionalProperties: false
+      required: [path, kind, message]
+      properties:
+        path:
+          type: string
+          minLength: 1
+          maxLength: 1024
+        kind:
+          type: string
+          enum: [required-added, property-removed, type-narrowed, enum-narrowed, constraint-changed]
+        message:
+          type: string
+          minLength: 1
+          maxLength: 512
     SchemaPublishRequest:
       type: object
       additionalProperties: false

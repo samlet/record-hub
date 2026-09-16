@@ -24,7 +24,7 @@ func TestSchemaHTTPMutationContract(t *testing.T) {
 		t.Fatalf("unauthenticated status = %d", unauthenticated.Code)
 	}
 
-	body := `{"tenantId":"tenant-1","workspaceId":"workspace-1","schemaId":"urn:record-hub:test:http","name":"HTTP Schema","version":1,"jsonSchema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object"},"semanticTypes":[]}`
+	body := `{"tenantId":"tenant-1","workspaceId":"workspace-1","schemaId":"urn:record-hub:test:http","name":"HTTP Schema","version":1,"jsonSchema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"name":{"type":"string"}}},"semanticTypes":[]}`
 	created := doSchemaRequest(handler, &principal, http.MethodPost, "/api/v1/schemas", body, map[string]string{"Idempotency-Key": "create-http-1"})
 	if created.Code != http.StatusCreated || created.Header().Get("ETag") != `"1"` {
 		t.Fatalf("create response status=%d etag=%q body=%s", created.Code, created.Header().Get("ETag"), created.Body.String())
@@ -57,6 +57,17 @@ func TestSchemaHTTPMutationContract(t *testing.T) {
 	if read.Code != http.StatusOK || read.Header().Get("ETag") != `"3"` || !strings.Contains(read.Body.String(), `"status":"PUBLISHED"`) {
 		t.Fatalf("read response status=%d etag=%q body=%s", read.Code, read.Header().Get("ETag"), read.Body.String())
 	}
+	compatibleCandidate := `{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"name":{"type":"string"},"description":{"type":"string"}}}`
+	compatibilityBody := `{"tenantId":"tenant-1","workspaceId":"workspace-1","publishedVersion":1,"candidateSchema":` + compatibleCandidate + `}`
+	compatibility := doSchemaRequest(handler, &principal, http.MethodPost, "/api/v1/schemas/urn%3Arecord-hub%3Atest%3Ahttp/compatibility", compatibilityBody, nil)
+	if compatibility.Code != http.StatusOK || !strings.Contains(compatibility.Body.String(), `"compatible":true`) || !strings.Contains(compatibility.Body.String(), `"changes":[]`) {
+		t.Fatalf("compatibility response status=%d body=%s", compatibility.Code, compatibility.Body.String())
+	}
+	breakingBody := `{"tenantId":"tenant-1","workspaceId":"workspace-1","publishedVersion":1,"candidateSchema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"name":{"type":"integer"}}}}`
+	breaking := doSchemaRequest(handler, &principal, http.MethodPost, "/api/v1/schemas/urn%3Arecord-hub%3Atest%3Ahttp/compatibility", breakingBody, nil)
+	if breaking.Code != http.StatusOK || !strings.Contains(breaking.Body.String(), `"compatible":false`) || !strings.Contains(breaking.Body.String(), `"path":"$.properties.name"`) {
+		t.Fatalf("breaking compatibility response status=%d body=%s", breaking.Code, breaking.Body.String())
+	}
 	list := doSchemaRequest(handler, &principal, http.MethodGet, "/api/v1/schemas?tenantId=tenant-1&workspaceId=workspace-1&limit=20", "", nil)
 	if list.Code != http.StatusOK || !strings.Contains(list.Body.String(), `"schemaId":"urn:record-hub:test:http"`) || strings.Contains(list.Body.String(), `"jsonSchema"`) {
 		t.Fatalf("list response status=%d body=%s", list.Code, list.Body.String())
@@ -86,6 +97,12 @@ func TestSchemaHTTPRejectsMalformedAndUnauthorizedRequests(t *testing.T) {
 	}
 	if response := doSchemaRequest(handler, &editor, http.MethodPost, "/api/v1/schemas", `{"tenantId":"tenant-1","workspaceId":"workspace-1","schemaId":"x","name":"x","version":1,"jsonSchema":{}}`, map[string]string{"Idempotency-Key": "editor"}); response.Code != http.StatusForbidden {
 		t.Fatalf("editor status = %d", response.Code)
+	}
+	if response := doSchemaRequest(handler, &editor, http.MethodPost, "/api/v1/schemas/x/compatibility", `{"tenantId":"tenant-1","workspaceId":"workspace-1","publishedVersion":1,"candidateSchema":{}}`, nil); response.Code != http.StatusForbidden {
+		t.Fatalf("editor compatibility status = %d", response.Code)
+	}
+	if response := doSchemaRequest(handler, &owner, http.MethodPost, "/api/v1/schemas/x/compatibility", `{"tenantId":"tenant-1","workspaceId":"workspace-1","publishedVersion":1,"candidateSchema":[]}`, nil); response.Code != http.StatusBadRequest {
+		t.Fatalf("array candidate status = %d", response.Code)
 	}
 }
 
