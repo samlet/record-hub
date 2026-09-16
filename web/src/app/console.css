@@ -64,6 +64,18 @@
   accent-color: var(--accent);
 }
 
+.cell-value.numeric {
+  font-variant-numeric: tabular-nums;
+}
+
+.cell-value.bad-value {
+  color: var(--danger);
+}
+
+.reference-value {
+  overflow-wrap: anywhere;
+}
+
 .danger-button {
   color: var(--danger);
   border-color: #edc5c1;

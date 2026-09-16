@@ -72,6 +72,7 @@ export function Console() {
   const [tables, setTables] = useState<TableDefinition[]>([]);
   const [tableId, setTableId] = useState("");
   const [records, setRecords] = useState<RecordItem[]>([]);
+  const [tableSchema, setTableSchema] = useState<SchemaDefinition | null>(null);
   const [editingRecord, setEditingRecord] = useState<RecordItem | null>(null);
   const [views, setViews] = useState<ViewDefinition[]>([]);
   const [viewId, setViewId] = useState("");
@@ -164,6 +165,30 @@ export function Console() {
       );
     });
   }, [tenantId, workspaceId, tableId, authenticated]);
+
+  useEffect(() => {
+    if (!tenantId || !workspaceId || !selectedTable || authenticated !== true) {
+      setTableSchema(null);
+      return;
+    }
+    let active = true;
+    api
+      .getSchema(
+        tenantId,
+        workspaceId,
+        selectedTable.schemaId,
+        selectedTable.schemaVersion,
+      )
+      .then((response) => {
+        if (active) setTableSchema(response.body);
+      })
+      .catch(() => {
+        if (active) setTableSchema(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [tenantId, workspaceId, selectedTable, authenticated]);
 
   useEffect(() => {
     if (
@@ -384,6 +409,7 @@ export function Console() {
               viewForm={viewForm}
               setViewForm={setViewForm}
               selectedTable={selectedTable}
+              tableSchema={tableSchema}
               records={records}
               tableForm={tableForm}
               setTableForm={setTableForm}
@@ -618,6 +644,7 @@ function RecordsPanel(props: {
   viewForm: ViewForm;
   setViewForm: (value: ViewForm) => void;
   selectedTable?: TableDefinition;
+  tableSchema: SchemaDefinition | null;
   records: RecordItem[];
   tableForm: {
     id: string;
@@ -654,6 +681,7 @@ function RecordsPanel(props: {
     viewForm,
     setViewForm,
     selectedTable,
+    tableSchema,
     records,
     tableForm,
     setTableForm,
@@ -1057,6 +1085,7 @@ function RecordsPanel(props: {
           <RecordGrid
             records={records}
             selectedView={views.find((view) => view.id === viewId)}
+            schema={tableSchema}
             onEdit={onEditRecord}
             onDelete={onDeleteRecord}
           />
@@ -1071,11 +1100,13 @@ function RecordsPanel(props: {
 function RecordGrid({
   records,
   selectedView,
+  schema,
   onEdit,
   onDelete,
 }: {
   records: RecordItem[];
   selectedView?: ViewDefinition;
+  schema: SchemaDefinition | null;
   onEdit: (record: RecordItem) => void;
   onDelete: (record: RecordItem) => void;
 }) {
@@ -1100,6 +1131,11 @@ function RecordGrid({
   }, [records, selectedView]);
   const columnKey = availableColumns.join("\u0000");
   const [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
+  const fieldTypes = useMemo(() => {
+    if (!schema) return new Map<string, SchemaField["type"]>();
+    const parsed = parseSchemaFields(JSON.stringify(schema.jsonSchema));
+    return new Map(parsed.fields.map((field) => [field.name, field.type]));
+  }, [schema]);
 
   useEffect(() => {
     setHiddenColumns([]);
@@ -1163,9 +1199,12 @@ function RecordGrid({
                 </td>
                 {columns.map((column) => (
                   <td key={column}>
-                    <span className="cell-value">
-                      {formatCell(readPath(record.data, column))}
-                    </span>
+                    <RecordCell
+                      value={readPath(record.data, column)}
+                      type={fieldTypes.get(
+                        column.replace(/^data\./, "").split(".")[0],
+                      )}
+                    />
                   </td>
                 ))}
                 <td>
@@ -1212,6 +1251,53 @@ function RecordGrid({
       </div>
     </>
   );
+}
+
+function RecordCell({
+  value,
+  type,
+}: {
+  value: unknown;
+  type?: SchemaField["type"];
+}) {
+  if (value === undefined || value === null)
+    return <span className="cell-value muted">—</span>;
+  if (type === "boolean" && typeof value === "boolean") {
+    return (
+      <span className={`status ${value ? "good" : ""}`}>
+        {value ? "是" : "否"}
+      </span>
+    );
+  }
+  if ((type === "number" || type === "integer") && typeof value === "number") {
+    return <span className="cell-value numeric">{value.toLocaleString()}</span>;
+  }
+  if (type === "date-time" && typeof value === "string") {
+    const timestamp = Date.parse(value);
+    return Number.isNaN(timestamp) ? (
+      <span className="cell-value bad-value">{value}</span>
+    ) : (
+      <time className="cell-value" dateTime={value}>
+        {new Date(timestamp).toLocaleString()}
+      </time>
+    );
+  }
+  if (type === "enum") return <span className="tag">{formatCell(value)}</span>;
+  if (type === "reference" && value && typeof value === "object") {
+    const reference = value as Record<string, unknown>;
+    if (
+      typeof reference.system === "string" &&
+      typeof reference.type === "string" &&
+      typeof reference.id === "string"
+    ) {
+      return (
+        <code className="reference-value">
+          {reference.system}/{reference.type}/{reference.id}
+        </code>
+      );
+    }
+  }
+  return <span className="cell-value">{formatCell(value)}</span>;
 }
 
 function readPath(data: Record<string, unknown>, path: string): unknown {
