@@ -6,7 +6,7 @@ Record Hub 不是各业务系统的事实库，也不是跨 MongoDB、PostgreSQL
 
 ## 状态
 
-当前处于 MVP 实现阶段。服务端使用 Go，Web 控制台使用 TypeScript；实施状态以[MVP 任务分解](docs/mvp-task-breakdown.md)为准。
+MVP 已有条件收口：实现与本机可执行门禁完成，依赖专用 Dex/machine identity 或隔离全拓扑的 live 项已显式标为 `SKIPPED`。服务端使用 Go，Web 控制台使用 TypeScript；状态与证据见[MVP 任务分解](docs/mvp-task-breakdown.md)和[MVP 验收报告](docs/m8-acceptance-report.md)。
 
 ## 开发命令
 
@@ -50,6 +50,8 @@ HTTP 契约以 [`api/openapi.yaml`](api/openapi.yaml) 为准。`make generate-cl
 - [M8 MVP 验收报告](docs/m8-acceptance-report.md)
 - [认证、授权与租户隔离](docs/security-auth.md)
 - [实施路线](docs/roadmap.md)
+- [下一期方案评估](docs/phase-2-evaluation.md)
+- [下一期需求设计](docs/phase-2-requirements.md)
 - [参考资料](docs/references.md)
 - [ADR-0001：独立仓库与事实所有权](docs/adr/0001-independent-service-and-data-ownership.md)
 - [ADR-0002：Go 服务端](docs/adr/0002-go-server.md)
