@@ -63,6 +63,18 @@ export type SchemaDefinition = {
   updatedAt: string;
 };
 
+export type SchemaSummary = {
+  tenantId: string;
+  schemaId: string;
+  name: string;
+  version: number;
+  revision: number;
+  status: string;
+  semanticTypes: string[];
+  contentHash?: string;
+  updatedAt: string;
+};
+
 export type OperationsSnapshot = {
   tenantId: string;
   workspaceId: string;
@@ -287,6 +299,10 @@ export const api = {
       method: "POST",
       body: JSON.stringify(input),
     }),
+  schemas: (tenantId: string, workspaceId: string) =>
+    request<{ items: SchemaSummary[] }>(
+      `/api/v1/schemas?tenantId=${encodeURIComponent(tenantId)}&workspaceId=${encodeURIComponent(workspaceId)}&limit=100`,
+    ),
   getSchema: (
     tenantId: string,
     workspaceId: string,

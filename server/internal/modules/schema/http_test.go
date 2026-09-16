@@ -57,6 +57,13 @@ func TestSchemaHTTPMutationContract(t *testing.T) {
 	if read.Code != http.StatusOK || read.Header().Get("ETag") != `"3"` || !strings.Contains(read.Body.String(), `"status":"PUBLISHED"`) {
 		t.Fatalf("read response status=%d etag=%q body=%s", read.Code, read.Header().Get("ETag"), read.Body.String())
 	}
+	list := doSchemaRequest(handler, &principal, http.MethodGet, "/api/v1/schemas?tenantId=tenant-1&workspaceId=workspace-1&limit=20", "", nil)
+	if list.Code != http.StatusOK || !strings.Contains(list.Body.String(), `"schemaId":"urn:record-hub:test:http"`) || strings.Contains(list.Body.String(), `"jsonSchema"`) {
+		t.Fatalf("list response status=%d body=%s", list.Code, list.Body.String())
+	}
+	if invalidList := doSchemaRequest(handler, &principal, http.MethodGet, "/api/v1/schemas?tenantId=tenant-1&workspaceId=workspace-1&limit=101", "", nil); invalidList.Code != http.StatusBadRequest {
+		t.Fatalf("invalid list limit status = %d", invalidList.Code)
+	}
 	if invalid := doSchemaRequest(handler, &principal, http.MethodGet, "/api/v1/schemas/x?tenantId=tenant-1&workspaceId=workspace-1", "", nil); invalid.Code != http.StatusBadRequest {
 		t.Fatalf("missing version status = %d", invalid.Code)
 	}

@@ -92,6 +92,43 @@
   padding: 14px;
 }
 
+.schema-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 8px;
+  margin: 18px 0 4px;
+}
+
+.schema-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 10px;
+  text-align: left;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.schema-list-item.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.schema-list-item strong,
+.schema-list-item code {
+  display: block;
+}
+
+.schema-list-item strong {
+  color: var(--ink);
+  font-size: 13px;
+  margin-bottom: 3px;
+}
+
 .schema-fields .subheading {
   margin: 0 0 12px;
 }

@@ -25,6 +25,10 @@ type ReadService interface {
 	GetDefinition(context.Context, identity.Principal, string, string, string, int64) (Definition, error)
 }
 
+type ListService interface {
+	ListDefinitions(context.Context, identity.Principal, string, string, int64) ([]Definition, error)
+}
+
 type HTTPHandler struct {
 	service MutationService
 }
@@ -33,10 +37,44 @@ func NewHTTPHandler(service MutationService) http.Handler {
 	handler := &HTTPHandler{service: service}
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /api/v1/schemas", handler.create)
+	mux.HandleFunc("GET /api/v1/schemas", handler.list)
 	mux.HandleFunc("GET /api/v1/schemas/{schemaID}", handler.get)
 	mux.HandleFunc("PUT /api/v1/schemas/{schemaID}/draft", handler.update)
 	mux.HandleFunc("POST /api/v1/schemas/{schemaID}/publish", handler.publish)
 	return mux
+}
+
+func (handler *HTTPHandler) list(writer http.ResponseWriter, request *http.Request) {
+	principal, ok := identity.PrincipalFromContext(request.Context())
+	if !ok {
+		writeAPIError(writer, http.StatusUnauthorized, "AUTHENTICATION_REQUIRED", "Authentication is required.")
+		return
+	}
+	limit := int64(50)
+	if raw := strings.TrimSpace(request.URL.Query().Get("limit")); raw != "" {
+		parsed, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil || parsed < 1 || parsed > 100 {
+			writeAPIError(writer, http.StatusBadRequest, "INVALID_REQUEST", "limit must be between 1 and 100.")
+			return
+		}
+		limit = parsed
+	}
+	service, ok := handler.service.(ListService)
+	if !ok || service == nil {
+		writeAPIError(writer, http.StatusNotImplemented, "SCHEMA_LIST_UNAVAILABLE", "The schema list API is not configured.")
+		return
+	}
+	definitions, err := service.ListDefinitions(request.Context(), principal, request.URL.Query().Get("tenantId"), request.URL.Query().Get("workspaceId"), limit)
+	if err != nil {
+		writeSchemaError(writer, err)
+		return
+	}
+	items := make([]definitionSummaryResponse, 0, len(definitions))
+	for _, definition := range definitions {
+		items = append(items, definitionSummary(definition))
+	}
+	writer.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(writer).Encode(map[string]interface{}{"items": items})
 }
 
 func (handler *HTTPHandler) get(writer http.ResponseWriter, request *http.Request) {
@@ -216,6 +254,27 @@ type definitionResponse struct {
 	CreatedAt     string                `json:"createdAt"`
 	UpdatedAt     string                `json:"updatedAt"`
 	PublishedAt   *string               `json:"publishedAt,omitempty"`
+}
+
+type definitionSummaryResponse struct {
+	TenantID      string   `json:"tenantId"`
+	SchemaID      string   `json:"schemaId"`
+	Name          string   `json:"name"`
+	Version       int64    `json:"version"`
+	Revision      int64    `json:"revision"`
+	Status        Status   `json:"status"`
+	SemanticTypes []string `json:"semanticTypes"`
+	ContentHash   string   `json:"contentHash,omitempty"`
+	UpdatedAt     string   `json:"updatedAt"`
+}
+
+func definitionSummary(definition Definition) definitionSummaryResponse {
+	return definitionSummaryResponse{
+		TenantID: definition.TenantID, SchemaID: definition.SchemaID, Name: definition.Name,
+		Version: definition.Version, Revision: definition.Revision, Status: definition.Status,
+		SemanticTypes: definition.SemanticTypes, ContentHash: definition.ContentHash,
+		UpdatedAt: definition.UpdatedAt.UTC().Format(time.RFC3339Nano),
+	}
 }
 
 func writeDefinition(writer http.ResponseWriter, status int, definition Definition) {

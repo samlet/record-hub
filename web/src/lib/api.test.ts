@@ -67,6 +67,12 @@ describe("Record Hub browser API client", () => {
     expect(String(fetchMock.mock.calls[1][0])).toContain(
       "/api/v1/tables/table%2Fa/views?",
     );
+
+    fetchMock.mockResolvedValueOnce(jsonResponse({ items: [] }));
+    await api.schemas("tenant one", "workspace/one");
+    expect(String(fetchMock.mock.calls[2][0])).toContain(
+      "/api/v1/schemas?tenantId=tenant%20one&workspaceId=workspace%2Fone&limit=100",
+    );
   });
 
   it("serializes bounded multi-condition view definitions", async () => {

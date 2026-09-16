@@ -95,6 +95,26 @@ func (repository *MongoRepository) Get(ctx context.Context, tenantID, schemaID s
 	return definition, nil
 }
 
+func (repository *MongoRepository) List(ctx context.Context, tenantID string, limit int64) ([]Definition, error) {
+	if limit < 1 || limit > 100 {
+		return nil, errors.New("schema list limit must be between 1 and 100")
+	}
+	cursor, err := repository.collection.Find(
+		ctx,
+		bson.D{{Key: "tenantId", Value: tenantID}},
+		options.Find().SetSort(bson.D{{Key: "updatedAt", Value: -1}, {Key: "schemaId", Value: 1}, {Key: "version", Value: -1}}).SetLimit(limit),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list schema definitions: %w", err)
+	}
+	defer cursor.Close(ctx)
+	var definitions []Definition
+	if err := cursor.All(ctx, &definitions); err != nil {
+		return nil, fmt.Errorf("decode schema definitions: %w", err)
+	}
+	return definitions, nil
+}
+
 // UpdateDraft is the only general mutation path. Filtering on DRAFT makes
 // published and deprecated documents immutable even under concurrent callers.
 func (repository *MongoRepository) UpdateDraft(ctx context.Context, definition Definition, expectedRevision int64) (Definition, error) {

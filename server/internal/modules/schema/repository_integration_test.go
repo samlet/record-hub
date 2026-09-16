@@ -64,6 +64,13 @@ func TestMongoRepositoryIndexesAndImmutability(t *testing.T) {
 	if err := repository.Create(ctx, published); err != nil {
 		t.Fatal(err)
 	}
+	listed, err := repository.List(ctx, draft.TenantID, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(listed) != 2 {
+		t.Fatalf("listed schema definitions = %d, want 2", len(listed))
+	}
 	maliciousDraft := published
 	maliciousDraft.Status = StatusDraft
 	maliciousDraft.ContentHash = ""

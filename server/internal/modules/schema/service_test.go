@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"testing"
 	"time"
 
@@ -33,6 +34,22 @@ func (r *memoryRegistry) Get(_ context.Context, tenantID, schemaID string, versi
 		return Definition{}, ErrNotFound
 	}
 	return definition, nil
+}
+
+func (r *memoryRegistry) List(_ context.Context, tenantID string, limit int64) ([]Definition, error) {
+	definitions := make([]Definition, 0, len(r.definitions))
+	for _, definition := range r.definitions {
+		if definition.TenantID == tenantID {
+			definitions = append(definitions, definition)
+		}
+	}
+	sort.Slice(definitions, func(i, j int) bool {
+		return definitions[i].UpdatedAt.After(definitions[j].UpdatedAt)
+	})
+	if int64(len(definitions)) > limit {
+		definitions = definitions[:limit]
+	}
+	return definitions, nil
 }
 
 func (r *memoryRegistry) UpdateDraft(_ context.Context, definition Definition, expectedRevision int64) (Definition, error) {

@@ -10,6 +10,7 @@ tags:
   - name: System
   - name: Identity
   - name: Records
+  - name: Schema
   - name: Operations
   - name: Bindings
 paths:
@@ -504,6 +505,27 @@ paths:
         "428":
           $ref: "#/components/responses/PreconditionRequired"
   /api/v1/schemas:
+    get:
+      tags: [Schema]
+      operationId: listSchemas
+      summary: List bounded schema summaries visible to a workspace
+      parameters:
+        - $ref: "#/components/parameters/TenantIdQuery"
+        - $ref: "#/components/parameters/WorkspaceIdQuery"
+        - $ref: "#/components/parameters/LimitQuery"
+      responses:
+        "200":
+          description: Schema summaries ordered by most recent update.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SchemaSummaryList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
     post:
       tags: [Schema]
       operationId: createSchemaDraft
@@ -1646,6 +1668,45 @@ components:
         publishedAt:
           type: string
           format: date-time
+    SchemaSummary:
+      type: object
+      additionalProperties: false
+      required: [tenantId, schemaId, name, version, revision, status, semanticTypes, updatedAt]
+      properties:
+        tenantId:
+          type: string
+        schemaId:
+          type: string
+        name:
+          type: string
+        version:
+          type: integer
+          minimum: 1
+        revision:
+          type: integer
+          minimum: 1
+        status:
+          type: string
+          enum: [DRAFT, PUBLISHED, DEPRECATED]
+        semanticTypes:
+          type: array
+          items:
+            type: string
+        contentHash:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+    SchemaSummaryList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/SchemaSummary"
     IdentityKey:
       type: object
       additionalProperties: false

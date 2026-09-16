@@ -8,6 +8,7 @@ import {
   OperationsSnapshot,
   RecordItem,
   SchemaDefinition,
+  SchemaSummary,
   TableDefinition,
   ViewFilter,
   ViewDefinition,
@@ -81,6 +82,7 @@ export function Console() {
   const [consumer, setConsumer] = useState(consumerOptions[0][0]);
   const [operations, setOperations] = useState<OperationsSnapshot | null>(null);
   const [schema, setSchema] = useState<SchemaDefinition | null>(null);
+  const [schemas, setSchemas] = useState<SchemaSummary[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -239,6 +241,28 @@ export function Console() {
     );
   }
 
+  async function refreshSchemas() {
+    if (!tenantId || !workspaceId) return;
+    setSchemas(items((await api.schemas(tenantId, workspaceId)).body));
+  }
+
+  async function loadSchemaDefinition(schemaId: string, version: number) {
+    const loaded = await api.getSchema(
+      tenantId,
+      workspaceId,
+      schemaId,
+      version,
+    );
+    setSchema(loaded.body);
+    setSchemaForm({
+      id: loaded.body.schemaId,
+      name: loaded.body.name,
+      version: String(loaded.body.version),
+      data: JSON.stringify(loaded.body.jsonSchema, null, 2),
+      semanticTypes: loaded.body.semanticTypes.join(", "),
+    });
+  }
+
   useEffect(() => {
     if (
       tab !== "operations" ||
@@ -251,6 +275,12 @@ export function Console() {
     const timer = window.setInterval(() => void refreshOperations(), 10_000);
     return () => window.clearInterval(timer);
   }, [tab, authenticated, tenantId, workspaceId, consumer]);
+
+  useEffect(() => {
+    if (tab !== "schema" || authenticated !== true || !tenantId || !workspaceId)
+      return;
+    void run(refreshSchemas);
+  }, [tab, authenticated, tenantId, workspaceId]);
 
   async function signOut() {
     await run(async () => {
@@ -536,6 +566,7 @@ export function Console() {
               tenantId={tenantId}
               workspaceId={workspaceId}
               schema={schema}
+              schemas={schemas}
               form={schemaForm}
               setForm={setSchemaForm}
               onCreate={(event) =>
@@ -553,6 +584,7 @@ export function Console() {
                       .filter(Boolean),
                   });
                   setSchema(created.body);
+                  await refreshSchemas();
                 })
               }
               onUpdate={(event) =>
@@ -574,24 +606,20 @@ export function Console() {
                     },
                   );
                   setSchema(updated.body);
+                  await refreshSchemas();
                 })
               }
               onLoad={() =>
                 void run(async () => {
-                  const loaded = await api.getSchema(
-                    tenantId,
-                    workspaceId,
+                  await loadSchemaDefinition(
                     schemaForm.id,
                     Number(schemaForm.version),
                   );
-                  setSchema(loaded.body);
-                  setSchemaForm({
-                    ...schemaForm,
-                    name: loaded.body.name,
-                    version: String(loaded.body.version),
-                    data: JSON.stringify(loaded.body.jsonSchema, null, 2),
-                    semanticTypes: loaded.body.semanticTypes.join(", "),
-                  });
+                })
+              }
+              onSelect={(summary) =>
+                void run(async () => {
+                  await loadSchemaDefinition(summary.schemaId, summary.version);
                 })
               }
               onReset={() => {
@@ -615,6 +643,7 @@ export function Console() {
                       )
                     ).body,
                   );
+                  await refreshSchemas();
                   setNotice("Schema 已发布");
                 })
               }
@@ -1329,6 +1358,7 @@ function SchemaPanel(props: {
   tenantId: string;
   workspaceId: string;
   schema: SchemaDefinition | null;
+  schemas: SchemaSummary[];
   form: {
     id: string;
     name: string;
@@ -1346,17 +1376,20 @@ function SchemaPanel(props: {
   onCreate: (event: FormEvent) => void;
   onUpdate: (event: FormEvent) => void;
   onLoad: () => void;
+  onSelect: (schema: SchemaSummary) => void;
   onReset: () => void;
   onPublish: () => void;
 }) {
   const {
     workspaceId,
     schema,
+    schemas,
     form,
     setForm,
     onCreate,
     onUpdate,
     onLoad,
+    onSelect,
     onReset,
     onPublish,
   } = props;
@@ -1378,6 +1411,27 @@ function SchemaPanel(props: {
           >
             {schema.status} · revision {schema.revision}
           </span>
+        )}
+      </div>
+      <div className="schema-list" aria-label="Schema 版本列表">
+        {schemas.map((item) => (
+          <button
+            type="button"
+            className={`schema-list-item ${schema?.schemaId === item.schemaId && schema.version === item.version ? "selected" : ""}`}
+            key={`${item.schemaId}:${item.version}`}
+            onClick={() => onSelect(item)}
+          >
+            <span>
+              <strong>{item.name}</strong>
+              <code>{item.schemaId}</code>
+            </span>
+            <span>
+              v{item.version} · {item.status}
+            </span>
+          </button>
+        ))}
+        {schemas.length === 0 && (
+          <p className="muted">当前工作区还没有 Schema 版本。</p>
         )}
       </div>
       <div className="load-row">

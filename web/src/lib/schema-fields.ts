@@ -93,6 +93,25 @@ function fieldType(value: SchemaObject): SchemaFieldType {
   return "string";
 }
 
+function jsonErrorMessage(raw: string, error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  const match = message.match(/position\s+(\d+)/i);
+  let position = match ? Number(match[1]) : undefined;
+  if (position === undefined) {
+    const token = message.match(/Unexpected token '([^']+)'/i)?.[1];
+    if (token) {
+      const candidate = raw.lastIndexOf(token);
+      if (candidate >= 0) position = candidate;
+    } else if (/Unexpected end/i.test(message)) {
+      position = raw.length;
+    }
+  }
+  if (position === undefined) return `JSON 格式错误：${message}`;
+  const prefix = raw.slice(0, position);
+  const lines = prefix.split("\n");
+  return `JSON 第 ${lines.length} 行、第 ${lines[lines.length - 1].length + 1} 列附近有错误：${message}`;
+}
+
 export function parseSchemaFields(raw: string): {
   fields: SchemaField[];
   error?: string;
@@ -129,8 +148,8 @@ export function parseSchemaFields(raw: string): {
         };
       }),
     };
-  } catch {
-    return { fields: [], error: "JSON 尚未闭合，字段编辑器暂不可用" };
+  } catch (error) {
+    return { fields: [], error: jsonErrorMessage(raw, error) };
   }
 }
 

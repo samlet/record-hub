@@ -27,6 +27,10 @@ type Registry interface {
 	PublishDefinition(context.Context, string, string, int64, int64, identity.IdentityKey, string) (Definition, error)
 }
 
+type RegistryLister interface {
+	List(context.Context, string, int64) ([]Definition, error)
+}
+
 type TransactionalRegistry interface {
 	Registry
 	WithTransaction(context.Context, func(context.Context) error) error
@@ -86,6 +90,23 @@ func (service *Service) GetDefinition(ctx context.Context, principal identity.Pr
 		return Definition{}, err
 	}
 	return service.registry.Get(ctx, tenantID, schemaID, version)
+}
+
+func (service *Service) ListDefinitions(ctx context.Context, principal identity.Principal, tenantID, workspaceID string, limit int64) ([]Definition, error) {
+	if service == nil || service.registry == nil || service.authorizer == nil {
+		return nil, identity.ErrForbidden
+	}
+	if tenantID == "" || workspaceID == "" || limit < 1 || limit > 100 {
+		return nil, ErrNotFound
+	}
+	if _, err := service.authorizer.Authorize(ctx, principal, tenantID, workspaceID, identity.ActionSchemaRead); err != nil {
+		return nil, err
+	}
+	lister, ok := service.registry.(RegistryLister)
+	if !ok {
+		return nil, ErrNotFound
+	}
+	return lister.List(ctx, tenantID, limit)
 }
 
 func (service *Service) CreateDraft(ctx context.Context, principal identity.Principal, input DraftInput) (Definition, error) {

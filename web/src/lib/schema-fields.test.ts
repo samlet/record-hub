@@ -80,7 +80,7 @@ describe("schema field editor model", () => {
   });
 
   it("reports malformed JSON without mutating it", () => {
-    expect(parseSchemaFields("{").error).toBeTruthy();
+    expect(parseSchemaFields('{\n  "field": }').error).toMatch(/第 2 行/);
     expect(writeSchemaFields("{", [])).toBe("{");
   });
 });
