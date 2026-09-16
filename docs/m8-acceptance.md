@@ -23,6 +23,13 @@
 - pending OIDC state 使用有界、一次性内存 store。多实例部署前必须替换为共享
   短期 store（例如 Redis）；不能依赖实例粘滞来掩盖重启丢失。
 
+M8-081 的资源路由组合也已完成：`NewResourceRouter` 把现有 records 和 schema
+HTTP handlers 收敛到单一 `/api/v1` 浏览器入口，`/api/v1/schemas` 及其子路径只
+能进入 schema handler，其余资源进入 records handler；相似前缀不会误分流，缺失
+依赖 fail closed 为 503。路由本身不实现第二套授权，handler 收到的 principal
+仍来自同一 Session middleware，OWNER/EDITOR/VIEWER allow/deny 仍由本地
+membership authorizer 决定。
+
 ## 本地启动
 
 先启动 Dex 并生成本地 secret：
