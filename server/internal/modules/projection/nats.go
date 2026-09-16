@@ -90,6 +90,8 @@ type PullRunnerConfig struct {
 	Stream       string
 	Durable      string
 	BatchSize    int
+	MaxDeliver   int
+	Backoff      []time.Duration
 	FetchTimeout time.Duration
 	AckTimeout   time.Duration
 	RetryDelay   time.Duration
@@ -99,6 +101,12 @@ type PullRunnerConfig struct {
 func (config PullRunnerConfig) withDefaults() PullRunnerConfig {
 	if config.BatchSize == 0 {
 		config.BatchSize = 64
+	}
+	if config.MaxDeliver == 0 {
+		config.MaxDeliver = 5
+	}
+	if len(config.Backoff) == 0 {
+		config.Backoff = []time.Duration{250 * time.Millisecond, time.Second, 5 * time.Second, 15 * time.Second}
 	}
 	if config.FetchTimeout == 0 {
 		config.FetchTimeout = 10 * time.Second
@@ -122,6 +130,17 @@ func (config PullRunnerConfig) Validate() error {
 	if config.BatchSize < 1 || config.BatchSize > 256 {
 		return fmt.Errorf("%w: batch size must be between 1 and 256", ErrInvalidConsumerConfig)
 	}
+	if config.MaxDeliver < 1 || config.MaxDeliver > 100 {
+		return fmt.Errorf("%w: max deliver must be between 1 and 100", ErrInvalidConsumerConfig)
+	}
+	if len(config.Backoff) > config.MaxDeliver {
+		return fmt.Errorf("%w: backoff cannot have more entries than max deliver", ErrInvalidConsumerConfig)
+	}
+	for _, delay := range config.Backoff {
+		if delay < 10*time.Millisecond || delay > 30*time.Second {
+			return fmt.Errorf("%w: backoff entries must be between 10ms and 30s", ErrInvalidConsumerConfig)
+		}
+	}
 	if config.FetchTimeout < 100*time.Millisecond || config.FetchTimeout > 60*time.Second {
 		return fmt.Errorf("%w: fetch timeout must be between 100ms and 60s", ErrInvalidConsumerConfig)
 	}
@@ -143,6 +162,7 @@ type PullRunner struct {
 	provider ConsumerProvider
 	config   PullRunnerConfig
 	handler  MessageHandler
+	dlq      DeadLetterPublisher
 }
 
 func NewPullRunner(provider ConsumerProvider, config PullRunnerConfig, handler MessageHandler) (*PullRunner, error) {
@@ -154,6 +174,13 @@ func NewPullRunner(provider ConsumerProvider, config PullRunnerConfig, handler M
 		return nil, err
 	}
 	return &PullRunner{provider: provider, config: config, handler: handler}, nil
+}
+
+func (runner *PullRunner) WithDeadLetterPublisher(publisher DeadLetterPublisher) *PullRunner {
+	if runner != nil {
+		runner.dlq = publisher
+	}
+	return runner
 }
 
 // Run keeps a durable pull consumer alive until ctx is cancelled. Fetch and
@@ -226,7 +253,7 @@ func (runner *PullRunner) Run(ctx context.Context) error {
 				if ctx.Err() != nil {
 					return nil
 				}
-				if err := message.Nak(); err != nil {
+				if err := runner.retryMessage(ctx, message, handled); err != nil {
 					consumer = nil
 					reconnect = true
 					break
@@ -253,6 +280,38 @@ func (runner *PullRunner) Run(ctx context.Context) error {
 			return nil
 		}
 	}
+}
+
+func (runner *PullRunner) retryMessage(ctx context.Context, message jetstream.Msg, handlerErr error) error {
+	class, safeMessage := errorClass(handlerErr)
+	attempts := uint64(1)
+	if metadata, err := message.Metadata(); err == nil && metadata != nil && metadata.NumDelivered > 0 {
+		attempts = metadata.NumDelivered
+	}
+	if class == ErrorDeterministic || attempts >= uint64(runner.config.MaxDeliver) {
+		if runner.dlq == nil {
+			return message.NakWithDelay(runner.retryDelay(attempts))
+		}
+		publishContext, cancel := context.WithTimeout(context.Background(), runner.config.AckTimeout)
+		publishErr := runner.dlq.Publish(publishContext, DeadLetter{EventID: messageEventID(message), Consumer: runner.config.Durable, OriginalSubject: message.Subject(), Attempts: attempts, Reason: safeMessage, CreatedAt: time.Now().UTC()})
+		cancel()
+		if publishErr != nil {
+			return publishErr
+		}
+		return message.TermWithReason(safeMessage)
+	}
+	return message.NakWithDelay(runner.retryDelay(attempts))
+}
+
+func (runner *PullRunner) retryDelay(attempts uint64) time.Duration {
+	if len(runner.config.Backoff) == 0 {
+		return runner.config.RetryDelay
+	}
+	index := attempts - 1
+	if index >= uint64(len(runner.config.Backoff)) {
+		index = uint64(len(runner.config.Backoff) - 1)
+	}
+	return runner.config.Backoff[index]
 }
 
 func (runner *PullRunner) handle(ctx context.Context, message jetstream.Msg) (error, bool) {

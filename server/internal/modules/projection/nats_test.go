@@ -3,6 +3,7 @@ package projection
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -64,12 +65,14 @@ func messageBatch(messages ...jetstream.Msg) jetstream.MessageBatch {
 }
 
 type fakeMessage struct {
-	acks atomic.Int64
-	naks atomic.Int64
+	acks      atomic.Int64
+	naks      atomic.Int64
+	terms     atomic.Int64
+	delivered uint64
 }
 
 func (message *fakeMessage) Metadata() (*jetstream.MsgMetadata, error) {
-	return &jetstream.MsgMetadata{}, nil
+	return &jetstream.MsgMetadata{NumDelivered: message.delivered}, nil
 }
 func (message *fakeMessage) Data() []byte                     { return []byte(`{"eventId":"event-1"}`) }
 func (message *fakeMessage) Headers() nats.Header             { return nats.Header{} }
@@ -80,8 +83,19 @@ func (message *fakeMessage) DoubleAck(context.Context) error  { message.acks.Add
 func (message *fakeMessage) Nak() error                       { message.naks.Add(1); return nil }
 func (message *fakeMessage) NakWithDelay(time.Duration) error { message.naks.Add(1); return nil }
 func (message *fakeMessage) InProgress() error                { return nil }
-func (message *fakeMessage) Term() error                      { return nil }
-func (message *fakeMessage) TermWithReason(string) error      { return nil }
+func (message *fakeMessage) Term() error                      { message.terms.Add(1); return nil }
+func (message *fakeMessage) TermWithReason(string) error      { message.terms.Add(1); return nil }
+
+type fakeDeadLetterPublisher struct {
+	letters atomic.Int64
+	last    DeadLetter
+}
+
+func (publisher *fakeDeadLetterPublisher) Publish(_ context.Context, letter DeadLetter) error {
+	publisher.last = letter
+	publisher.letters.Add(1)
+	return nil
+}
 
 func testRunnerConfig() PullRunnerConfig {
 	return PullRunnerConfig{Stream: "DOMAIN_EVENTS", Durable: "record-hub-test-v1", BatchSize: 4, FetchTimeout: 100 * time.Millisecond, AckTimeout: time.Second, RetryDelay: 10 * time.Millisecond, DrainTimeout: time.Second}
@@ -182,5 +196,59 @@ func TestPullRunnerRejectsUnboundedConfiguration(t *testing.T) {
 	_, err := NewPullRunner(&fakeConsumerProvider{}, PullRunnerConfig{Stream: "DOMAIN_EVENTS", Durable: "consumer", BatchSize: 257}, func(context.Context, jetstream.Msg) error { return nil })
 	if !errors.Is(err, ErrInvalidConsumerConfig) {
 		t.Fatalf("invalid batch configuration error = %v", err)
+	}
+}
+
+func TestPullRunnerPublishesDeterministicFailureToDLQ(t *testing.T) {
+	message := &fakeMessage{}
+	provider := &fakeConsumerProvider{consumer: &fakeConsumer{batches: []jetstream.MessageBatch{messageBatch(message)}}}
+	publisher := &fakeDeadLetterPublisher{}
+	runner, err := NewPullRunner(provider, testRunnerConfig(), func(context.Context, jetstream.Msg) error {
+		return DeterministicError(errors.New("contains secret details"), "payload schema rejected")
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	runner.WithDeadLetterPublisher(publisher)
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		for message.terms.Load() == 0 {
+			time.Sleep(time.Millisecond)
+		}
+		cancel()
+	}()
+	if err := runner.Run(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if publisher.letters.Load() != 1 || message.naks.Load() != 0 || message.terms.Load() != 1 || publisher.last.Reason != "payload schema rejected" || strings.Contains(publisher.last.Reason, "secret") {
+		t.Fatalf("DLQ letters=%d naks=%d terms=%d letter=%#v", publisher.letters.Load(), message.naks.Load(), message.terms.Load(), publisher.last)
+	}
+}
+
+func TestPullRunnerDeadLettersAfterMaxDeliver(t *testing.T) {
+	message := &fakeMessage{delivered: 5}
+	provider := &fakeConsumerProvider{consumer: &fakeConsumer{batches: []jetstream.MessageBatch{messageBatch(message)}}}
+	publisher := &fakeDeadLetterPublisher{}
+	config := testRunnerConfig()
+	config.MaxDeliver = 5
+	runner, err := NewPullRunner(provider, config, func(context.Context, jetstream.Msg) error {
+		return TransientError(errors.New("backend unavailable"), "backend unavailable")
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	runner.WithDeadLetterPublisher(publisher)
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		for message.terms.Load() == 0 {
+			time.Sleep(time.Millisecond)
+		}
+		cancel()
+	}()
+	if err := runner.Run(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if publisher.letters.Load() != 1 || message.terms.Load() != 1 || publisher.last.Attempts != 5 {
+		t.Fatalf("max deliver DLQ letters=%d terms=%d letter=%#v", publisher.letters.Load(), message.terms.Load(), publisher.last)
 	}
 }

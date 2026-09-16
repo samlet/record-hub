@@ -302,6 +302,10 @@ Checkpoint 更新遵循连续版本规则：`aggregateVersion <= current` 只确
 跳跃版本保留 Inbox `PROCESSING` 并将已有 checkpoint 标为 `GAP`，返回可重试错误；缺失版本
 补齐后，后续事件按 `current + 1` 顺序恢复。
 
+Retry policy 将错误显式分为 deterministic/transient：前者立即写入 `dlq.record-hub.<consumer>`
+并 `TermWithReason`，后者按 JetStream delivery count 使用有界 backoff；达到 `MaxDeliver` 后
+同样进入脱敏 DLQ。DLQ 只包含 event/consumer/subject/attempts/safe reason，不复制原始 payload。
+
 MVP 单消息上限暂定 256 KiB；压测后才能提高。
 
 ## 10. 三个生产者接入
