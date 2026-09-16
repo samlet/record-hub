@@ -37,7 +37,7 @@
 | RH-M1-013 | Record Hub | Dex 本地 issuer 与四个 Web client | DONE | M0 | discovery/JWKS/code+PKCE/redirect 负向测试 |
 | RH-M1-014 | Record Hub | Dex machine clients 与 token contract fixture | DEFERRED | 013 | Dex 2.45.1 尚未实现 `client_credentials`；不得以 password grant 代替，等待 machine identity ADR 或包含该能力的稳定版 |
 | RH-M1-015 | Record Hub | OIDC verifier、JWKS cache 与 principal model | DONE | 013 | RS256；`(iss, sub)` identity；key rotation/cache/outage、错误 issuer/audience/expiry fail closed |
-| RH-M1-016 | Record Hub | Workspace membership 与角色授权骨架 | TODO | 015 | OWNER/EDITOR/VIEWER allow/deny 矩阵通过 |
+| RH-M1-016 | Record Hub | Workspace membership 与角色授权骨架 | DONE | 015 | 精确 tenant/workspace/`(iss, sub)` membership；OWNER/EDITOR/VIEWER allow/deny 矩阵通过 |
 
 ## 4. M2：Schema Registry
 

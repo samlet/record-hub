@@ -28,6 +28,17 @@ Dex 承担身份认证和 token 签发；各系统仍负责自己的租户映射
 
 Record Hub 的 OIDC verifier 只接受显式配置的 issuer、单一 audience 和 RS256。它以 `(iss, sub)` 构造稳定身份，缓存已经验证过的 JWKS key，并在遇到未知 `kid` 时刷新 JWKS。错误 issuer/audience/expiry、空 subject、未知 key 且 JWKS 不可用时均 fail closed。本地 HTTP issuer 必须显式开启开发例外，其他环境只接受 HTTPS。
 
+本地授权以精确的 `(tenantId, workspaceId, iss, sub)` membership 为准，token group 不参与请求时的 allow/deny。角色基线如下：
+
+| Capability | OWNER | EDITOR | VIEWER |
+| --- | --- | --- | --- |
+| 读取 workspace/schema/record/view | 允许 | 允许 | 允许 |
+| 写 custom record/view | 允许 | 允许 | 拒绝 |
+| 管理 workspace/membership/schema | 允许 | 拒绝 | 拒绝 |
+| 写 projection | 拒绝 | 拒绝 | 拒绝 |
+
+Projection 写入只属于事件 projector 的独立服务策略，不继承任何人类角色。membership 缺失、已撤销、tenant/workspace/identity 不匹配、未知角色或未知 action 均 fail closed。
+
 ## 3. 服务间身份
 
 目标模型是每个信任方向使用独立 machine identity，不共享一个超级 client：
