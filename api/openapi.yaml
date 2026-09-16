@@ -56,18 +56,183 @@ paths:
                 $ref: "#/components/schemas/Principal"
         "401":
           $ref: "#/components/responses/Unauthorized"
+  /api/v1/schemas:
+    post:
+      tags: [Schema]
+      operationId: createSchemaDraft
+      summary: Create a schema draft
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/RequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SchemaDraftRequest"
+      responses:
+        "201":
+          description: Draft created.
+          headers:
+            ETag:
+              $ref: "#/components/headers/RevisionETag"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SchemaDefinition"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/v1/schemas/{schemaId}/draft:
+    put:
+      tags: [Schema]
+      operationId: updateSchemaDraft
+      summary: Update a schema draft with an expected revision
+      parameters:
+        - $ref: "#/components/parameters/SchemaId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/RequestId"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SchemaDraftRequest"
+      responses:
+        "200":
+          description: Draft updated.
+          headers:
+            ETag:
+              $ref: "#/components/headers/RevisionETag"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SchemaDefinition"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "428":
+          $ref: "#/components/responses/PreconditionRequired"
+  /api/v1/schemas/{schemaId}/publish:
+    post:
+      tags: [Schema]
+      operationId: publishSchema
+      summary: Publish a draft schema with an expected revision
+      parameters:
+        - $ref: "#/components/parameters/SchemaId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/RequestId"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SchemaPublishRequest"
+      responses:
+        "200":
+          description: Schema published.
+          headers:
+            ETag:
+              $ref: "#/components/headers/RevisionETag"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SchemaDefinition"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "428":
+          $ref: "#/components/responses/PreconditionRequired"
 components:
   securitySchemes:
     oidc:
       type: openIdConnect
       openIdConnectUrl: http://127.0.0.1:5556/dex/.well-known/openid-configuration
   responses:
+    BadRequest:
+      description: The request is invalid.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
     Unauthorized:
       description: Authentication is missing or invalid.
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: The principal is not authorized.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: The request conflicts with current state or idempotency data.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    PreconditionRequired:
+      description: The expected revision is missing.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  parameters:
+    SchemaId:
+      name: schemaId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 256
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+    RequestId:
+      name: X-Request-ID
+      in: header
+      required: false
+      schema:
+        type: string
+        maxLength: 128
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      schema:
+        type: string
+        pattern: '^"?[1-9][0-9]*"?$'
+  headers:
+    RevisionETag:
+      description: Current schema revision as a quoted ETag.
+      schema:
+        type: string
+
   schemas:
     ErrorResponse:
       type: object
@@ -157,5 +322,104 @@ components:
         role:
           type: string
           enum: [OWNER, EDITOR, VIEWER]
+    SchemaDraftRequest:
+      type: object
+      additionalProperties: false
+      required: [tenantId, workspaceId, schemaId, name, version, jsonSchema]
+      properties:
+        tenantId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        workspaceId:
+          type: string
+          format: uuid
+        schemaId:
+          type: string
+          minLength: 1
+          maxLength: 256
+        name:
+          type: string
+          minLength: 1
+          maxLength: 128
+        version:
+          type: integer
+          minimum: 1
+        jsonSchema:
+          type: object
+          additionalProperties: true
+        semanticTypes:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+    SchemaPublishRequest:
+      type: object
+      additionalProperties: false
+      required: [tenantId, workspaceId, version]
+      properties:
+        tenantId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        workspaceId:
+          type: string
+          format: uuid
+        version:
+          type: integer
+          minimum: 1
+    SchemaDefinition:
+      type: object
+      additionalProperties: false
+      required: [tenantId, schemaId, name, version, revision, status, jsonSchema, semanticTypes, createdBy, createdAt, updatedAt]
+      properties:
+        tenantId:
+          type: string
+        schemaId:
+          type: string
+        name:
+          type: string
+        version:
+          type: integer
+        revision:
+          type: integer
+          minimum: 1
+        status:
+          type: string
+          enum: [DRAFT, PUBLISHED, DEPRECATED]
+        jsonSchema:
+          type: object
+          additionalProperties: true
+        semanticTypes:
+          type: array
+          items:
+            type: string
+        contentHash:
+          type: string
+        createdBy:
+          $ref: "#/components/schemas/IdentityKey"
+        publishedBy:
+          $ref: "#/components/schemas/IdentityKey"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        publishedAt:
+          type: string
+          format: date-time
+    IdentityKey:
+      type: object
+      additionalProperties: false
+      required: [issuer, subject]
+      properties:
+        issuer:
+          type: string
+          format: uri
+        subject:
+          type: string
+          minLength: 1
 security:
   - oidc: []
