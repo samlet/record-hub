@@ -38,4 +38,5 @@ does not infer tenant scope from a user profile. The value is kept in
 ## Verification
 
 From the repository root, `make web-check` runs `npm ci`, TypeScript checking,
-and a production Next build. The same target is part of `make check`/`make ci`.
+the API-client contract tests, and a production Next build. The same target is
+part of `make check`/`make ci`.
