@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/samlet/record-hub/server/internal/modules/audit"
 	"github.com/samlet/record-hub/server/internal/modules/identity"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -70,6 +71,54 @@ func TestMongoRepositoryIndexesAndImmutability(t *testing.T) {
 	maliciousDraft.PublishedAt = nil
 	if _, err := repository.UpdateDraft(ctx, maliciousDraft, 1); !errors.Is(err, ErrImmutable) {
 		t.Fatalf("published update error = %v", err)
+	}
+}
+
+func TestMongoPersistenceAdapters(t *testing.T) {
+	uri := os.Getenv("RECORD_HUB_MONGODB_URI")
+	if uri == "" {
+		t.Skip("RECORD_HUB_MONGODB_URI is not set")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	client, err := mongo.Connect(options.Client().ApplyURI(uri))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = client.Disconnect(context.Background()) }()
+	database := client.Database("record_hub")
+	receipts := NewMongoReceiptStore(database)
+	auditWriter := audit.NewMongoWriter(database)
+	defer func() {
+		_ = receipts.collection.Drop(context.Background())
+		_ = database.Collection("audit_entries").Drop(context.Background())
+	}()
+	if err := receipts.EnsureIndexes(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := auditWriter.EnsureIndexes(ctx); err != nil {
+		t.Fatal(err)
+	}
+	definition := schemaFixture(t, StatusDraft)
+	receipt := Receipt{TenantID: "tenant-1", WorkspaceID: "workspace-1", Operation: "schema.create", IdempotencyKey: "request-1", RequestHash: "sha256:request", Definition: definition}
+	if err := receipts.Save(ctx, receipt); err != nil {
+		t.Fatal(err)
+	}
+	if err := receipts.Save(ctx, receipt); err != nil {
+		t.Fatalf("same receipt should be idempotent: %v", err)
+	}
+	if _, err := receipts.Find(ctx, receipt.TenantID, receipt.WorkspaceID, receipt.Operation, receipt.IdempotencyKey); err != nil {
+		t.Fatal(err)
+	}
+	conflict := receipt
+	conflict.RequestHash = "sha256:other"
+	if err := receipts.Save(ctx, conflict); !errors.Is(err, ErrIdempotencyConflict) {
+		t.Fatalf("conflicting receipt = %v", err)
+	}
+
+	entry := audit.Entry{TenantID: "tenant-1", WorkspaceID: "workspace-1", Action: "schema.create", Actor: definition.CreatedBy, ResourceType: "SchemaDefinition", ResourceID: definition.SchemaID, ResourceVersion: definition.Version, IdempotencyKey: receipt.IdempotencyKey, AfterHash: receipt.RequestHash, CreatedAt: time.Now().UTC()}
+	if err := auditWriter.Append(ctx, entry); err != nil {
+		t.Fatal(err)
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/samlet/record-hub/server/internal/modules/identity"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
@@ -115,6 +116,42 @@ func (repository *MongoRepository) UpdateDraft(ctx context.Context, definition D
 	}
 
 	existing, lookupErr := repository.Get(ctx, definition.TenantID, definition.SchemaID, definition.Version)
+	if lookupErr != nil {
+		return Definition{}, lookupErr
+	}
+	if existing.Status != StatusDraft {
+		return Definition{}, ErrImmutable
+	}
+	return Definition{}, ErrRevisionConflict
+}
+
+// PublishDefinition atomically transitions one draft to PUBLISHED. The status
+// and revision predicates prevent a second publisher from changing the record.
+func (repository *MongoRepository) PublishDefinition(ctx context.Context, tenantID, schemaID string, version, expectedRevision int64, publisher identity.IdentityKey, contentHash string) (Definition, error) {
+	now := repository.clock().UTC()
+	filter := bson.D{
+		{Key: "tenantId", Value: tenantID},
+		{Key: "schemaId", Value: schemaID},
+		{Key: "version", Value: version},
+		{Key: "status", Value: StatusDraft},
+		{Key: "revision", Value: expectedRevision},
+	}
+	update := bson.D{{Key: "$set", Value: bson.D{
+		{Key: "status", Value: StatusPublished},
+		{Key: "contentHash", Value: contentHash},
+		{Key: "publishedBy", Value: publisher},
+		{Key: "publishedAt", Value: now},
+		{Key: "updatedAt", Value: now},
+	}}, {Key: "$inc", Value: bson.D{{Key: "revision", Value: 1}}}}
+	var published Definition
+	err := repository.collection.FindOneAndUpdate(ctx, filter, update, options.FindOneAndUpdate().SetReturnDocument(options.After)).Decode(&published)
+	if err == nil {
+		return published, nil
+	}
+	if !errors.Is(err, mongo.ErrNoDocuments) {
+		return Definition{}, fmt.Errorf("publish schema definition: %w", err)
+	}
+	existing, lookupErr := repository.Get(ctx, tenantID, schemaID, version)
 	if lookupErr != nil {
 		return Definition{}, lookupErr
 	}

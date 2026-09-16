@@ -36,7 +36,7 @@ mongo-smoke:
 	go run ./tools/mongo-smoke
 
 schema-persistence-smoke:
-	go test ./server/internal/modules/schema -run TestMongoRepositoryIndexesAndImmutability -count=1 -v
+	go test ./server/internal/modules/schema -run TestMongo -count=1 -v
 
 mongo-down:
 	docker compose -f deploy/local/mongodb/compose.yaml down
