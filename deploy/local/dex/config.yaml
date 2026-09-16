@@ -1,0 +1,56 @@
+issuer: {{ getenv "DEX_ISSUER" "http://127.0.0.1:5556/dex" | quote }}
+
+storage:
+  type: sqlite3
+  config:
+    file: /var/dex/dex.db
+
+web:
+  http: 0.0.0.0:5556
+
+telemetry:
+  http: 0.0.0.0:5558
+
+logger:
+  level: info
+  format: text
+
+oauth2:
+  responseTypes: [code]
+  grantTypes: [authorization_code, refresh_token]
+  skipApprovalScreen: true
+  alwaysShowLoginScreen: false
+
+enablePasswordDB: true
+staticPasswords:
+  - email: record-hub-dev@example.test
+    username: record-hub-dev
+    name: Record Hub Developer
+    preferredUsername: record-hub-dev
+    emailVerified: true
+    userID: 4f74f51a-16f4-4a6b-a65f-47bf3c3e66fb
+    hashFromEnv: DEX_LOCAL_PASSWORD_HASH
+    groups:
+      - record-hub-developers
+
+staticClients:
+  - id: approver-web-local
+    name: Approver Web (local)
+    secretEnv: DEX_APPROVER_WEB_SECRET
+    redirectURIs:
+      - http://127.0.0.1:3001/auth/callback
+  - id: fluxion-web-local
+    name: Fluxion Web (local)
+    secretEnv: DEX_FLUXION_WEB_SECRET
+    redirectURIs:
+      - http://127.0.0.1:3002/auth/callback
+  - id: bids-web-local
+    name: Bids Web (local)
+    secretEnv: DEX_BIDS_WEB_SECRET
+    redirectURIs:
+      - http://127.0.0.1:3003/auth/callback
+  - id: record-hub-web-local
+    name: Record Hub Web (local)
+    secretEnv: DEX_RECORD_HUB_WEB_SECRET
+    redirectURIs:
+      - http://127.0.0.1:3004/auth/callback

@@ -1,0 +1,28 @@
+name: record-hub-dex
+
+services:
+  dex:
+    image: ghcr.io/dexidp/dex:v2.45.1
+    restart: unless-stopped
+    command: ["dex", "serve", "/etc/dex/config.yaml"]
+    environment:
+      DEX_ISSUER: ${DEX_ISSUER:-http://127.0.0.1:5556/dex}
+      DEX_LOCAL_PASSWORD_HASH: ${DEX_LOCAL_PASSWORD_HASH:?run make dex-env}
+      DEX_APPROVER_WEB_SECRET: ${DEX_APPROVER_WEB_SECRET:?run make dex-env}
+      DEX_FLUXION_WEB_SECRET: ${DEX_FLUXION_WEB_SECRET:?run make dex-env}
+      DEX_BIDS_WEB_SECRET: ${DEX_BIDS_WEB_SECRET:?run make dex-env}
+      DEX_RECORD_HUB_WEB_SECRET: ${DEX_RECORD_HUB_WEB_SECRET:?run make dex-env}
+    ports:
+      - "127.0.0.1:5556:5556"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1:5558/healthz"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 3s
+    volumes:
+      - ./config.yaml:/etc/dex/config.yaml:ro
+      - dex-data:/var/dex
+
+volumes:
+  dex-data:

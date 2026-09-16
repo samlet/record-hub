@@ -11,4 +11,16 @@ run_gitleaks() {
 }
 
 run_gitleaks git /repo
-run_gitleaks dir /repo
+
+# Scan the current source tree, including untracked files, while respecting
+# .gitignore so intentionally local credential files are never copied into the
+# scanner workspace. Git history above remains the backstop for committed data.
+scan_tree=$(mktemp -d "$repository_root/.gitleaks-scan.XXXXXX")
+trap 'rm -rf "$scan_tree"' EXIT HUP INT TERM
+git -C "$repository_root" ls-files --cached --others --exclude-standard -z |
+  tar -C "$repository_root" --null -T - -cf - |
+  tar -C "$scan_tree" -xf -
+
+docker run --rm \
+  --volume "$scan_tree:/scan:ro" \
+  "$image" dir /scan --config /scan/.gitleaks.toml --no-banner --no-color --redact

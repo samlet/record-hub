@@ -1,4 +1,4 @@
-.PHONY: build test lint openapi-lint generate-clients dependency-scan sbom secret-scan mongo-up mongo-smoke mongo-down nats-up nats-init nats-smoke nats-permissions-smoke nats-down check ci clean
+.PHONY: build test lint openapi-lint generate-clients dependency-scan sbom secret-scan mongo-up mongo-smoke mongo-down nats-up nats-init nats-smoke nats-permissions-smoke nats-down dex-env dex-up dex-smoke dex-down check ci clean
 
 BUILD_DIR := build
 BINARY := $(BUILD_DIR)/record-hub
@@ -52,6 +52,18 @@ nats-permissions-smoke:
 
 nats-down:
 	docker compose -f deploy/local/nats/compose.yaml down
+
+dex-env:
+	./deploy/local/dex/initialize-env.sh
+
+dex-up:
+	docker compose --env-file deploy/local/dex/.env.local -f deploy/local/dex/compose.yaml up -d --wait dex
+
+dex-smoke:
+	set -a; . deploy/local/dex/.env.local; set +a; go run ./tools/dex-smoke
+
+dex-down:
+	docker compose --env-file deploy/local/dex/.env.local -f deploy/local/dex/compose.yaml down
 
 check: lint openapi-lint test build
 
