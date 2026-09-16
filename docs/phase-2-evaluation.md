@@ -107,4 +107,3 @@ Record Hub <──projection/events── Approver
 - **Schema 演进破坏长运行 workflow**：snapshot 固定 schema/record/source version，迁移不重写历史。
 - **实时流泄露数据**：只发授权后的 record delta/reference，不暴露 NATS credential 或原始领域 payload。
 - **审批跨引擎耦合**：采用服务 connector + stable operation ID，不共享 workflow history 或 worker 包。
-
