@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -51,7 +52,7 @@ func catalogTestService(t *testing.T) (*CatalogService, *memoryCatalogStore, *me
 	receipts := newMemoryCatalogReceipts()
 	auditWriter := &catalogAuditWriter{}
 	authorizer := identity.NewAuthorizer(catalogMembershipReader{membership: identity.WorkspaceMembership{TenantID: "tenant-1", WorkspaceID: "workspace-1", Identity: principal.IdentityKey(), Role: identity.RoleOwner, Status: identity.MembershipActive}})
-	rawSchema, err := bson.Marshal(bson.D{{Key: "type", Value: "object"}, {Key: "properties", Value: bson.D{{Key: "applicationId", Value: bson.D{{Key: "type", Value: "string"}}}, {Key: "status", Value: bson.D{{Key: "type", Value: "string"}}}}}})
+	rawSchema, err := bson.Marshal(bson.D{{Key: "$schema", Value: schema.Draft202012URI}, {Key: "type", Value: "object"}, {Key: "additionalProperties", Value: false}, {Key: "required", Value: bson.A{"applicationId", "status"}}, {Key: "properties", Value: bson.D{{Key: "applicationId", Value: bson.D{{Key: "type", Value: "string"}}}, {Key: "status", Value: bson.D{{Key: "type", Value: "string"}}}}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +65,9 @@ func validCatalogSourceInput() SourceCreateInput {
 }
 
 func validCatalogMappingInput() MappingCreateInput {
-	return MappingCreateInput{TenantID: "tenant-1", WorkspaceID: "workspace-1", MappingID: "application-summary", SourceID: "approver", EventType: "application.updated", EventVersion: 1, TargetTableID: "applications", TargetSchemaID: "schema.application", TargetSchemaVersion: 1, FieldMap: map[string]string{"applicationId": "payload.applicationId", "status": "payload.status"}, Fixture: MappingFixture{EventRef: "fixture/application-updated.json", SHA256: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}, RequestID: "request-mapping-1", IdempotencyKey: "mapping-1"}
+	document := []byte(`{"eventId":"00000000-0000-4000-8000-000000000001","kind":"event","eventType":"application.updated","schemaVersion":1,"sourceSystem":"approver","tenantId":"tenant-1","aggregateType":"Application","aggregateId":"application-1","aggregateVersion":1,"occurredAt":"2026-09-16T00:00:00Z","payload":{"applicationId":"application-1","status":"PENDING"},"metadata":{"workspaceId":"workspace-1"}}`)
+	_, hash, _ := canonicalFixture(document)
+	return MappingCreateInput{TenantID: "tenant-1", WorkspaceID: "workspace-1", MappingID: "application-summary", SourceID: "approver", EventType: "application.updated", EventVersion: 1, TargetTableID: "applications", TargetSchemaID: "schema.application", TargetSchemaVersion: 1, FieldMap: map[string]string{"applicationId": "payload.applicationId", "status": "payload.status"}, Fixture: MappingFixture{EventRef: "fixture/application-updated.json", SHA256: hash}, FixtureDocument: document, RequestID: "request-mapping-1", IdempotencyKey: "mapping-1"}
 }
 
 func TestCatalogCanonicalHashIsStableAndFieldMapOrderIndependent(t *testing.T) {
@@ -95,7 +98,7 @@ func TestCatalogCanonicalHashIsStableAndFieldMapOrderIndependent(t *testing.T) {
 }
 
 func TestCatalogPublishesSourceAndMappingWithExactPrerequisites(t *testing.T) {
-	service, _, _, principal := catalogTestService(t)
+	service, _, receipts, principal := catalogTestService(t)
 	source, replay, err := service.CreateSource(context.Background(), principal, validCatalogSourceInput())
 	if err != nil || replay || source.Status != CatalogStatusDraft || source.Revision != 1 {
 		t.Fatalf("create source = %#v replay=%v err=%v", source, replay, err)
@@ -108,9 +111,27 @@ func TestCatalogPublishesSourceAndMappingWithExactPrerequisites(t *testing.T) {
 	if err != nil || mapping.Status != CatalogStatusDraft {
 		t.Fatalf("create mapping = %#v err=%v", mapping, err)
 	}
+	receipt, err := receipts.Find(context.Background(), "tenant-1", "workspace-1", "mapping.create", "mapping-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	receiptJSON, err := json.Marshal(receipt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(receiptJSON), "PENDING") || strings.Contains(string(receiptJSON), "00000000-0000-4000-8000-000000000001") {
+		t.Fatalf("catalog receipt leaked fixture body: %s", receiptJSON)
+	}
 	publishedMapping, _, err := service.PublishMapping(context.Background(), principal, CatalogTransitionInput{TenantID: "tenant-1", WorkspaceID: "workspace-1", ID: mapping.ID, ExpectedRevision: 1, RequestID: "request-mapping-publish-1", IdempotencyKey: "mapping-publish-1"})
 	if err != nil || publishedMapping.Status != CatalogStatusPublished || publishedMapping.Revision != 2 {
 		t.Fatalf("publish mapping = %#v err=%v", publishedMapping, err)
+	}
+	encoded, err := json.Marshal(publishedMapping)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(encoded), "fixtureDocument") || strings.Contains(string(encoded), "PENDING") || strings.Contains(string(encoded), "00000000-0000-4000-8000-000000000001") {
+		t.Fatalf("mapping response leaked fixture body: %s", encoded)
 	}
 	revoked, _, err := service.RevokeMapping(context.Background(), principal, CatalogTransitionInput{TenantID: "tenant-1", WorkspaceID: "workspace-1", ID: mapping.ID, ExpectedRevision: 2, RequestID: "request-mapping-revoke-1", IdempotencyKey: "mapping-revoke-1"})
 	if err != nil || revoked.Status != CatalogStatusRevoked || revoked.Revision != 3 {
@@ -158,6 +179,73 @@ func TestCatalogRejectsTargetFieldsOutsidePublishedSchema(t *testing.T) {
 	_, _, err := service.PublishMapping(context.Background(), principal, CatalogTransitionInput{TenantID: "tenant-1", WorkspaceID: "workspace-1", ID: input.MappingID, ExpectedRevision: 1, RequestID: "request-mapping-publish-fields", IdempotencyKey: "mapping-publish-fields"})
 	if !errors.Is(err, ErrTargetFieldNotAllowed) {
 		t.Fatalf("unknown target field error = %v", err)
+	}
+}
+
+func TestCatalogFixtureHashAndPublishValidation(t *testing.T) {
+	service, _, _, principal := catalogTestService(t)
+	if _, _, err := service.CreateSource(context.Background(), principal, validCatalogSourceInput()); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := service.PublishSource(context.Background(), principal, CatalogTransitionInput{TenantID: "tenant-1", WorkspaceID: "workspace-1", ID: "approver", ExpectedRevision: 1, RequestID: "request-source-publish-fixtures", IdempotencyKey: "source-publish-fixtures"}); err != nil {
+		t.Fatal(err)
+	}
+
+	badHash := validCatalogMappingInput()
+	badHash.MappingID = "bad-hash"
+	badHash.IdempotencyKey = "mapping-bad-hash"
+	badHash.Fixture.SHA256 = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	if _, _, err := service.CreateMapping(context.Background(), principal, badHash); !errors.Is(err, ErrFixtureHashMismatch) {
+		t.Fatalf("fixture hash error = %v", err)
+	}
+
+	tests := []struct {
+		name    string
+		replace func(string) string
+	}{
+		{name: "workspace", replace: func(value string) string {
+			return strings.Replace(value, `"workspaceId":"workspace-1"`, `"workspaceId":"workspace-other"`, 1)
+		}},
+		{name: "source", replace: func(value string) string {
+			return strings.Replace(value, `"sourceSystem":"approver"`, `"sourceSystem":"fluxion"`, 1)
+		}},
+		{name: "missing-path", replace: func(value string) string { return strings.Replace(value, `"applicationId":"application-1",`, "", 1) }},
+		{name: "schema", replace: func(value string) string { return strings.Replace(value, `"status":"PENDING"`, `"status":42`, 1) }},
+	}
+	for index, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			input := validCatalogMappingInput()
+			input.MappingID = "invalid-fixture-" + strconv.Itoa(index)
+			input.IdempotencyKey = "mapping-invalid-fixture-" + strconv.Itoa(index)
+			input.RequestID = "request-invalid-fixture-" + strconv.Itoa(index)
+			input.Fixture.EventRef = "fixture/invalid-" + strconv.Itoa(index) + ".json"
+			input.FixtureDocument = []byte(test.replace(string(input.FixtureDocument)))
+			_, hash, err := canonicalFixture(input.FixtureDocument)
+			if err != nil {
+				t.Fatal(err)
+			}
+			input.Fixture.SHA256 = hash
+			mapping, _, err := service.CreateMapping(context.Background(), principal, input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, _, err = service.PublishMapping(context.Background(), principal, CatalogTransitionInput{TenantID: "tenant-1", WorkspaceID: "workspace-1", ID: mapping.ID, ExpectedRevision: 1, RequestID: "request-publish-invalid-" + strconv.Itoa(index), IdempotencyKey: "publish-invalid-" + strconv.Itoa(index)})
+			if !errors.Is(err, ErrFixtureInvalid) {
+				t.Fatalf("invalid fixture publish error = %v", err)
+			}
+		})
+	}
+}
+
+func TestFixtureJSONPointerResolution(t *testing.T) {
+	input := validCatalogMappingInput()
+	var document interface{}
+	if err := json.Unmarshal(input.FixtureDocument, &document); err != nil {
+		t.Fatal(err)
+	}
+	value, ok := resolveFixturePath(document, "/payload/applicationId")
+	if !ok || value != "application-1" {
+		t.Fatalf("JSON pointer value = %#v ok=%v", value, ok)
 	}
 }
 

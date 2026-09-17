@@ -58,7 +58,19 @@ func TestMongoCatalogRepositoryScopesIDsAndTransitions(t *testing.T) {
 		t.Fatalf("second source publish error = %v", err)
 	}
 
-	mapping := MappingRegistration{ID: "application-summary", TenantID: base.TenantID, WorkspaceID: base.WorkspaceID, SourceID: base.ID, EventType: base.EventType, EventVersion: base.EventVersion, TargetTableID: "applications", TargetSchemaID: "urn:record-hub:schema:application", TargetSchemaVersion: 1, FieldMap: map[string]string{"status": "payload.status"}, Fixture: MappingFixture{EventRef: "fixture/application.json", SHA256: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}, Status: CatalogStatusDraft, Revision: 1, CreatedBy: actor, UpdatedBy: actor, CreatedAt: now, UpdatedAt: now}
+	fixtureInput := validCatalogMappingInput()
+	fixture, err := prepareMappingFixtureDocument(base.TenantID, base.WorkspaceID, fixtureInput.Fixture, fixtureInput.FixtureDocument, actor, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := repository.PutFixture(ctx, fixture); err != nil {
+		t.Fatal(err)
+	}
+	storedFixture, err := repository.GetFixture(ctx, fixture.TenantID, fixture.WorkspaceID, fixture.EventRef, fixture.SHA256)
+	if err != nil || string(storedFixture.Document) != string(fixture.Document) {
+		t.Fatalf("stored fixture = %#v err=%v", storedFixture, err)
+	}
+	mapping := MappingRegistration{ID: "application-summary", TenantID: base.TenantID, WorkspaceID: base.WorkspaceID, SourceID: base.ID, EventType: base.EventType, EventVersion: base.EventVersion, TargetTableID: "applications", TargetSchemaID: "urn:record-hub:schema:application", TargetSchemaVersion: 1, FieldMap: map[string]string{"status": "payload.status"}, Fixture: fixtureInput.Fixture, Status: CatalogStatusDraft, Revision: 1, CreatedBy: actor, UpdatedBy: actor, CreatedAt: now, UpdatedAt: now}
 	mapping.CanonicalHash, err = mapping.ComputeCanonicalHash()
 	if err != nil {
 		t.Fatal(err)

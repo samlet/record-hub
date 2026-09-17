@@ -2168,11 +2168,12 @@ components:
           maxLength: 512
         sha256:
           type: string
+          description: SHA-256 of the Record Hub canonical JSON fixture document, including the sha256 prefix.
           pattern: "^sha256:[0-9a-f]{64}$"
     MappingRegistrationCreateRequest:
       type: object
       additionalProperties: false
-      required: [tenantId, workspaceId, mappingId, sourceId, eventType, eventVersion, targetTableId, targetSchemaId, targetSchemaVersion, fieldMap, fixture]
+      required: [tenantId, workspaceId, mappingId, sourceId, eventType, eventVersion, targetTableId, targetSchemaId, targetSchemaVersion, fieldMap, fixture, fixtureDocument]
       properties:
         tenantId:
           type: string
@@ -2212,9 +2213,13 @@ components:
           maxProperties: 128
           additionalProperties:
             type: string
-            pattern: "^(?:/|payload\\.)[A-Za-z0-9_./-]{1,255}$"
+            pattern: "^(?:/|payload\\.)[A-Za-z0-9_./~-]{1,255}$"
         fixture:
           $ref: "#/components/schemas/MappingFixture"
+        fixtureDocument:
+          type: object
+          description: A redacted Event Envelope v1 sample. It is stored separately and never returned by catalog APIs.
+          additionalProperties: true
     MappingRegistration:
       type: object
       additionalProperties: false
@@ -2258,7 +2263,7 @@ components:
           maxProperties: 128
           additionalProperties:
             type: string
-            pattern: "^(?:/|payload\\.)[A-Za-z0-9_./-]{1,255}$"
+            pattern: "^(?:/|payload\\.)[A-Za-z0-9_./~-]{1,255}$"
         fixture:
           $ref: "#/components/schemas/MappingFixture"
         canonicalHash:

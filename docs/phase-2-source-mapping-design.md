@@ -45,14 +45,16 @@ Mapping 绑定 source event 到一个 projection table/schema：
   "targetSchemaVersion": 1,
   "fieldMap": {"name":"payload.name", "status":"payload.status"},
   "fixture": {"eventRef":"fixtures/fluxion/project-summary-v1.json", "sha256":"sha256:..."},
+  "fixtureDocument": {"eventId":"...", "kind":"event", "payload":{"name":"..."}},
   "canonicalHash": "sha256:...",
   "status": "DRAFT"
 }
 ```
 
 `fieldMap` 仅允许预声明的 JSON Pointer/path，最多 128 个字段；禁止表达式、脚本、Mongo
-query、网络访问和原始 payload 透传。fixture 是脱敏、大小有界的 envelope+payload 样本，
-用于发布前验证；生产日志不能复制 fixture 正文。
+query、网络访问和原始 payload 透传。创建 mapping 时必须提交脱敏、大小有界的
+`fixtureDocument`；服务将其 canonicalize 后校验 `fixture.sha256`，存入独立 collection，响应和
+生产日志都不能复制正文。
 
 ## 生命周期与 API
 
@@ -88,14 +90,19 @@ eventVersion)` 的精确索引。事件没有精确 mapping、mapping 已撤销�
 
 ## 当前实现边界
 
-本批已经实现 source/mapping 严格模型、workspace-scoped Mongo unique/index、OWNER mutation、
+当前已经实现 source/mapping 严格模型、workspace-scoped Mongo unique/index、OWNER mutation、
 viewer read、optimistic revision、幂等回执、审计、canonical hash，以及 source/event version、
 published target schema 和目标字段 allowlist 的发布校验。HTTP 路由和 OpenAPI 与 server runtime
 已经接通。
 
-fixture 当前只登记有界引用与 `sha256`，尚未从受控 fixture store 取回正文并执行 envelope/schema
-验证；published mapping 也尚未组装为 generation 并切换现有 JetStream projector。现有硬编码 v1
-summary handlers 因此仍是唯一运行时数据路径。这两项完成前 P2-1-003 保持 `PARTIAL`。
+fixture 正文已采用独立 Mongo collection 受控存储，mapping 只公开 `eventRef` 和 canonical JSON
+`sha256`。发布时会重新校验 hash、Event Envelope v1、source/type/version、tenant/workspace
+resolution、JSON Pointer/path 存在性，以及映射结果的目标 JSON Schema；fixture 正文不会进入
+mapping/list 响应、receipt 或 audit。
+
+published mapping 尚未组装为 generation 并切换现有 JetStream projector，现有硬编码 v1 summary
+handlers 因此仍是唯一运行时数据路径。完成 generation/live/recovery 证据前 P2-1-003 保持
+`PARTIAL`。
 
 本批验收命令：
 

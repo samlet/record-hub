@@ -62,6 +62,7 @@ type mappingRequest struct {
 	TargetSchemaVersion int64             `json:"targetSchemaVersion"`
 	FieldMap            map[string]string `json:"fieldMap"`
 	Fixture             MappingFixture    `json:"fixture"`
+	FixtureDocument     json.RawMessage   `json:"fixtureDocument"`
 }
 
 type transitionRequest struct {
@@ -151,7 +152,7 @@ func (handler *CatalogHTTPHandler) createMapping(writer http.ResponseWriter, req
 		writeCatalogError(writer, http.StatusNotImplemented, "CATALOG_API_UNAVAILABLE", "The projection catalog API is not configured.")
 		return
 	}
-	mapping, _, err := handler.service.CreateMapping(request.Context(), principal, MappingCreateInput{TenantID: input.TenantID, WorkspaceID: input.WorkspaceID, MappingID: input.MappingID, SourceID: input.SourceID, EventType: input.EventType, EventVersion: input.EventVersion, TargetTableID: input.TargetTableID, TargetSchemaID: input.TargetSchemaID, TargetSchemaVersion: input.TargetSchemaVersion, FieldMap: input.FieldMap, Fixture: input.Fixture, RequestID: request.Header.Get("X-Request-ID"), IdempotencyKey: request.Header.Get("Idempotency-Key")})
+	mapping, _, err := handler.service.CreateMapping(request.Context(), principal, MappingCreateInput{TenantID: input.TenantID, WorkspaceID: input.WorkspaceID, MappingID: input.MappingID, SourceID: input.SourceID, EventType: input.EventType, EventVersion: input.EventVersion, TargetTableID: input.TargetTableID, TargetSchemaID: input.TargetSchemaID, TargetSchemaVersion: input.TargetSchemaVersion, FieldMap: input.FieldMap, Fixture: input.Fixture, FixtureDocument: input.FixtureDocument, RequestID: request.Header.Get("X-Request-ID"), IdempotencyKey: request.Header.Get("Idempotency-Key")})
 	if err != nil {
 		writeCatalogDomainError(writer, err)
 		return
@@ -328,6 +329,12 @@ func writeCatalogDomainError(writer http.ResponseWriter, err error) {
 		writeCatalogError(writer, http.StatusConflict, "TARGET_FIELD_NOT_ALLOWED", "Every mapped target field must be declared by the published target schema.")
 	case errors.Is(err, ErrCanonicalHashMismatch):
 		writeCatalogError(writer, http.StatusConflict, "CANONICAL_HASH_MISMATCH", "The mapping canonical hash does not match its content.")
+	case errors.Is(err, ErrFixtureNotFound):
+		writeCatalogError(writer, http.StatusConflict, "FIXTURE_NOT_FOUND", "The mapping fixture document was not found.")
+	case errors.Is(err, ErrFixtureHashMismatch):
+		writeCatalogError(writer, http.StatusBadRequest, "FIXTURE_HASH_MISMATCH", "The fixture document does not match fixture.sha256.")
+	case errors.Is(err, ErrFixtureInvalid):
+		writeCatalogError(writer, http.StatusBadRequest, "INVALID_FIXTURE", "The fixture document does not satisfy the mapping contract.")
 	case errors.Is(err, ErrCatalogInvalid):
 		writeCatalogError(writer, http.StatusBadRequest, "INVALID_REQUEST", "The catalog registration is invalid.")
 	case errors.Is(err, ErrCatalogUnavailable):

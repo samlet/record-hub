@@ -52,6 +52,9 @@ var (
 	ErrTargetSchemaNotPublished   = errors.New("target schema is not published")
 	ErrTargetFieldNotAllowed      = errors.New("mapping target field is not declared by the target schema")
 	ErrCanonicalHashMismatch      = errors.New("mapping canonical hash mismatch")
+	ErrFixtureNotFound            = errors.New("mapping fixture document not found")
+	ErrFixtureHashMismatch        = errors.New("mapping fixture hash mismatch")
+	ErrFixtureInvalid             = errors.New("mapping fixture is invalid")
 	ErrIdempotencyKeyMissing      = errors.New("idempotency key is required")
 	ErrRequestIDMissing           = errors.New("request ID is required")
 	ErrCatalogIdempotencyConflict = errors.New("idempotency key was used with different input")
@@ -70,7 +73,7 @@ const (
 
 var (
 	catalogIDPattern  = regexp.MustCompile(`^[a-z][a-z0-9.-]{0,127}$`)
-	pathPattern       = regexp.MustCompile(`^(?:/|payload\.)[A-Za-z0-9_./-]{1,255}$`)
+	pathPattern       = regexp.MustCompile(`^(?:/|payload\.)[A-Za-z0-9_./~-]{1,255}$`)
 	targetPathPattern = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_.-]{0,127}$`)
 	sha256Pattern     = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
 )
@@ -255,6 +258,11 @@ type MappingStore interface {
 	TransitionMapping(context.Context, string, string, string, CatalogStatus, identity.IdentityKey, *time.Time, int64) (MappingRegistration, error)
 }
 
+type MappingFixtureStore interface {
+	PutFixture(context.Context, MappingFixtureDocument) error
+	GetFixture(context.Context, string, string, string, string) (MappingFixtureDocument, error)
+}
+
 type CatalogSchemaReader interface {
 	Get(context.Context, string, string, int64) (schema.Definition, error)
 }
@@ -311,6 +319,7 @@ type MappingCreateInput struct {
 	TargetSchemaVersion int64
 	FieldMap            map[string]string
 	Fixture             MappingFixture
+	FixtureDocument     []byte
 	RequestID           string
 	IdempotencyKey      string
 }
@@ -318,6 +327,7 @@ type MappingCreateInput struct {
 type CatalogService struct {
 	sources     SourceStore
 	mappings    MappingStore
+	fixtures    MappingFixtureStore
 	schemas     CatalogSchemaReader
 	authorizer  *identity.Authorizer
 	receipts    CatalogReceiptStore
@@ -325,8 +335,14 @@ type CatalogService struct {
 	clock       func() time.Time
 }
 
-func NewCatalogService(sources SourceStore, mappings MappingStore, schemas CatalogSchemaReader, authorizer *identity.Authorizer, receipts CatalogReceiptStore, auditWriter audit.Writer) *CatalogService {
-	return &CatalogService{sources: sources, mappings: mappings, schemas: schemas, authorizer: authorizer, receipts: receipts, auditWriter: auditWriter, clock: time.Now}
+func NewCatalogService(sources SourceStore, mappings MappingStore, schemas CatalogSchemaReader, authorizer *identity.Authorizer, receipts CatalogReceiptStore, auditWriter audit.Writer, fixtureStores ...MappingFixtureStore) *CatalogService {
+	var fixtures MappingFixtureStore
+	if len(fixtureStores) > 0 {
+		fixtures = fixtureStores[0]
+	} else if inferred, ok := sources.(MappingFixtureStore); ok {
+		fixtures = inferred
+	}
+	return &CatalogService{sources: sources, mappings: mappings, fixtures: fixtures, schemas: schemas, authorizer: authorizer, receipts: receipts, auditWriter: auditWriter, clock: time.Now}
 }
 
 func (service *CatalogService) CreateSource(ctx context.Context, principal identity.Principal, input SourceCreateInput) (SourceRegistration, bool, error) {
@@ -475,7 +491,12 @@ func (service *CatalogService) CreateMapping(ctx context.Context, principal iden
 		return MappingRegistration{}, false, err
 	}
 	now := service.clock().UTC()
-	mapping := MappingRegistration{ID: strings.TrimSpace(input.MappingID), TenantID: strings.TrimSpace(input.TenantID), WorkspaceID: strings.TrimSpace(input.WorkspaceID), SourceID: strings.TrimSpace(input.SourceID), EventType: strings.TrimSpace(input.EventType), EventVersion: input.EventVersion, TargetTableID: strings.TrimSpace(input.TargetTableID), TargetSchemaID: strings.TrimSpace(input.TargetSchemaID), TargetSchemaVersion: input.TargetSchemaVersion, FieldMap: input.FieldMap, Fixture: input.Fixture, Status: CatalogStatusDraft, Revision: 1, CreatedBy: principal.IdentityKey(), UpdatedBy: principal.IdentityKey(), CreatedAt: now, UpdatedAt: now}
+	fixtureMetadata := MappingFixture{EventRef: strings.TrimSpace(input.Fixture.EventRef), SHA256: strings.TrimSpace(input.Fixture.SHA256)}
+	fixtureDocument, err := prepareMappingFixtureDocument(input.TenantID, input.WorkspaceID, fixtureMetadata, input.FixtureDocument, principal.IdentityKey(), now)
+	if err != nil {
+		return MappingRegistration{}, false, err
+	}
+	mapping := MappingRegistration{ID: strings.TrimSpace(input.MappingID), TenantID: strings.TrimSpace(input.TenantID), WorkspaceID: strings.TrimSpace(input.WorkspaceID), SourceID: strings.TrimSpace(input.SourceID), EventType: strings.TrimSpace(input.EventType), EventVersion: input.EventVersion, TargetTableID: strings.TrimSpace(input.TargetTableID), TargetSchemaID: strings.TrimSpace(input.TargetSchemaID), TargetSchemaVersion: input.TargetSchemaVersion, FieldMap: input.FieldMap, Fixture: fixtureMetadata, Status: CatalogStatusDraft, Revision: 1, CreatedBy: principal.IdentityKey(), UpdatedBy: principal.IdentityKey(), CreatedAt: now, UpdatedAt: now}
 	hash, err := mapping.ComputeCanonicalHash()
 	if err != nil {
 		return MappingRegistration{}, false, err
@@ -495,6 +516,9 @@ func (service *CatalogService) CreateMapping(ctx context.Context, principal iden
 	}
 	var result MappingRegistration
 	err = service.inTransaction(ctx, func(tx context.Context) error {
+		if err := service.fixtures.PutFixture(tx, fixtureDocument); err != nil {
+			return err
+		}
 		if err := service.mappings.CreateMapping(tx, mapping); err != nil {
 			return err
 		}
@@ -580,6 +604,13 @@ func (service *CatalogService) transitionMapping(ctx context.Context, principal 
 		if err := validateMappingTargetFields(target, mapping.FieldMap); err != nil {
 			return MappingRegistration{}, false, err
 		}
+		fixture, fixtureErr := service.fixtures.GetFixture(ctx, mapping.TenantID, mapping.WorkspaceID, mapping.Fixture.EventRef, mapping.Fixture.SHA256)
+		if fixtureErr != nil {
+			return MappingRegistration{}, false, fixtureErr
+		}
+		if err := validateMappingFixture(source, mapping, target, fixture.Document); err != nil {
+			return MappingRegistration{}, false, err
+		}
 		hash, hashErr := mapping.ComputeCanonicalHash()
 		if hashErr != nil {
 			return MappingRegistration{}, false, hashErr
@@ -633,7 +664,7 @@ func validateMappingTargetFields(definition schema.Definition, fieldMap map[stri
 }
 
 func (service *CatalogService) ready() error {
-	if service == nil || service.sources == nil || service.mappings == nil || service.schemas == nil || service.authorizer == nil || service.receipts == nil || service.auditWriter == nil || service.clock == nil {
+	if service == nil || service.sources == nil || service.mappings == nil || service.fixtures == nil || service.schemas == nil || service.authorizer == nil || service.receipts == nil || service.auditWriter == nil || service.clock == nil {
 		return ErrCatalogUnavailable
 	}
 	return nil
@@ -694,16 +725,18 @@ func (service *CatalogService) mappingReceipt(ctx context.Context, tenantID, wor
 type MongoCatalogRepository struct {
 	sources  *mongo.Collection
 	mappings *mongo.Collection
+	fixtures *mongo.Collection
 }
 
 const (
 	sourceCollectionName         = "projection_sources"
 	mappingCollectionName        = "projection_mappings"
+	fixtureCollectionName        = "projection_mapping_fixtures"
 	catalogReceiptCollectionName = "projection_catalog_receipts"
 )
 
 func NewMongoCatalogRepository(database *mongo.Database) *MongoCatalogRepository {
-	return &MongoCatalogRepository{sources: database.Collection(sourceCollectionName), mappings: database.Collection(mappingCollectionName)}
+	return &MongoCatalogRepository{sources: database.Collection(sourceCollectionName), mappings: database.Collection(mappingCollectionName), fixtures: database.Collection(fixtureCollectionName)}
 }
 
 func (repository *MongoCatalogRepository) WithTransaction(ctx context.Context, fn func(context.Context) error) error {
@@ -720,7 +753,7 @@ func (repository *MongoCatalogRepository) WithTransaction(ctx context.Context, f
 }
 
 func (repository *MongoCatalogRepository) EnsureIndexes(ctx context.Context) error {
-	if repository == nil || repository.sources == nil || repository.mappings == nil {
+	if repository == nil || repository.sources == nil || repository.mappings == nil || repository.fixtures == nil {
 		return ErrCatalogUnavailable
 	}
 	if _, err := repository.sources.Indexes().CreateMany(ctx, []mongo.IndexModel{{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "workspaceId", Value: 1}, {Key: "sourceId", Value: 1}}, Options: options.Index().SetName("projection_source_scope_id_unique").SetUnique(true)}, {Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "workspaceId", Value: 1}, {Key: "status", Value: 1}, {Key: "updatedAt", Value: -1}}, Options: options.Index().SetName("projection_source_scope_status_updated")}}); err != nil {
@@ -728,6 +761,9 @@ func (repository *MongoCatalogRepository) EnsureIndexes(ctx context.Context) err
 	}
 	if _, err := repository.mappings.Indexes().CreateMany(ctx, []mongo.IndexModel{{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "workspaceId", Value: 1}, {Key: "mappingId", Value: 1}}, Options: options.Index().SetName("projection_mapping_scope_id_unique").SetUnique(true)}, {Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "workspaceId", Value: 1}, {Key: "sourceId", Value: 1}, {Key: "eventType", Value: 1}, {Key: "eventVersion", Value: 1}, {Key: "status", Value: 1}}, Options: options.Index().SetName("projection_mapping_event_lookup")}}); err != nil {
 		return fmt.Errorf("create projection mapping indexes: %w", err)
+	}
+	if err := repository.ensureFixtureIndexes(ctx); err != nil {
+		return err
 	}
 	return nil
 }

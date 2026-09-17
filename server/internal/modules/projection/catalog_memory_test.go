@@ -13,10 +13,11 @@ type memoryCatalogStore struct {
 	mu       sync.Mutex
 	sources  map[string]SourceRegistration
 	mappings map[string]MappingRegistration
+	fixtures map[string]MappingFixtureDocument
 }
 
 func newMemoryCatalogStore() *memoryCatalogStore {
-	return &memoryCatalogStore{sources: map[string]SourceRegistration{}, mappings: map[string]MappingRegistration{}}
+	return &memoryCatalogStore{sources: map[string]SourceRegistration{}, mappings: map[string]MappingRegistration{}, fixtures: map[string]MappingFixtureDocument{}}
 }
 
 func catalogKey(tenant, workspace, id string) string {
@@ -149,6 +150,30 @@ func (store *memoryCatalogStore) TransitionMapping(_ context.Context, tenant, wo
 	}
 	store.mappings[key] = value
 	return value, nil
+}
+
+func (store *memoryCatalogStore) PutFixture(_ context.Context, fixture MappingFixtureDocument) error {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	key := catalogKey(fixture.TenantID, fixture.WorkspaceID, fixture.EventRef+"\x00"+fixture.SHA256)
+	if existing, ok := store.fixtures[key]; ok {
+		if string(existing.Document) == string(fixture.Document) {
+			return nil
+		}
+		return ErrFixtureHashMismatch
+	}
+	store.fixtures[key] = fixture
+	return nil
+}
+
+func (store *memoryCatalogStore) GetFixture(_ context.Context, tenantID, workspaceID, eventRef, hash string) (MappingFixtureDocument, error) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	fixture, ok := store.fixtures[catalogKey(tenantID, workspaceID, eventRef+"\x00"+hash)]
+	if !ok {
+		return MappingFixtureDocument{}, ErrFixtureNotFound
+	}
+	return fixture, nil
 }
 
 type memoryCatalogReceipts struct {
