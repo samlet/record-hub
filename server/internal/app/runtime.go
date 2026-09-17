@@ -33,6 +33,7 @@ type runtimeDependencies struct {
 	catalog     http.Handler
 	binding     http.Handler
 	operations  http.Handler
+	rebuild     http.Handler
 	workers     []Service
 	webVerifier identity.TokenVerifier
 	closer      Service
@@ -95,6 +96,8 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 	schemaRepo := schema.NewMongoRepository(database)
 	auditWriter := audit.NewMongoWriter(database)
 	catalogRepo := projection.NewMongoCatalogRepository(database)
+	rebuildRepo := projection.NewMongoRebuildRepository(database)
+	rebuildReceipts := projection.NewMongoRebuildReceiptStore(database)
 	catalogReceipts := projection.NewMongoCatalogReceiptStore(database)
 	schemaReceipts := schema.NewMongoReceiptStore(database)
 	migrationReceipts := schema.NewMongoMigrationPlanReceiptStore(database)
@@ -123,11 +126,15 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 	}
 	bindingService := binding.NewService(binding.NewMongoRecordReader(recordRepo), snapshotStore, authorizer, machineAuthorizer)
 	operationsService := projection.NewOperationsService(projection.NewMongoProjectionRepository(database), authorizer).WithMetrics(metrics)
+	generations := projection.NewMappingGenerationRegistry()
+	generationBuilder := projection.NewMappingGenerationBuilder(catalogRepo, schemaRepo)
+	rebuildService := projection.NewProjectionRebuildService(rebuildRepo, generationBuilder, generations, authorizer, rebuildReceipts, auditWriter)
 	deps.records = records.NewHTTPHandler(recordService)
 	deps.schema = schema.NewHTTPHandler(schemaService, migrationService)
 	deps.catalog = projection.NewCatalogHTTPHandler(catalogService)
 	deps.binding = binding.NewHTTPHandler(bindingService)
 	deps.operations = projection.NewOperationsHTTPHandler(operationsService)
+	deps.rebuild = projection.NewProjectionRebuildHTTPHandler(rebuildService)
 
 	if strings.TrimSpace(cfg.NATSURL) == "" {
 		if cfg.Mode == config.ModeWorker || cfg.Mode == config.ModeAll {
@@ -143,8 +150,6 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 	}
 	deps.natsClient = natsClient
 	deps.checks[health.NATS] = health.CheckFunc(natsClient.Check)
-	generations := projection.NewMappingGenerationRegistry()
-	generationBuilder := projection.NewMappingGenerationBuilder(catalogRepo, schemaRepo)
 	generationRefresher := projection.NewMappingGenerationRefresher(generationBuilder, generations, 5*time.Second, logger)
 	refreshCtx, refreshCancel := context.WithTimeout(context.Background(), 8*time.Second)
 	_, err = generationRefresher.Refresh(refreshCtx)
@@ -175,6 +180,7 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 		return nil, fmt.Errorf("configure projection DLQ: %w", err)
 	}
 	deps.workers = append(deps.workers, generationRefresher)
+	deps.workers = append(deps.workers, projection.NewProjectionRebuildWorker(rebuildService, logger))
 	for _, durable := range []string{projection.ApproverProjectionConsumer, projection.FluxionProjectionConsumer, projection.BidsProjectionConsumer} {
 		runner, runnerErr := projection.NewPullRunner(natsClient, projection.PullRunnerConfig{Stream: "DOMAIN_EVENTS", Durable: durable, BatchSize: 16, FetchTimeout: time.Second}, projector.HandleMessage)
 		if runnerErr != nil {
@@ -226,6 +232,12 @@ func ensureMongoIndexes(database *mongo.Database) error {
 		return err
 	}
 	if err := projection.NewMongoCatalogReceiptStore(database).EnsureIndexes(ctx); err != nil {
+		return err
+	}
+	if err := projection.NewMongoRebuildRepository(database).EnsureIndexes(ctx); err != nil {
+		return err
+	}
+	if err := projection.NewMongoRebuildReceiptStore(database).EnsureIndexes(ctx); err != nil {
 		return err
 	}
 	return nil

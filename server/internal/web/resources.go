@@ -36,9 +36,17 @@ func NewResourceRouter(recordsHandler, schemaHandler http.Handler, catalogHandle
 // Mongo repositories and membership policy remain owned by their modules.
 func NewConsoleRouter(recordsHandler, schemaHandler, operationsHandler http.Handler, catalogHandlers ...http.Handler) http.Handler {
 	resources := NewResourceRouter(recordsHandler, schemaHandler, catalogHandlers...)
+	var rebuildHandler http.Handler
+	if len(catalogHandlers) > 1 {
+		rebuildHandler = catalogHandlers[1]
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/operations/events" || r.URL.Path == "/api/v1/operations/events" {
 			serveResourceHandler(w, r, operationsHandler)
+			return
+		}
+		if r.URL.Path == "/api/v1/projection/rebuilds" || strings.HasPrefix(r.URL.Path, "/api/v1/projection/rebuilds/") {
+			serveResourceHandler(w, r, rebuildHandler)
 			return
 		}
 		resources.ServeHTTP(w, r)

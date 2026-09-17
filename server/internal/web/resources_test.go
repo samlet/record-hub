@@ -72,7 +72,7 @@ func TestConsoleRouterDispatchesOperationsPageWithoutShadowingResources(t *testi
 			w.WriteHeader(status)
 		})
 	}
-	router := NewConsoleRouter(marker("records", http.StatusAccepted), marker("schemas", http.StatusCreated), marker("operations", http.StatusNoContent))
+	router := NewConsoleRouter(marker("records", http.StatusAccepted), marker("schemas", http.StatusCreated), marker("operations", http.StatusNoContent), marker("catalog", http.StatusNoContent), marker("rebuild", http.StatusResetContent))
 	for _, test := range []struct {
 		path       string
 		wantHeader string
@@ -82,6 +82,7 @@ func TestConsoleRouterDispatchesOperationsPageWithoutShadowingResources(t *testi
 		{path: "/api/v1/operations/events", wantHeader: "operations", wantStatus: http.StatusNoContent},
 		{path: "/api/v1/workspaces", wantHeader: "records", wantStatus: http.StatusAccepted},
 		{path: "/api/v1/schemas", wantHeader: "schemas", wantStatus: http.StatusCreated},
+		{path: "/api/v1/projection/rebuilds", wantHeader: "rebuild", wantStatus: http.StatusResetContent},
 	} {
 		t.Run(test.path, func(t *testing.T) {
 			response := httptest.NewRecorder()

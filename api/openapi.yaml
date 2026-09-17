@@ -70,6 +70,113 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ReadinessResponse"
+  /api/v1/projection/rebuilds:
+    post:
+      tags: [Operations]
+      operationId: startProjectionRebuild
+      summary: Start an owner-authorized projection generation rebuild
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/RequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectionRebuildScopeRequest"
+      responses:
+        "202":
+          description: Rebuild accepted for the projection worker.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectionRebuildOperation"
+        "200":
+          description: Existing operation returned for an idempotent replay.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectionRebuildOperation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /api/v1/projection/rebuilds/{operationID}:
+    get:
+      tags: [Operations]
+      operationId: getProjectionRebuild
+      summary: Read a projection rebuild operation
+      parameters:
+        - name: operationID
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^rebuild-[a-f0-9]{24}$"
+        - $ref: "#/components/parameters/TenantIdQuery"
+        - $ref: "#/components/parameters/WorkspaceIdQuery"
+      responses:
+        "200":
+          description: Rebuild operation status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectionRebuildOperation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/projection/rebuilds/{operationID}/cancel:
+    post:
+      tags: [Operations]
+      operationId: cancelProjectionRebuild
+      summary: Request cancellation of a projection rebuild
+      parameters:
+        - name: operationID
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^rebuild-[a-f0-9]{24}$"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/RequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectionRebuildScopeRequest"
+      responses:
+        "202":
+          description: Cancellation accepted or requested.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectionRebuildOperation"
+        "200":
+          description: Existing cancellation returned for an idempotent replay.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectionRebuildOperation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
   /api/v1/bindings/snapshots:
     post:
       tags: [Bindings]
@@ -1115,6 +1222,12 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
+    ServiceUnavailable:
+      description: The projection rebuild service is not configured or ready.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
   parameters:
     TenantIdQuery:
       name: tenantId
@@ -1351,6 +1464,65 @@ components:
         generatedAt:
           type: string
           format: date-time
+    ProjectionRebuildScopeRequest:
+      type: object
+      additionalProperties: false
+      required: [tenantId, workspaceId]
+      properties:
+        tenantId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        workspaceId:
+          type: string
+          minLength: 1
+          maxLength: 128
+    ProjectionRebuildOperation:
+      type: object
+      additionalProperties: false
+      required: [operationId, tenantId, workspaceId, status, revision, mappingCount, createdBy, updatedBy, createdAt, updatedAt]
+      properties:
+        operationId:
+          type: string
+          pattern: "^rebuild-[a-f0-9]{24}$"
+        tenantId:
+          type: string
+        workspaceId:
+          type: string
+        status:
+          type: string
+          enum: [ACCEPTED, RUNNING, CANCEL_REQUESTED, CANCELLED, SUCCEEDED, FAILED]
+        revision:
+          type: integer
+          minimum: 1
+        generationBefore:
+          type: string
+        stagingGenerationId:
+          type: string
+        activeGenerationId:
+          type: string
+        mappingCount:
+          type: integer
+          minimum: 0
+        createdBy:
+          $ref: "#/components/schemas/IdentityKey"
+        updatedBy:
+          $ref: "#/components/schemas/IdentityKey"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        startedAt:
+          type: string
+          format: date-time
+        finishedAt:
+          type: string
+          format: date-time
+        safeError:
+          type: string
+          maxLength: 512
     InboxOperationsSummary:
       type: object
       additionalProperties: false
