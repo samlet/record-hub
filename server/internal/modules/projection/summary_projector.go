@@ -28,6 +28,7 @@ type SummaryProjector struct {
 	mappings          *MappingGenerationRegistry
 	inbox             InboxRepository
 	projection        ProjectionRepository
+	archive           ProjectionEventArchiveWriter
 	workspaceID       string
 	workspaceByTenant map[string]string
 	projectorKey      identity.IdentityKey
@@ -91,6 +92,16 @@ func (projector *SummaryProjector) WithMappingGenerations(registry *MappingGener
 	return projector
 }
 
+// WithEventArchive enables durable raw-event retention for future rebuilds.
+// It is optional so deterministic projector tests and embedded adapters can
+// keep using the small Inbox/Projection interfaces without Mongo.
+func (projector *SummaryProjector) WithEventArchive(archive ProjectionEventArchiveWriter) *SummaryProjector {
+	if projector != nil {
+		projector.archive = archive
+	}
+	return projector
+}
+
 // HandleMessage is suitable for PullRunner. Deterministic contract or scope
 // failures are classified for bounded retry/DLQ; Mongo/NATS errors remain
 // transient and are NAKed by the runner.
@@ -121,6 +132,9 @@ func (projector *SummaryProjector) Handle(ctx context.Context, subject string, r
 	schemaID := ""
 	schemaVersion := int64(1)
 	recordVersion := envelope.AggregateVersion
+	now := projector.now().UTC()
+	payloadHash := sha256.Sum256(raw)
+	archived := false
 	var data bson.Raw
 	var runtimeMapping *RuntimeMapping
 	if projector.mappings != nil {
@@ -140,6 +154,20 @@ func (projector *SummaryProjector) Handle(ctx context.Context, subject string, r
 		tableID = runtimeMapping.TargetTableID
 		schemaID = runtimeMapping.TargetSchemaID
 		schemaVersion = runtimeMapping.TargetSchemaVersion
+		if projector.archive != nil {
+			consumer := consumerForSource(envelope.SourceSystem)
+			if consumer != "" {
+				if err := projector.archive.Archive(ctx, ProjectionEventArchiveEntry{
+					EventID: envelope.EventID, Consumer: consumer, Subject: subject, TenantID: envelope.TenantID, WorkspaceID: workspaceID,
+					SourceSystem: envelope.SourceSystem, EventType: envelope.EventType, SchemaVersion: envelope.SchemaVersion,
+					AggregateType: envelope.AggregateType, AggregateID: envelope.AggregateID, AggregateVersion: envelope.AggregateVersion,
+					OccurredAt: envelope.OccurredAt.UTC(), ReceivedAt: now, PayloadHash: "sha256:" + hex.EncodeToString(payloadHash[:]), Raw: append([]byte(nil), raw...),
+				}); err != nil {
+					return TransientError(err, "archive projection event failed")
+				}
+				archived = true
+			}
+		}
 		mapped, err := runtimeMapping.Map(raw)
 		if err != nil {
 			return DeterministicError(err, "projection mapping rejected")
@@ -175,12 +203,20 @@ func (projector *SummaryProjector) Handle(ctx context.Context, subject string, r
 		tableID = projectionTableID(envelope.SourceSystem)
 		schemaID = summarySchemaID(envelope.SourceSystem)
 	}
-	now := projector.now().UTC()
 	consumer := consumerForSource(envelope.SourceSystem)
 	if consumer == "" {
 		return DeterministicError(errors.New("summary source is not registered"), "summary source rejected")
 	}
-	payloadHash := sha256.Sum256(raw)
+	if projector.archive != nil && !archived {
+		if err := projector.archive.Archive(ctx, ProjectionEventArchiveEntry{
+			EventID: envelope.EventID, Consumer: consumer, Subject: subject, TenantID: envelope.TenantID, WorkspaceID: workspaceID,
+			SourceSystem: envelope.SourceSystem, EventType: envelope.EventType, SchemaVersion: envelope.SchemaVersion,
+			AggregateType: envelope.AggregateType, AggregateID: envelope.AggregateID, AggregateVersion: envelope.AggregateVersion,
+			OccurredAt: envelope.OccurredAt.UTC(), ReceivedAt: now, PayloadHash: "sha256:" + hex.EncodeToString(payloadHash[:]), Raw: append([]byte(nil), raw...),
+		}); err != nil {
+			return TransientError(err, "archive projection event failed")
+		}
+	}
 	claim, err := projector.inbox.Claim(ctx, InboxClaim{
 		EventID: envelope.EventID, Consumer: consumer, Subject: subject, TenantID: envelope.TenantID, WorkspaceID: workspaceID,
 		Payload: raw, ReceivedAt: now,

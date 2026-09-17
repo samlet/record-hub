@@ -85,6 +85,28 @@ type ProjectionState struct {
 	Status      string    `bson:"status" json:"status"`
 }
 
+const (
+	ProjectionReadPointerActive         = "ACTIVE"
+	ProjectionReadPointerRetired        = "RETIRED"
+	ProjectionReadPointerCollectionName = "projection_read_pointers"
+)
+
+// ProjectionReadPointer identifies the collection that is authoritative for
+// one projection table. It is deliberately stored outside the records so a
+// rebuild can prepare a complete collection and switch readers atomically.
+type ProjectionReadPointer struct {
+	TenantID       string    `bson:"tenantId" json:"tenantId"`
+	WorkspaceID    string    `bson:"workspaceId" json:"workspaceId"`
+	TableID        string    `bson:"tableId" json:"tableId"`
+	GenerationID   string    `bson:"generationId" json:"generationId"`
+	CollectionName string    `bson:"collectionName" json:"collectionName"`
+	OperationID    string    `bson:"operationId" json:"operationId"`
+	Revision       int64     `bson:"revision" json:"revision"`
+	Status         string    `bson:"status" json:"status"`
+	CreatedAt      time.Time `bson:"createdAt" json:"createdAt"`
+	ActivatedAt    time.Time `bson:"activatedAt" json:"activatedAt"`
+}
+
 // Record is the user-owned envelope. Dynamic business content is kept as a
 // BSON document and is validated against the table's published schema before
 // every write.

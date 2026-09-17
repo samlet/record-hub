@@ -1499,6 +1499,8 @@ components:
           type: string
         stagingGenerationId:
           type: string
+        stagingCollection:
+          type: string
         activeGenerationId:
           type: string
         mappingCount:

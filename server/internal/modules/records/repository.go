@@ -79,16 +79,17 @@ type IndexRepository interface {
 }
 
 type MongoRepository struct {
-	workspaces *mongo.Collection
-	tables     *mongo.Collection
-	records    *mongo.Collection
-	views      *mongo.Collection
-	indexes    *mongo.Collection
-	clock      func() time.Time
+	workspaces   *mongo.Collection
+	tables       *mongo.Collection
+	records      *mongo.Collection
+	readPointers *mongo.Collection
+	views        *mongo.Collection
+	indexes      *mongo.Collection
+	clock        func() time.Time
 }
 
 func NewMongoRepository(database *mongo.Database) *MongoRepository {
-	return &MongoRepository{workspaces: database.Collection(workspaceCollectionName), tables: database.Collection(tableCollectionName), records: database.Collection(recordCollectionName), views: database.Collection(viewCollectionName), indexes: database.Collection(indexCollectionName), clock: time.Now}
+	return &MongoRepository{workspaces: database.Collection(workspaceCollectionName), tables: database.Collection(tableCollectionName), records: database.Collection(recordCollectionName), readPointers: database.Collection(ProjectionReadPointerCollectionName), views: database.Collection(viewCollectionName), indexes: database.Collection(indexCollectionName), clock: time.Now}
 }
 
 func (repository *MongoRepository) EnsureIndexes(ctx context.Context) error {
@@ -112,6 +113,14 @@ func (repository *MongoRepository) EnsureIndexes(ctx context.Context) error {
 		{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "workspaceId", Value: 1}, {Key: "tableId", Value: 1}, {Key: "tags", Value: 1}}, Options: options.Index().SetName("record_table_tags")},
 	}); err != nil {
 		return fmt.Errorf("create record indexes: %w", err)
+	}
+	if repository.readPointers != nil {
+		if _, err := repository.readPointers.Indexes().CreateMany(ctx, []mongo.IndexModel{
+			{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "workspaceId", Value: 1}, {Key: "tableId", Value: 1}, {Key: "status", Value: 1}}, Options: options.Index().SetName("projection_read_pointer_active_unique").SetUnique(true)},
+			{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "workspaceId", Value: 1}, {Key: "status", Value: 1}, {Key: "activatedAt", Value: -1}}, Options: options.Index().SetName("projection_read_pointer_scope_status")},
+		}); err != nil {
+			return fmt.Errorf("create projection read pointer indexes: %w", err)
+		}
 	}
 	if _, err := repository.views.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "workspaceId", Value: 1}, {Key: "tableId", Value: 1}, {Key: "_id", Value: 1}}, Options: options.Index().SetName("view_tenant_workspace_table_id_unique").SetUnique(true)},
@@ -238,7 +247,21 @@ func (repository *MongoRepository) CreateRecord(ctx context.Context, record Reco
 
 func (repository *MongoRepository) GetRecord(ctx context.Context, tenantID, workspaceID, recordID string) (Record, error) {
 	var record Record
-	err := repository.records.FindOne(ctx, bson.D{{Key: "tenantId", Value: tenantID}, {Key: "workspaceId", Value: workspaceID}, {Key: "_id", Value: recordID}}).Decode(&record)
+	if repository.readPointers != nil {
+		if record, lookupErr := repository.findAcrossActiveProjectionCollections(ctx, tenantID, workspaceID, bson.D{{Key: "_id", Value: recordID}}); lookupErr == nil {
+			return record, nil
+		}
+	}
+	collection, err := repository.activeRecordCollection(ctx, tenantID, workspaceID, "")
+	if err != nil {
+		return Record{}, err
+	}
+	err = collection.FindOne(ctx, bson.D{{Key: "tenantId", Value: tenantID}, {Key: "workspaceId", Value: workspaceID}, {Key: "_id", Value: recordID}}).Decode(&record)
+	if errors.Is(err, mongo.ErrNoDocuments) {
+		if record, lookupErr := repository.findAcrossActiveProjectionCollections(ctx, tenantID, workspaceID, bson.D{{Key: "_id", Value: recordID}}); lookupErr == nil {
+			return record, nil
+		}
+	}
 	if errors.Is(err, mongo.ErrNoDocuments) {
 		return Record{}, ErrRecordNotFound
 	}
@@ -253,7 +276,21 @@ func (repository *MongoRepository) GetRecord(ctx context.Context, tenantID, work
 // queries or internal record IDs to workflow code.
 func (repository *MongoRepository) GetRecordBySource(ctx context.Context, tenantID, workspaceID, system, recordType, sourceID string) (Record, error) {
 	var record Record
-	err := repository.records.FindOne(ctx, bson.D{{Key: "tenantId", Value: tenantID}, {Key: "workspaceId", Value: workspaceID}, {Key: "source.system", Value: system}, {Key: "source.type", Value: recordType}, {Key: "source.id", Value: sourceID}}).Decode(&record)
+	if repository.readPointers != nil {
+		if record, lookupErr := repository.findAcrossActiveProjectionCollections(ctx, tenantID, workspaceID, bson.D{{Key: "source.system", Value: system}, {Key: "source.type", Value: recordType}, {Key: "source.id", Value: sourceID}}); lookupErr == nil {
+			return record, nil
+		}
+	}
+	collection, err := repository.activeRecordCollection(ctx, tenantID, workspaceID, "")
+	if err != nil {
+		return Record{}, err
+	}
+	err = collection.FindOne(ctx, bson.D{{Key: "tenantId", Value: tenantID}, {Key: "workspaceId", Value: workspaceID}, {Key: "source.system", Value: system}, {Key: "source.type", Value: recordType}, {Key: "source.id", Value: sourceID}}).Decode(&record)
+	if errors.Is(err, mongo.ErrNoDocuments) {
+		if record, lookupErr := repository.findAcrossActiveProjectionCollections(ctx, tenantID, workspaceID, bson.D{{Key: "source.system", Value: system}, {Key: "source.type", Value: recordType}, {Key: "source.id", Value: sourceID}}); lookupErr == nil {
+			return record, nil
+		}
+	}
 	if errors.Is(err, mongo.ErrNoDocuments) {
 		return Record{}, ErrRecordNotFound
 	}
@@ -269,8 +306,12 @@ func (repository *MongoRepository) UpdateRecord(ctx context.Context, record Reco
 	}
 	filter := bson.D{{Key: "tenantId", Value: record.TenantID}, {Key: "workspaceId", Value: record.WorkspaceID}, {Key: "_id", Value: record.ID}, {Key: "recordVersion", Value: expectedVersion}}
 	update := bson.D{{Key: "$set", Value: bson.D{{Key: "data", Value: record.Data}, {Key: "tags", Value: record.Tags}, {Key: "relations", Value: record.Relations}, {Key: "updatedBy", Value: record.UpdatedBy}, {Key: "updatedAt", Value: record.UpdatedAt}}}, {Key: "$inc", Value: bson.D{{Key: "recordVersion", Value: 1}}}}
+	collection, err := repository.activeRecordCollection(ctx, record.TenantID, record.WorkspaceID, record.TableID)
+	if err != nil {
+		return Record{}, err
+	}
 	var updated Record
-	err := repository.records.FindOneAndUpdate(ctx, filter, update, options.FindOneAndUpdate().SetReturnDocument(options.After)).Decode(&updated)
+	err = collection.FindOneAndUpdate(ctx, filter, update, options.FindOneAndUpdate().SetReturnDocument(options.After)).Decode(&updated)
 	if err == nil {
 		return updated, nil
 	}
@@ -291,7 +332,11 @@ func (repository *MongoRepository) UpdateRecord(ctx context.Context, record Reco
 }
 
 func (repository *MongoRepository) DeleteRecord(ctx context.Context, tenantID, workspaceID, recordID string, expectedVersion int64) error {
-	result, err := repository.records.DeleteOne(ctx, bson.D{{Key: "tenantId", Value: tenantID}, {Key: "workspaceId", Value: workspaceID}, {Key: "_id", Value: recordID}, {Key: "recordVersion", Value: expectedVersion}})
+	collection, err := repository.activeRecordCollection(ctx, tenantID, workspaceID, "")
+	if err != nil {
+		return err
+	}
+	result, err := collection.DeleteOne(ctx, bson.D{{Key: "tenantId", Value: tenantID}, {Key: "workspaceId", Value: workspaceID}, {Key: "_id", Value: recordID}, {Key: "recordVersion", Value: expectedVersion}})
 	if err != nil {
 		return fmt.Errorf("delete record: %w", err)
 	}
@@ -449,7 +494,11 @@ func (repository *MongoRepository) ListRecords(ctx context.Context, tenantID, wo
 		}
 		filter = append(filter, bson.E{Key: "$or", Value: orConditions})
 	}
-	cursor, err := repository.records.Find(ctx, filter, options.Find().SetSort(mongoSort(sorts)).SetLimit(int64(limit+1)))
+	collection, err := repository.activeRecordCollection(ctx, tenantID, workspaceID, tableID)
+	if err != nil {
+		return RecordPage{}, err
+	}
+	cursor, err := collection.Find(ctx, filter, options.Find().SetSort(mongoSort(sorts)).SetLimit(int64(limit+1)))
 	if err != nil {
 		return RecordPage{}, fmt.Errorf("list records: %w", err)
 	}
@@ -467,6 +516,53 @@ func (repository *MongoRepository) ListRecords(ctx context.Context, tenantID, wo
 		}
 	}
 	return page, nil
+}
+
+func (repository *MongoRepository) activeRecordCollection(ctx context.Context, tenantID, workspaceID, tableID string) (*mongo.Collection, error) {
+	if repository == nil || repository.records == nil {
+		return nil, errors.New("record repository is not configured")
+	}
+	if repository.readPointers == nil || strings.TrimSpace(tableID) == "" {
+		return repository.records, nil
+	}
+	var pointer ProjectionReadPointer
+	err := repository.readPointers.FindOne(ctx, bson.D{{Key: "tenantId", Value: tenantID}, {Key: "workspaceId", Value: workspaceID}, {Key: "tableId", Value: tableID}, {Key: "status", Value: ProjectionReadPointerActive}}).Decode(&pointer)
+	if errors.Is(err, mongo.ErrNoDocuments) {
+		return repository.records, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("find projection read pointer: %w", err)
+	}
+	if strings.TrimSpace(pointer.CollectionName) == "" {
+		return nil, errors.New("projection read pointer has no collection")
+	}
+	return repository.records.Database().Collection(pointer.CollectionName), nil
+}
+
+func (repository *MongoRepository) findAcrossActiveProjectionCollections(ctx context.Context, tenantID, workspaceID string, extra bson.D) (Record, error) {
+	if repository.readPointers == nil {
+		return Record{}, ErrRecordNotFound
+	}
+	cursor, err := repository.readPointers.Find(ctx, bson.D{{Key: "tenantId", Value: tenantID}, {Key: "workspaceId", Value: workspaceID}, {Key: "status", Value: ProjectionReadPointerActive}})
+	if err != nil {
+		return Record{}, fmt.Errorf("list projection read pointers: %w", err)
+	}
+	defer cursor.Close(ctx)
+	var pointers []ProjectionReadPointer
+	if err := cursor.All(ctx, &pointers); err != nil {
+		return Record{}, fmt.Errorf("decode projection read pointers: %w", err)
+	}
+	for _, pointer := range pointers {
+		filter := bson.D{{Key: "tenantId", Value: tenantID}, {Key: "workspaceId", Value: workspaceID}}
+		filter = append(filter, extra...)
+		var record Record
+		if err := repository.records.Database().Collection(pointer.CollectionName).FindOne(ctx, filter).Decode(&record); err == nil {
+			return record, nil
+		} else if !errors.Is(err, mongo.ErrNoDocuments) {
+			return Record{}, fmt.Errorf("find projection record in active collection: %w", err)
+		}
+	}
+	return Record{}, ErrRecordNotFound
 }
 
 type recordCursor struct {

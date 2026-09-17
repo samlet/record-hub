@@ -98,6 +98,8 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 	catalogRepo := projection.NewMongoCatalogRepository(database)
 	rebuildRepo := projection.NewMongoRebuildRepository(database)
 	rebuildReceipts := projection.NewMongoRebuildReceiptStore(database)
+	readPointers := projection.NewMongoProjectionReadPointerRepository(database)
+	eventArchive := projection.NewMongoProjectionEventArchive(database)
 	catalogReceipts := projection.NewMongoCatalogReceiptStore(database)
 	schemaReceipts := schema.NewMongoReceiptStore(database)
 	migrationReceipts := schema.NewMongoMigrationPlanReceiptStore(database)
@@ -128,7 +130,7 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 	operationsService := projection.NewOperationsService(projection.NewMongoProjectionRepository(database), authorizer).WithMetrics(metrics)
 	generations := projection.NewMappingGenerationRegistry()
 	generationBuilder := projection.NewMappingGenerationBuilder(catalogRepo, schemaRepo)
-	rebuildService := projection.NewProjectionRebuildService(rebuildRepo, generationBuilder, generations, authorizer, rebuildReceipts, auditWriter)
+	rebuildService := projection.NewProjectionRebuildService(rebuildRepo, generationBuilder, generations, authorizer, rebuildReceipts, auditWriter).WithReplayDependencies(eventArchive, readPointers)
 	deps.records = records.NewHTTPHandler(recordService)
 	deps.schema = schema.NewHTTPHandler(schemaService, migrationService)
 	deps.catalog = projection.NewCatalogHTTPHandler(catalogService)
@@ -172,7 +174,7 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 		_ = client.Disconnect(context.Background())
 		return nil, fmt.Errorf("configure summary projector: %w", err)
 	}
-	projector.WithWorkspaceMappings(cfg.ProjectionWorkspaceMappings).WithMappingGenerations(generations)
+	projector.WithWorkspaceMappings(cfg.ProjectionWorkspaceMappings).WithMappingGenerations(generations).WithEventArchive(eventArchive)
 	dlq, err := projection.NewNATSDeadLetterPublisher(natsClient.Publisher(), "dlq.record-hub")
 	if err != nil {
 		natsClient.Close()
@@ -238,6 +240,12 @@ func ensureMongoIndexes(database *mongo.Database) error {
 		return err
 	}
 	if err := projection.NewMongoRebuildReceiptStore(database).EnsureIndexes(ctx); err != nil {
+		return err
+	}
+	if err := projection.NewMongoProjectionReadPointerRepository(database).EnsureIndexes(ctx); err != nil {
+		return err
+	}
+	if err := projection.NewMongoProjectionEventArchive(database).EnsureIndexes(ctx); err != nil {
 		return err
 	}
 	return nil

@@ -78,6 +78,31 @@ func (generation *MappingGeneration) EntryCount() int {
 	return generation.entryCount
 }
 
+// TargetTableIDs returns the immutable set of projection tables represented by
+// a generation for one tenant/workspace scope. Built-in summary tables are
+// included because rebuilds must switch reads for both catalog mappings and
+// the three first-party projections.
+func (generation *MappingGeneration) TargetTableIDs(tenantID, workspaceID string) []string {
+	if generation == nil {
+		return nil
+	}
+	seen := map[string]struct{}{}
+	for key, entry := range generation.entries {
+		if key.TenantID == strings.TrimSpace(tenantID) && key.WorkspaceID == strings.TrimSpace(workspaceID) && entry != nil && entry.TargetTableID != "" {
+			seen[entry.TargetTableID] = struct{}{}
+		}
+	}
+	for _, source := range []string{"approver", "fluxion", "bids"} {
+		seen[projectionTableID(source)] = struct{}{}
+	}
+	tables := make([]string, 0, len(seen))
+	for tableID := range seen {
+		tables = append(tables, tableID)
+	}
+	sort.Strings(tables)
+	return tables
+}
+
 type MappingGenerationRegistry struct {
 	active atomic.Pointer[MappingGeneration]
 }

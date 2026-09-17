@@ -3,6 +3,7 @@ package projection
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -32,6 +33,7 @@ var (
 	ErrRebuildNotCancellable      = errors.New("projection rebuild operation cannot be cancelled")
 	ErrRebuildReceiptNotFound     = errors.New("projection rebuild receipt not found")
 	ErrRebuildIdempotencyConflict = errors.New("projection rebuild idempotency conflict")
+	ErrRebuildCancellation        = errors.New("projection rebuild cancellation requested")
 )
 
 type RebuildStatus string
@@ -56,6 +58,7 @@ type ProjectionRebuildOperation struct {
 	Revision            int64                `bson:"revision" json:"revision"`
 	GenerationBefore    string               `bson:"generationBefore,omitempty" json:"generationBefore,omitempty"`
 	StagingGenerationID string               `bson:"stagingGenerationId,omitempty" json:"stagingGenerationId,omitempty"`
+	StagingCollection   string               `bson:"stagingCollection,omitempty" json:"stagingCollection,omitempty"`
 	ActiveGenerationID  string               `bson:"activeGenerationId,omitempty" json:"activeGenerationId,omitempty"`
 	MappingCount        int                  `bson:"mappingCount" json:"mappingCount"`
 	CreatedBy           identity.IdentityKey `bson:"createdBy" json:"createdBy"`
@@ -134,18 +137,31 @@ type RebuildReceiptStore interface {
 }
 
 type ProjectionRebuildService struct {
-	operations RebuildStore
-	builder    *MappingGenerationBuilder
-	registry   *MappingGenerationRegistry
-	authorizer *identity.Authorizer
-	receipts   RebuildReceiptStore
-	audit      audit.Writer
-	clock      func() time.Time
-	id         func() (string, error)
+	operations   RebuildStore
+	builder      *MappingGenerationBuilder
+	registry     *MappingGenerationRegistry
+	authorizer   *identity.Authorizer
+	receipts     RebuildReceiptStore
+	audit        audit.Writer
+	archive      ProjectionEventArchiveReader
+	readPointers *MongoProjectionReadPointerRepository
+	clock        func() time.Time
+	id           func() (string, error)
 }
 
 func NewProjectionRebuildService(operations RebuildStore, builder *MappingGenerationBuilder, registry *MappingGenerationRegistry, authorizer *identity.Authorizer, receipts RebuildReceiptStore, auditWriter audit.Writer) *ProjectionRebuildService {
 	return &ProjectionRebuildService{operations: operations, builder: builder, registry: registry, authorizer: authorizer, receipts: receipts, audit: auditWriter, clock: time.Now, id: newRebuildID}
+}
+
+// WithReplayDependencies enables the data-plane portion of rebuild. Keeping
+// this opt-in preserves the in-memory control-plane service used by unit
+// tests, while the production runtime always wires both durable stores.
+func (service *ProjectionRebuildService) WithReplayDependencies(archive ProjectionEventArchiveReader, readPointers *MongoProjectionReadPointerRepository) *ProjectionRebuildService {
+	if service != nil {
+		service.archive = archive
+		service.readPointers = readPointers
+	}
+	return service
 }
 
 func (service *ProjectionRebuildService) ready() error {
@@ -322,6 +338,7 @@ func (service *ProjectionRebuildService) process(ctx context.Context, operation 
 	now := service.clock().UTC()
 	staged := latest
 	staged.StagingGenerationID = generation.ID
+	staged.StagingCollection = stagingRecordsCollectionName(staged.ID)
 	staged.MappingCount = generation.EntryCount()
 	staged.UpdatedAt = now
 	staged = operationWithActor(staged, identity.IdentityKey{Issuer: "record-hub", Subject: "rebuild-worker"})
@@ -339,9 +356,35 @@ func (service *ProjectionRebuildService) process(ctx context.Context, operation 
 	if latest.Status != RebuildRunning {
 		return nil
 	}
-	// The in-memory pointer is the read pointer for this process. The durable
-	// operation stores the staged and active IDs so another worker can repeat
-	// the same activation after a crash before the terminal write.
+	if service.archive != nil && service.readPointers != nil {
+		if err := service.replay(ctx, latest, generation); err != nil {
+			if errors.Is(err, ErrRebuildCancellation) {
+				current, findErr := service.operations.Find(ctx, latest.TenantID, latest.WorkspaceID, latest.ID)
+				if findErr != nil {
+					return findErr
+				}
+				return service.finishCancelled(ctx, current)
+			}
+			return service.fail(ctx, latest, "historical projection replay failed")
+		}
+		latest, err = service.operations.Find(ctx, operation.TenantID, operation.WorkspaceID, operation.ID)
+		if err != nil {
+			return err
+		}
+		if latest.Status == RebuildCancelRequested {
+			return service.finishCancelled(ctx, latest)
+		}
+		if latest.Status != RebuildRunning {
+			return nil
+		}
+	}
+	// The in-memory generation pointer and durable per-table read pointers are
+	// switched only after staging replay has completed successfully.
+	if service.readPointers != nil {
+		if err := service.activateReadPointers(ctx, latest, generation); err != nil {
+			return service.fail(ctx, latest, "projection read pointer activation failed")
+		}
+	}
 	if err := service.registry.Activate(generation); err != nil {
 		return service.fail(ctx, latest, "generation activation failed")
 	}
@@ -353,6 +396,97 @@ func (service *ProjectionRebuildService) process(ctx context.Context, operation 
 	latest = operationWithActor(latest, identity.IdentityKey{Issuer: "record-hub", Subject: "rebuild-worker"})
 	_, err = service.operations.SaveCAS(ctx, latest, staged.Revision)
 	return err
+}
+
+func (service *ProjectionRebuildService) replay(ctx context.Context, operation ProjectionRebuildOperation, generation *MappingGeneration) error {
+	if service.archive == nil || service.readPointers == nil || service.readPointers.database == nil || generation == nil {
+		return ErrRebuildUnavailable
+	}
+	if err := NewMongoProjectionRepository(service.readPointers.database).EnsureStagingIndexes(ctx, operation.ID); err != nil {
+		return err
+	}
+	entries, err := service.archive.List(ctx, operation.TenantID, operation.WorkspaceID, archiveReplayPageSize)
+	if err != nil {
+		return err
+	}
+	if len(entries) > MaxArchivedReplayEvents {
+		return fmt.Errorf("replay event limit of %d reached; archive window is incomplete", MaxArchivedReplayEvents)
+	}
+	registry := NewMappingGenerationRegistry()
+	if err := registry.Activate(generation); err != nil {
+		return err
+	}
+	handlers := NewHandlerRegistry()
+	if err := RegisterSummaryHandlers(handlers); err != nil {
+		return err
+	}
+	projector, err := NewSummaryProjector(handlers, &rebuildInbox{}, NewMongoProjectionRepository(service.readPointers.database).WithStaging(operation.ID), operation.WorkspaceID)
+	if err != nil {
+		return err
+	}
+	projector.WithMappingGenerations(registry).WithWorkspaceMappings(map[string]string{operation.TenantID: operation.WorkspaceID})
+	for _, entry := range entries {
+		latest, findErr := service.operations.Find(ctx, operation.TenantID, operation.WorkspaceID, operation.ID)
+		if findErr != nil {
+			return findErr
+		}
+		if latest.Status == RebuildCancelRequested {
+			return ErrRebuildCancellation
+		}
+		if latest.Status != RebuildRunning {
+			return ErrRebuildCancellation
+		}
+		if err := projector.Handle(ctx, entry.Subject, entry.Raw); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (service *ProjectionRebuildService) activateReadPointers(ctx context.Context, operation ProjectionRebuildOperation, generation *MappingGeneration) error {
+	if service.readPointers == nil {
+		return nil
+	}
+	var checkpoints []ProjectionCheckpoint
+	if service.archive != nil {
+		entries, err := service.archive.List(ctx, operation.TenantID, operation.WorkspaceID, archiveReplayPageSize)
+		if err != nil {
+			return err
+		}
+		latest := make(map[string]ProjectionCheckpoint, len(entries))
+		for _, entry := range entries {
+			key := strings.Join([]string{entry.Consumer, entry.SourceSystem, entry.AggregateType, entry.AggregateID}, "\x00")
+			candidate := ProjectionCheckpoint{TenantID: entry.TenantID, WorkspaceID: entry.WorkspaceID, Consumer: entry.Consumer, SourceSystem: entry.SourceSystem, AggregateType: entry.AggregateType, AggregateID: entry.AggregateID, SourceVersion: entry.AggregateVersion, LastEventID: entry.EventID, SyncedAt: entry.ReceivedAt.UTC(), Status: CheckpointCurrent}
+			if current, ok := latest[key]; !ok || candidate.SourceVersion > current.SourceVersion || (candidate.SourceVersion == current.SourceVersion && candidate.SyncedAt.After(current.SyncedAt)) {
+				latest[key] = candidate
+			}
+		}
+		checkpoints = make([]ProjectionCheckpoint, 0, len(latest))
+		for _, checkpoint := range latest {
+			checkpoints = append(checkpoints, checkpoint)
+		}
+	}
+	return service.readPointers.ActivateManyWithCheckpoints(ctx, operation.TenantID, operation.WorkspaceID, operation.ID, generation.ID, stagingRecordsCollectionName(operation.ID), generation.TargetTableIDs(operation.TenantID, operation.WorkspaceID), checkpoints)
+}
+
+// rebuildInbox is intentionally ephemeral. Replaying archived events must
+// never mutate the live inbox/checkpoint stream; staging repository writes are
+// protected by record-version monotonicity instead.
+type rebuildInbox struct{}
+
+func (inbox *rebuildInbox) Claim(_ context.Context, claim InboxClaim) (InboxClaimResult, error) {
+	hash := sha256.Sum256(claim.Payload)
+	return InboxClaimResult{Event: InboxEvent{EventID: claim.EventID, Consumer: claim.Consumer, Subject: claim.Subject, TenantID: claim.TenantID, WorkspaceID: claim.WorkspaceID, PayloadHash: "sha256:" + hex.EncodeToString(hash[:]), Status: InboxProcessing, ReceivedAt: claim.ReceivedAt}}, nil
+}
+
+func (inbox *rebuildInbox) Get(context.Context, string, string) (InboxEvent, error) {
+	return InboxEvent{}, ErrInboxNotFound
+}
+
+func (inbox *rebuildInbox) MarkApplied(context.Context, string, string, time.Time) error { return nil }
+
+func (inbox *rebuildInbox) MarkRejected(context.Context, string, string, string, time.Time) error {
+	return nil
 }
 
 func (service *ProjectionRebuildService) finishCancelled(ctx context.Context, operation ProjectionRebuildOperation) error {
@@ -559,7 +693,7 @@ func (repository *MongoRebuildRepository) SaveCAS(ctx context.Context, operation
 	if expectedRevision < 1 {
 		return ProjectionRebuildOperation{}, ErrRebuildRevisionConflict
 	}
-	set := bson.D{{Key: "status", Value: operation.Status}, {Key: "updatedBy", Value: operation.UpdatedBy}, {Key: "updatedAt", Value: operation.UpdatedAt}, {Key: "generationBefore", Value: operation.GenerationBefore}, {Key: "stagingGenerationId", Value: operation.StagingGenerationID}, {Key: "activeGenerationId", Value: operation.ActiveGenerationID}, {Key: "mappingCount", Value: operation.MappingCount}, {Key: "startedAt", Value: operation.StartedAt}, {Key: "finishedAt", Value: operation.FinishedAt}, {Key: "safeError", Value: operation.SafeError}}
+	set := bson.D{{Key: "status", Value: operation.Status}, {Key: "updatedBy", Value: operation.UpdatedBy}, {Key: "updatedAt", Value: operation.UpdatedAt}, {Key: "generationBefore", Value: operation.GenerationBefore}, {Key: "stagingGenerationId", Value: operation.StagingGenerationID}, {Key: "stagingCollection", Value: operation.StagingCollection}, {Key: "activeGenerationId", Value: operation.ActiveGenerationID}, {Key: "mappingCount", Value: operation.MappingCount}, {Key: "startedAt", Value: operation.StartedAt}, {Key: "finishedAt", Value: operation.FinishedAt}, {Key: "safeError", Value: operation.SafeError}}
 	update := bson.D{{Key: "$set", Value: set}, {Key: "$inc", Value: bson.D{{Key: "revision", Value: 1}}}}
 	var result ProjectionRebuildOperation
 	err := repository.collection.FindOneAndUpdate(ctx, bson.D{{Key: "operationId", Value: operation.ID}, {Key: "tenantId", Value: operation.TenantID}, {Key: "workspaceId", Value: operation.WorkspaceID}, {Key: "revision", Value: expectedRevision}}, update, options.FindOneAndUpdate().SetReturnDocument(options.After)).Decode(&result)

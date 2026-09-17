@@ -57,7 +57,7 @@
 | --- | --- | --- |
 | P2-PROJ-001 | Source registration | source system、event type/version、tenant/workspace resolution 和 owner 联系方式显式登记且版本化 |
 | P2-PROJ-002 | Mapping registry | event→record mapping 有 schema、版本、canonical hash、fixture 和发布审批；runtime 只运行已发布版本 |
-| P2-PROJ-003 | Replay/rebuild operation | rebuild 写 operation receipt，使用独立 staging generation；校验通过后原子切换读指针 |
+| P2-PROJ-003 | Replay/rebuild operation | projector 先将原始 envelope 写入 scope-scoped archive；rebuild 使用独立 staging generation/records，按 record version 单调 replay，补齐 checkpoints，并在校验通过后原子切换 read pointer；失败/取消不得暴露 staging |
 | P2-PROJ-004 | Gap/DLQ remediation | UI/API 展示安全摘要、建议动作和关联 operation；重放必须使用原 event ID，不允许手改 projection |
 | P2-PROJ-005 | Freshness SLO | 每 source 暴露 last event、projected version、lag age、backlog、error budget；超阈值可告警 |
 
@@ -169,4 +169,3 @@ live 场景的替代证据。
 2. 首个审批试点选择 Fluxion 还是 Bids，以及审批输入字段、SLA 和五种终态映射；
 3. Beta 的目标 RPO/RTO、峰值事件率、记录量、SSE 并发和数据保留期；
 4. workload identity 在本地/Beta 环境采用的 Authorization Server，以及生产是否规划 SPIFFE。
-

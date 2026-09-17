@@ -1,6 +1,6 @@
 # Projection Rebuild Operation（P2-1-004）
 
-状态：Control plane and mapping-generation staging implemented；历史事件 replay 待事件保留策略冻结
+状态：DONE（archive-backed replay、staging records、read pointer switch 已实现；archive 启用前的历史事件不在重放窗口内）
 日期：2026-09-17
 
 ## 目标与边界
@@ -14,9 +14,13 @@ published source/mapping/schema 校验。当前垂直切片重建的是 projecti
 4. 在取消检查通过后，用一个 atomic pointer switch 激活 generation；
 5. 把 active generation ID、mapping count、前后 generation、状态和安全错误摘要写入 operation。
 
-历史事件的完整 replay 仍需先冻结 JetStream retention / event archive 作为唯一重放来源，再把
-事件 replay 到隔离的 record staging collection；不能通过复用当前 Inbox/records 表或人工修改
-projection 来冒充 rebuild。这个剩余项保持 `PARTIAL`，不会被本批的 generation 切换证据掩盖。
+事件在 projector 入口先写入 `projection_event_archive`，保留原始 envelope 和规范化路由字段。
+rebuild worker 读取 tenant/workspace scope 的 archive，按记录版本单调地写入
+`projection_staging_records_<operationId>`，不会复用 live Inbox、checkpoint 或 audit；超过 archive
+窗口会安全失败。回放完成后，在 Mongo transaction 中为目标表退休旧 pointer、写入新的
+`projection_read_pointers`，并补齐 replay 期间的 aggregate checkpoints；随后 live projector 会
+根据 pointer 继续写入同一 staging collection，API 读取也会遵循 pointer。生成指针切换仍保留
+last-known-good 语义，失败或取消不会暴露 staging collection。
 
 ## API
 
@@ -56,5 +60,5 @@ RECORD_HUB_MONGODB_URI=mongodb://127.0.0.1:27017/?replicaSet=rs0\&directConnecti
 ```
 
 已覆盖：幂等创建、Owner 权限边界、CAS、staging/active generation、失败保留旧指针、接受前
-取消、运行中取消、receipt 冲突和 Mongo repository live index/CAS。历史 event replay、staging
-record collection、读指针切换和 replay 后 record freshness 是下一批的明确工作项。
+取消、运行中取消、receipt 冲突、Mongo archive/index/CAS、staging record replay、read pointer
+切换、checkpoint 补齐和 pointer 切换后的 live record freshness。
