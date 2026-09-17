@@ -16,9 +16,11 @@ import (
 )
 
 const (
-	domainEventsStream = "DOMAIN_EVENTS"
-	deadLettersStream  = "DEAD_LETTERS"
-	maxMessageBytes    = 256 * 1024
+	domainEventsStream     = "DOMAIN_EVENTS"
+	approvalCommandsStream = "APPROVAL_COMMANDS"
+	ownerCommandsStream    = "OWNER_COMMANDS"
+	deadLettersStream      = "DEAD_LETTERS"
+	maxMessageBytes        = 256 * 1024
 )
 
 var projectionConsumers = []jetstream.ConsumerConfig{
@@ -34,7 +36,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "NATS initialization failed: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Println("NATS topology ready: DOMAIN_EVENTS DEAD_LETTERS and projection consumers")
+	fmt.Println("NATS topology ready: DOMAIN_EVENTS APPROVAL_COMMANDS OWNER_COMMANDS DEAD_LETTERS and projection consumers")
 }
 
 func run(smoke bool) error {
@@ -81,6 +83,30 @@ func initialize(ctx context.Context, js jetstream.JetStream) error {
 			Storage:    jetstream.FileStorage,
 			Replicas:   1,
 			Duplicates: 10 * time.Minute,
+		},
+		{
+			Name:        approvalCommandsStream,
+			Description: "Commands addressed to the Approver owner system",
+			Subjects:    []string{"commands.approver.>"},
+			Retention:   jetstream.LimitsPolicy,
+			MaxBytes:    256 * 1024 * 1024,
+			MaxAge:      7 * 24 * time.Hour,
+			MaxMsgSize:  maxMessageBytes,
+			Storage:     jetstream.FileStorage,
+			Replicas:    1,
+			Duplicates:  10 * time.Minute,
+		},
+		{
+			Name:        ownerCommandsStream,
+			Description: "Commands addressed to Fluxion and Bids owner systems",
+			Subjects:    []string{"commands.fluxion.>", "commands.bids.>"},
+			Retention:   jetstream.LimitsPolicy,
+			MaxBytes:    256 * 1024 * 1024,
+			MaxAge:      7 * 24 * time.Hour,
+			MaxMsgSize:  maxMessageBytes,
+			Storage:     jetstream.FileStorage,
+			Replicas:    1,
+			Duplicates:  10 * time.Minute,
 		},
 		{
 			Name:        deadLettersStream,
@@ -138,6 +164,25 @@ func verifyTopology(ctx context.Context, js jetstream.JetStream) error {
 	wantSubjects := []string{"events.approver.>", "events.fluxion.>", "events.bids.>", "events.record-hub.>"}
 	if domainInfo.Config.Storage != jetstream.FileStorage || domainInfo.Config.MaxMsgSize != maxMessageBytes || !sameStrings(domainInfo.Config.Subjects, wantSubjects) {
 		return errors.New("DOMAIN_EVENTS configuration does not match required topology")
+	}
+	for _, expected := range []struct {
+		name     string
+		subjects []string
+	}{
+		{name: approvalCommandsStream, subjects: []string{"commands.approver.>"}},
+		{name: ownerCommandsStream, subjects: []string{"commands.fluxion.>", "commands.bids.>"}},
+	} {
+		stream, streamErr := js.Stream(ctx, expected.name)
+		if streamErr != nil {
+			return fmt.Errorf("load command stream %s: %w", expected.name, streamErr)
+		}
+		info, infoErr := stream.Info(ctx)
+		if infoErr != nil {
+			return fmt.Errorf("inspect command stream %s: %w", expected.name, infoErr)
+		}
+		if info.Config.Storage != jetstream.FileStorage || info.Config.MaxMsgSize != maxMessageBytes || !sameStrings(info.Config.Subjects, expected.subjects) {
+			return fmt.Errorf("%s configuration does not match required topology", expected.name)
+		}
 	}
 
 	dlq, err := js.Stream(ctx, deadLettersStream)

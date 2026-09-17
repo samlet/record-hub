@@ -105,6 +105,26 @@ func TestLoadBindingMachinePolicies(t *testing.T) {
 	}
 }
 
+func TestLoadCommandPolicies(t *testing.T) {
+	env := map[string]string{
+		"RECORD_HUB_MODE":                "api",
+		"RECORD_HUB_HTTP_ADDRESS":        "127.0.0.1:18080",
+		"RECORD_HUB_OIDC_ISSUER":         "http://127.0.0.1:15557/workload",
+		"RECORD_HUB_OIDC_AUDIENCE":       "record-hub-api",
+		"RECORD_HUB_OIDC_PRINCIPAL_KIND": "service",
+		"RECORD_HUB_COMMAND_POLICIES": `[
+			{"policyId":"project.annotate","issuer":"http://127.0.0.1:15557/workload","subject":"fluxion","audience":"record-hub-api","scope":"recordhub.command.submit","tenantId":"tenant-1","workspaceId":"workspace-1","purpose":"project-annotation","ownerSystem":"fluxion","resourceType":"PROJECT","action":"project.annotate","expectedVersionRequired":true}
+		]`,
+	}
+	cfg, err := load(mapLookup(env))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.CommandPolicies) != 1 || cfg.CommandPolicies[0].PolicyID != "project.annotate" || cfg.CommandPolicies[0].MaxPayloadBytes != 256<<10 {
+		t.Fatalf("command policies = %+v", cfg.CommandPolicies)
+	}
+}
+
 func TestLoadRejectsUnsafeBindingMachinePolicies(t *testing.T) {
 	base := map[string]string{
 		"RECORD_HUB_MODE":                "api",

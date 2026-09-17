@@ -31,7 +31,7 @@
 | --- | --- | --- |
 | P2-1 Operable Data | IN_PROGRESS | Schema diff/migration、source/mapping registry、projection rebuild、SLO |
 | P2-2 Realtime Read Feed | IN_PROGRESS | SSE、cursor、背压、撤权和配额 |
-| P2-3 Controlled Command | TODO | policy、receipt、owner Inbox、单一低风险 command |
+| P2-3 Controlled Command | IN_PROGRESS | policy、receipt、owner Inbox、单一低风险 command |
 | P2-4 Approval/Beta | TODO | Approver connector/试点、备份恢复、升级回滚、Beta 准入 |
 
 P2-0-005 的运行说明见 [deploy/local/isolated/README.md](../deploy/local/isolated/README.md)。
@@ -55,3 +55,12 @@ P2-0-005 的运行说明见 [deploy/local/isolated/README.md](../deploy/local/is
 | P2-2-003 | Mutation/projection publication | DONE | 普通记录 create/update/delete 与 live projection apply 发布引用事件；projection retry 以 source event dedup；staging replay 不发布 |
 | P2-2-003a | Backpressure and connection quotas | PARTIAL | 单连接缓冲、单事件大小、principal/scope 连接数和进程连接数有界；速率令牌桶和跨实例 quota 尚未实现，待 Beta capacity baseline |
 | P2-2-004 | Revocation and live acceptance | PARTIAL | 每 5 秒重新授权并撤权后关闭连接；单测和错误路径已通过，真实 Dex 浏览器撤权、跨实例恢复和容量基线待 P2-0-007/009 及 Beta 拓扑就绪后补跑 |
+
+## P2-3 当前任务
+
+| ID | 任务 | 状态 | 验收 |
+| --- | --- | --- | --- |
+| P2-3-001 | Exact command policy registry | DONE | `RECORD_HUB_COMMAND_POLICIES` 严格 JSON、无通配符；workload identity 的 issuer/audience/scope/resource 精确匹配 |
+| P2-3-002 | Operation receipt and idempotency | DONE | Mongo unique receipt、payload canonical hash、相同键 replay、hash 冲突拒绝、状态枚举和审计摘要已实现 |
+| P2-3-003 | Controlled command HTTP contract | DONE | `POST/GET /api/v1/commands`、expectedVersion、256 KiB payload limit、OpenAPI 和负向测试已完成 |
+| P2-3-004 | Owner Inbox and result event | TODO | 需要 owner-system durable Inbox、事务 claim/commit、result event、ACK-loss/restart live 证据 |

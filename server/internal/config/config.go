@@ -83,6 +83,25 @@ type BindingMachinePolicyConfig struct {
 	ResourceType   string `json:"resourceType"`
 }
 
+// CommandPolicyConfig is an exact workload-to-owner command allowlist entry.
+// It is kept separate from binding policies so a snapshot permission cannot
+// silently become a write permission.
+type CommandPolicyConfig struct {
+	PolicyID                string `json:"policyId"`
+	Issuer                  string `json:"issuer"`
+	Subject                 string `json:"subject"`
+	Audience                string `json:"audience"`
+	Scope                   string `json:"scope"`
+	TenantID                string `json:"tenantId"`
+	WorkspaceID             string `json:"workspaceId"`
+	Purpose                 string `json:"purpose"`
+	OwnerSystem             string `json:"ownerSystem"`
+	ResourceType            string `json:"resourceType"`
+	Action                  string `json:"action"`
+	ExpectedVersionRequired bool   `json:"expectedVersionRequired"`
+	MaxPayloadBytes         int    `json:"maxPayloadBytes"`
+}
+
 // Config contains process-level runtime configuration.
 type Config struct {
 	Mode            Mode
@@ -112,6 +131,7 @@ type Config struct {
 	OIDCPrincipalKind       string
 	OIDCAllowInsecureIssuer bool
 	BindingMachinePolicies  []BindingMachinePolicyConfig
+	CommandPolicies         []CommandPolicyConfig
 	QueryBudget             QueryBudgetConfig
 	ProjectionSLO           ProjectionSLOConfig
 	Web                     WebAuthConfig
@@ -271,6 +291,14 @@ func load(lookup lookupEnv) (Config, error) {
 			cfg.BindingMachinePolicies = policies
 		}
 	}
+	if value, present := optional(lookup, "RECORD_HUB_COMMAND_POLICIES"); present {
+		policies, err := parseCommandPolicies(value, cfg)
+		if err != nil {
+			errs = append(errs, err)
+		} else {
+			cfg.CommandPolicies = policies
+		}
+	}
 
 	if enabled, present, err := optionalBool(lookup, "RECORD_HUB_WEB_ENABLED"); err != nil {
 		errs = append(errs, err)
@@ -288,6 +316,61 @@ func load(lookup lookupEnv) (Config, error) {
 		return Config{}, errors.Join(errs...)
 	}
 	return cfg, nil
+}
+
+func parseCommandPolicies(raw string, cfg Config) ([]CommandPolicyConfig, error) {
+	if cfg.OIDCIssuer == "" || cfg.OIDCAudience == "" || cfg.OIDCPrincipalKind != "service" {
+		return nil, errors.New("RECORD_HUB_COMMAND_POLICIES requires bearer OIDC with principal kind service")
+	}
+	decoder := json.NewDecoder(strings.NewReader(raw))
+	decoder.DisallowUnknownFields()
+	var policies []CommandPolicyConfig
+	if err := decoder.Decode(&policies); err != nil {
+		return nil, fmt.Errorf("RECORD_HUB_COMMAND_POLICIES must be a JSON array of exact policies: %w", err)
+	}
+	var trailing interface{}
+	if err := decoder.Decode(&trailing); err == nil || !errors.Is(err, io.EOF) {
+		return nil, errors.New("RECORD_HUB_COMMAND_POLICIES must contain one JSON array")
+	}
+	if len(policies) == 0 || len(policies) > 128 {
+		return nil, errors.New("RECORD_HUB_COMMAND_POLICIES must contain between 1 and 128 policies")
+	}
+	seen := make(map[string]struct{}, len(policies))
+	for index := range policies {
+		policy := &policies[index]
+		policy.PolicyID = strings.TrimSpace(policy.PolicyID)
+		policy.Issuer = strings.TrimSpace(policy.Issuer)
+		policy.Subject = strings.TrimSpace(policy.Subject)
+		policy.Audience = strings.TrimSpace(policy.Audience)
+		policy.Scope = strings.TrimSpace(policy.Scope)
+		policy.TenantID = strings.TrimSpace(policy.TenantID)
+		policy.WorkspaceID = strings.TrimSpace(policy.WorkspaceID)
+		policy.Purpose = strings.TrimSpace(policy.Purpose)
+		policy.OwnerSystem = strings.TrimSpace(policy.OwnerSystem)
+		policy.ResourceType = strings.TrimSpace(policy.ResourceType)
+		policy.Action = strings.TrimSpace(policy.Action)
+		fields := []string{policy.PolicyID, policy.Issuer, policy.Subject, policy.Audience, policy.Scope, policy.TenantID, policy.WorkspaceID, policy.Purpose, policy.OwnerSystem, policy.ResourceType, policy.Action}
+		for _, field := range fields {
+			if field == "" || strings.Contains(field, "*") || strings.ContainsAny(field, " \t\r\n") {
+				return nil, fmt.Errorf("RECORD_HUB_COMMAND_POLICIES[%d] requires non-empty exact fields without wildcards", index)
+			}
+		}
+		if policy.Issuer != cfg.OIDCIssuer || policy.Audience != cfg.OIDCAudience {
+			return nil, fmt.Errorf("RECORD_HUB_COMMAND_POLICIES[%d] issuer/audience must match bearer OIDC configuration", index)
+		}
+		if policy.MaxPayloadBytes == 0 {
+			policy.MaxPayloadBytes = 256 << 10
+		}
+		if policy.MaxPayloadBytes < 1024 || policy.MaxPayloadBytes > 256<<10 {
+			return nil, fmt.Errorf("RECORD_HUB_COMMAND_POLICIES[%d].maxPayloadBytes must be between 1024 and 262144", index)
+		}
+		key := strings.Join(fields, "\x00")
+		if _, exists := seen[key]; exists {
+			return nil, fmt.Errorf("RECORD_HUB_COMMAND_POLICIES[%d] duplicates an earlier policy", index)
+		}
+		seen[key] = struct{}{}
+	}
+	return policies, nil
 }
 
 func parseBindingMachinePolicies(raw string, cfg Config) ([]BindingMachinePolicyConfig, error) {

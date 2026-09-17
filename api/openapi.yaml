@@ -15,6 +15,7 @@ tags:
   - name: Projection Catalog
   - name: Operations
   - name: Bindings
+  - name: Commands
 paths:
   /healthz:
     get:
@@ -220,6 +221,73 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/commands:
+    post:
+      tags: [Commands]
+      operationId: submitCommand
+      summary: Submit an owner-system command with an operation receipt
+      description: Requires an exact workload policy. The command payload is published to the owner system; Record Hub never executes the owner business action.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/RequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommandSubmitRequest"
+      responses:
+        "202":
+          description: Command accepted or dispatched.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommandOperation"
+        "200":
+          description: Existing operation returned for an idempotent replay.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommandOperation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/RequestTooLarge"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /api/v1/commands/{operationID}:
+    parameters:
+      - $ref: "#/components/parameters/CommandOperationID"
+    get:
+      tags: [Commands]
+      operationId: getCommandOperation
+      summary: Read a command operation receipt
+      parameters:
+        - $ref: "#/components/parameters/TenantIdQuery"
+        - $ref: "#/components/parameters/WorkspaceIdQuery"
+      responses:
+        "200":
+          description: Command operation receipt.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommandOperation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
   /api/v1/bindings/snapshots/{snapshotId}:
     parameters:
       - $ref: "#/components/parameters/SnapshotId"
@@ -1245,6 +1313,12 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
+    RequestTooLarge:
+      description: The bounded command payload is too large.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
     Conflict:
       description: The request conflicts with current state or idempotency data.
       content:
@@ -1311,6 +1385,13 @@ components:
         type: string
         minLength: 1
         maxLength: 128
+    CommandOperationID:
+      name: operationID
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: "^cmd-[a-f0-9]{24}$"
     WorkspaceIdQuery:
       name: workspaceId
       in: query
@@ -2052,6 +2133,82 @@ components:
             $ref: "#/components/schemas/Record"
         nextCursor:
           type: string
+    CommandSubmitRequest:
+      type: object
+      additionalProperties: false
+      required: [tenantId, workspaceId, policyId, resourceRef, payload]
+      properties:
+        tenantId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        workspaceId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        policyId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        resourceRef:
+          type: string
+          pattern: "^[^\\s:]+:[^\\s:]+:[^\\s:]+$"
+          maxLength: 512
+        expectedVersion:
+          type: integer
+          minimum: 1
+        payload:
+          type: object
+          additionalProperties: true
+    CommandOperation:
+      type: object
+      additionalProperties: false
+      required: [operationId, tenantId, workspaceId, policyId, ownerSystem, resourceType, action, purpose, resourceRef, payloadHash, status, revision, createdBy, createdAt, updatedAt]
+      properties:
+        operationId:
+          type: string
+          pattern: "^cmd-[a-f0-9]{24}$"
+        tenantId:
+          type: string
+        workspaceId:
+          type: string
+        policyId:
+          type: string
+        ownerSystem:
+          type: string
+        resourceType:
+          type: string
+        action:
+          type: string
+        purpose:
+          type: string
+        resourceRef:
+          type: string
+        expectedVersion:
+          type: integer
+          minimum: 1
+        payloadHash:
+          type: string
+          pattern: "^sha256:[a-f0-9]{64}$"
+        status:
+          type: string
+          enum: [ACCEPTED, DISPATCHED, SUCCEEDED, REJECTED, FAILED, EXPIRED]
+        revision:
+          type: integer
+          minimum: 1
+        safeError:
+          type: string
+          maxLength: 512
+        requestId:
+          type: string
+        createdBy:
+          $ref: "#/components/schemas/IdentityKey"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
     RecordFeedEvent:
       type: object
       additionalProperties: false

@@ -1,6 +1,7 @@
 # 本地 NATS JetStream
 
-本地开发使用 NATS Server 2.14.6 和 JetStream file storage。`nats-init` 幂等创建 `DOMAIN_EVENTS`、`DEAD_LETTERS` 以及 Approver、Fluxion、Bids 三个 durable pull consumer。
+本地开发使用 NATS Server 2.14.6 和 JetStream file storage。`nats-init` 幂等创建 `DOMAIN_EVENTS`、
+`APPROVAL_COMMANDS`、`OWNER_COMMANDS`、`DEAD_LETTERS` 以及 Approver、Fluxion、Bids 三个 durable pull consumer。
 
 要求：
 

@@ -15,6 +15,7 @@ import (
 	"github.com/samlet/record-hub/server/internal/health"
 	"github.com/samlet/record-hub/server/internal/modules/audit"
 	"github.com/samlet/record-hub/server/internal/modules/binding"
+	"github.com/samlet/record-hub/server/internal/modules/commands"
 	"github.com/samlet/record-hub/server/internal/modules/identity"
 	"github.com/samlet/record-hub/server/internal/modules/projection"
 	"github.com/samlet/record-hub/server/internal/modules/records"
@@ -32,6 +33,7 @@ type runtimeDependencies struct {
 	schema      http.Handler
 	catalog     http.Handler
 	binding     http.Handler
+	commands    http.Handler
 	operations  http.Handler
 	rebuild     http.Handler
 	feed        http.Handler
@@ -111,7 +113,7 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 	catalogService := projection.NewCatalogService(catalogRepo, catalogRepo, schemaRepo, authorizer, catalogReceipts, auditWriter)
 	recordService := records.NewRecordService(recordRepo, recordRepo, schemaRepo, authorizer, recordRepo, recordReceipts, auditWriter).WithViewRepository(recordRepo).WithIndexRepository(recordRepo).WithMetrics(metrics).WithQueryBudget(observability.QueryBudget{MaxPageRows: cfg.QueryBudget.MaxPageRows, MaxResponseBytes: cfg.QueryBudget.MaxResponseBytes, MaxDuration: cfg.QueryBudget.MaxDuration}).WithFeed(feed)
 	snapshotStore := binding.NewMongoSnapshotStore(database)
-	var machineAuthorizer binding.PolicyAuthorizer
+	var bindingMachineAuthorizer binding.PolicyAuthorizer
 	if len(cfg.BindingMachinePolicies) > 0 {
 		policies := make([]binding.MachinePolicy, 0, len(cfg.BindingMachinePolicies))
 		for _, policy := range cfg.BindingMachinePolicies {
@@ -126,9 +128,24 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 				ResourceType:   policy.ResourceType,
 			})
 		}
-		machineAuthorizer = binding.NewStaticMachinePolicyAuthorizer(policies...)
+		bindingMachineAuthorizer = binding.NewStaticMachinePolicyAuthorizer(policies...)
 	}
-	bindingService := binding.NewService(binding.NewMongoRecordReader(recordRepo), snapshotStore, authorizer, machineAuthorizer)
+	commandPolicies := make([]commands.Policy, 0, len(cfg.CommandPolicies))
+	commandMachinePolicies := make([]binding.MachinePolicy, 0, len(cfg.CommandPolicies))
+	for _, policy := range cfg.CommandPolicies {
+		commandPolicies = append(commandPolicies, commands.Policy{ID: policy.PolicyID, TenantID: policy.TenantID, WorkspaceID: policy.WorkspaceID, Purpose: policy.Purpose, OwnerSystem: policy.OwnerSystem, ResourceType: policy.ResourceType, Action: policy.Action, ExpectedVersionRequired: policy.ExpectedVersionRequired, MaxPayloadBytes: policy.MaxPayloadBytes})
+		commandMachinePolicies = append(commandMachinePolicies, binding.MachinePolicy{Identity: identity.IdentityKey{Issuer: policy.Issuer, Subject: policy.Subject}, Audience: policy.Audience, Scope: policy.Scope, TenantID: policy.TenantID, WorkspaceID: policy.WorkspaceID, Purpose: policy.Purpose, ResourceSystem: policy.OwnerSystem, ResourceType: policy.ResourceType})
+	}
+	var commandMachineAuthorizer binding.PolicyAuthorizer
+	if len(commandMachinePolicies) > 0 {
+		commandMachineAuthorizer = binding.NewStaticMachinePolicyAuthorizer(commandMachinePolicies...)
+	}
+	commandRegistry, err := commands.NewStaticPolicyRegistry(commandPolicies...)
+	if err != nil {
+		return nil, fmt.Errorf("configure command policies: %w", err)
+	}
+	commandService := commands.NewService(commandRegistry, commands.NewMongoStore(database), commandMachineAuthorizer, auditWriter)
+	bindingService := binding.NewService(binding.NewMongoRecordReader(recordRepo), snapshotStore, authorizer, bindingMachineAuthorizer)
 	operationsService := projection.NewOperationsService(projection.NewMongoProjectionRepository(database), authorizer).WithMetrics(metrics).WithSLOThresholds(projection.ProjectionSLOThresholds{BacklogWarning: cfg.ProjectionSLO.BacklogWarning, LagWarning: cfg.ProjectionSLO.LagWarning, FailureBudget: cfg.ProjectionSLO.FailureBudget})
 	generations := projection.NewMappingGenerationRegistry()
 	generationBuilder := projection.NewMappingGenerationBuilder(catalogRepo, schemaRepo)
@@ -137,6 +154,7 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 	deps.schema = schema.NewHTTPHandler(schemaService, migrationService)
 	deps.catalog = projection.NewCatalogHTTPHandler(catalogService)
 	deps.binding = binding.NewHTTPHandler(bindingService)
+	deps.commands = commands.NewHTTPHandler(commandService)
 	deps.operations = projection.NewOperationsHTTPHandler(operationsService)
 	deps.rebuild = projection.NewProjectionRebuildHTTPHandler(rebuildService)
 	deps.feed = records.NewFeedHTTPHandler(feed, authorizer, records.FeedHTTPOptions{})
@@ -154,6 +172,7 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 		return nil, err
 	}
 	deps.natsClient = natsClient
+	commandService.WithPublisher(commands.NewJetStreamPublisher(natsClient.Publisher()))
 	deps.checks[health.NATS] = health.CheckFunc(natsClient.Check)
 	generationRefresher := projection.NewMappingGenerationRefresher(generationBuilder, generations, 5*time.Second, logger)
 	refreshCtx, refreshCancel := context.WithTimeout(context.Background(), 8*time.Second)
@@ -219,6 +238,9 @@ func ensureMongoIndexes(database *mongo.Database) error {
 		return err
 	}
 	if err := records.NewMongoRecordReceiptStore(database).EnsureIndexes(ctx); err != nil {
+		return err
+	}
+	if err := commands.NewMongoStore(database).EnsureIndexes(ctx); err != nil {
 		return err
 	}
 	if err := audit.NewMongoWriter(database).EnsureIndexes(ctx); err != nil {
