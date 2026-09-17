@@ -22,6 +22,7 @@
 | `DOMAIN_EVENTS` | `events.approver.>`, `events.fluxion.>`, `events.bids.>`, `events.record-hub.>` | 多消费者领域事件与重放 |
 | `APPROVAL_COMMANDS` | `commands.approver.>` | 单一处理方的审批命令 |
 | `OWNER_COMMANDS` | `commands.fluxion.>`, `commands.bids.>` | 回到事实来源执行的命令 |
+| `COMMAND_RESULTS` | `results.approver.>`, `results.fluxion.>`, `results.bids.>` | owner 事务提交后的命令终态结果 |
 | `DEAD_LETTERS` | `dlq.>` | 超限失败和人工恢复 |
 
 生产配置应使用 file storage 和多副本；具体副本数、容量、MaxAge 和地域拓扑在容量测试后确定。
@@ -31,6 +32,7 @@
 ```text
 events.<system>.<aggregate>.<event>.v<major>
 commands.<target-system>.<capability>.<action>.v<major>
+results.<owner-system>.<action>.v<major>
 dlq.<original-system>.<consumer>
 ```
 
@@ -42,6 +44,7 @@ events.fluxion.project.stage-changed.v1
 events.bids.tender.published.v1
 commands.approver.approval.request.v1
 commands.bids.payment-approval.apply.v1
+results.fluxion.project.annotate.v1
 ```
 
 tenant、aggregate ID 和用户 ID 放在 envelope，不放入 subject，避免高基数 subject 和授权规则膨胀。
@@ -49,7 +52,7 @@ tenant、aggregate ID 和用户 ID 放在 envelope，不放入 subject，避免�
 ## 4. Consumer 约定
 
 - 默认使用 durable pull consumer 和 explicit ACK。
-- 一个逻辑消费用途对应一个 durable 名称，例如 `record-hub-projector-v1`。
+- 一个逻辑消费用途对应一个 durable 名称，例如 `record-hub-projector-v1`、`approver-command-inbox-v1` 和 `record-hub-command-results-v1`。
 - 同一 durable 可以水平扩展 worker pool。
 - `AckWait` 大于 handler 正常最大处理时间；长任务定期续期或拆分。
 - `MaxDeliver` 后由消费者发布安全、脱敏的 DLQ envelope。

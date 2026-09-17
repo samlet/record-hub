@@ -114,3 +114,30 @@ func TestCommandHTTPMapsReplayAndPolicyErrors(t *testing.T) {
 		t.Fatalf("policy status=%d body=%s", response.Code, response.Body.String())
 	}
 }
+
+func TestCommandApplyResultIsIdempotentAndConflictsSafely(t *testing.T) {
+	service, _ := commandService(t, nil)
+	version := int64(4)
+	operation, _, err := service.Submit(context.Background(), commandPrincipal(), SubmitRequest{TenantID: "tenant-1", WorkspaceID: "workspace-1", PolicyID: "project.annotate", ResourceRef: "fluxion:PROJECT:project-1", ExpectedVersion: &version, Payload: []byte(`{"note":"safe"}`), IdempotencyKey: "result-op"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := ResultEnvelope{EventID: "evt-result-1", OperationID: operation.ID, TenantID: operation.TenantID, WorkspaceID: operation.WorkspaceID, OwnerSystem: operation.OwnerSystem, Action: operation.Action, Status: StatusSucceeded, ResultHash: "sha256:done", ResultVersion: &version, OccurredAt: time.Date(2026, 9, 17, 12, 1, 0, 0, time.UTC)}
+	updated, replayed, err := service.ApplyResult(context.Background(), result)
+	if err != nil || replayed || updated.Status != StatusSucceeded || updated.ResultEventID != result.EventID {
+		t.Fatalf("apply result = %#v replayed=%v err=%v", updated, replayed, err)
+	}
+	replay, replayed, err := service.ApplyResult(context.Background(), result)
+	if err != nil || !replayed || replay.ResultEventID != result.EventID {
+		t.Fatalf("result replay = %#v replayed=%v err=%v", replay, replayed, err)
+	}
+	result.EventID = "evt-result-2"
+	if _, _, err := service.ApplyResult(context.Background(), result); !errors.Is(err, ErrCommandResultConflict) {
+		t.Fatalf("conflicting result error = %v", err)
+	}
+	result.EventID = "evt-result-3"
+	result.OwnerSystem = "bids"
+	if _, _, err := service.ApplyResult(context.Background(), result); !errors.Is(err, ErrCommandResultConflict) {
+		t.Fatalf("owner mismatch error = %v", err)
+	}
+}

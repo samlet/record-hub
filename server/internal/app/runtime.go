@@ -214,6 +214,13 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 		}
 		deps.workers = append(deps.workers, runner.WithDeadLetterPublisher(dlq).WithMetrics(metrics).WithLogger(logger))
 	}
+	resultRunner, err := projection.NewPullRunner(natsClient, projection.PullRunnerConfig{Stream: commands.ResultStreamName, Durable: commands.ResultConsumerName, BatchSize: 16, FetchTimeout: time.Second}, commandService.HandleResultMessage)
+	if err != nil {
+		natsClient.Close()
+		_ = client.Disconnect(context.Background())
+		return nil, fmt.Errorf("configure command result consumer: %w", err)
+	}
+	deps.workers = append(deps.workers, resultRunner.WithDeadLetterPublisher(dlq).WithMetrics(metrics).WithLogger(logger))
 	deps.closer = runtimeCloser{mongoClient: client, natsClient: natsClient, timeout: cfg.ShutdownTimeout}
 	return deps, nil
 }
@@ -241,6 +248,9 @@ func ensureMongoIndexes(database *mongo.Database) error {
 		return err
 	}
 	if err := commands.NewMongoStore(database).EnsureIndexes(ctx); err != nil {
+		return err
+	}
+	if err := commands.NewMongoInboxStore(database).EnsureIndexes(ctx); err != nil {
 		return err
 	}
 	if err := audit.NewMongoWriter(database).EnsureIndexes(ctx); err != nil {

@@ -19,6 +19,7 @@ const (
 	domainEventsStream     = "DOMAIN_EVENTS"
 	approvalCommandsStream = "APPROVAL_COMMANDS"
 	ownerCommandsStream    = "OWNER_COMMANDS"
+	commandResultsStream   = "COMMAND_RESULTS"
 	deadLettersStream      = "DEAD_LETTERS"
 	maxMessageBytes        = 256 * 1024
 )
@@ -29,6 +30,17 @@ var projectionConsumers = []jetstream.ConsumerConfig{
 	consumerConfig("record-hub-bids-projection-v1", "events.bids.>"),
 }
 
+var resultConsumer = consumerConfig("record-hub-command-results-v1", "results.>")
+
+var commandConsumers = []struct {
+	stream string
+	config jetstream.ConsumerConfig
+}{
+	{stream: approvalCommandsStream, config: consumerConfig("approver-command-inbox-v1", "commands.approver.>")},
+	{stream: ownerCommandsStream, config: consumerConfig("fluxion-command-inbox-v1", "commands.fluxion.>")},
+	{stream: ownerCommandsStream, config: consumerConfig("bids-command-inbox-v1", "commands.bids.>")},
+}
+
 func main() {
 	smoke := flag.Bool("smoke", false, "verify publish, deduplication, pull, and explicit acknowledgement")
 	flag.Parse()
@@ -36,7 +48,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "NATS initialization failed: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Println("NATS topology ready: DOMAIN_EVENTS APPROVAL_COMMANDS OWNER_COMMANDS DEAD_LETTERS and projection consumers")
+	fmt.Println("NATS topology ready: DOMAIN_EVENTS APPROVAL_COMMANDS OWNER_COMMANDS COMMAND_RESULTS DEAD_LETTERS and durable consumers")
 }
 
 func run(smoke bool) error {
@@ -109,6 +121,18 @@ func initialize(ctx context.Context, js jetstream.JetStream) error {
 			Duplicates:  10 * time.Minute,
 		},
 		{
+			Name:        commandResultsStream,
+			Description: "Terminal result events published by command owner systems",
+			Subjects:    []string{"results.approver.>", "results.fluxion.>", "results.bids.>"},
+			Retention:   jetstream.LimitsPolicy,
+			MaxBytes:    256 * 1024 * 1024,
+			MaxAge:      7 * 24 * time.Hour,
+			MaxMsgSize:  maxMessageBytes,
+			Storage:     jetstream.FileStorage,
+			Replicas:    1,
+			Duplicates:  10 * time.Minute,
+		},
+		{
 			Name:        deadLettersStream,
 			Description: "Safe failure envelopes emitted by Record Hub consumers",
 			Subjects:    []string{"dlq.record-hub.>"},
@@ -129,6 +153,14 @@ func initialize(ctx context.Context, js jetstream.JetStream) error {
 	for _, config := range projectionConsumers {
 		if _, err := js.CreateOrUpdateConsumer(ctx, domainEventsStream, config); err != nil {
 			return fmt.Errorf("create or update consumer %s: %w", config.Durable, err)
+		}
+	}
+	if _, err := js.CreateOrUpdateConsumer(ctx, commandResultsStream, resultConsumer); err != nil {
+		return fmt.Errorf("create or update consumer %s: %w", resultConsumer.Durable, err)
+	}
+	for _, consumer := range commandConsumers {
+		if _, err := js.CreateOrUpdateConsumer(ctx, consumer.stream, consumer.config); err != nil {
+			return fmt.Errorf("create or update consumer %s: %w", consumer.config.Durable, err)
 		}
 	}
 	return verifyTopology(ctx, js)
@@ -171,6 +203,7 @@ func verifyTopology(ctx context.Context, js jetstream.JetStream) error {
 	}{
 		{name: approvalCommandsStream, subjects: []string{"commands.approver.>"}},
 		{name: ownerCommandsStream, subjects: []string{"commands.fluxion.>", "commands.bids.>"}},
+		{name: commandResultsStream, subjects: []string{"results.approver.>", "results.fluxion.>", "results.bids.>"}},
 	} {
 		stream, streamErr := js.Stream(ctx, expected.name)
 		if streamErr != nil {
@@ -208,6 +241,30 @@ func verifyTopology(ctx context.Context, js jetstream.JetStream) error {
 		}
 		if info.Config.AckPolicy != jetstream.AckExplicitPolicy || info.Config.FilterSubject != want.FilterSubject || info.Config.MaxDeliver != want.MaxDeliver {
 			return fmt.Errorf("consumer %s configuration does not match required topology", want.Durable)
+		}
+	}
+	results, err := js.Stream(ctx, commandResultsStream)
+	if err != nil {
+		return fmt.Errorf("load command result stream: %w", err)
+	}
+	if _, err := results.Consumer(ctx, resultConsumer.Durable); err != nil {
+		return fmt.Errorf("load command result consumer %s: %w", resultConsumer.Durable, err)
+	}
+	for _, expected := range commandConsumers {
+		stream, err := js.Stream(ctx, expected.stream)
+		if err != nil {
+			return fmt.Errorf("load command consumer stream %s: %w", expected.stream, err)
+		}
+		consumer, err := stream.Consumer(ctx, expected.config.Durable)
+		if err != nil {
+			return fmt.Errorf("load command consumer %s: %w", expected.config.Durable, err)
+		}
+		info, err := consumer.Info(ctx)
+		if err != nil {
+			return fmt.Errorf("inspect command consumer %s: %w", expected.config.Durable, err)
+		}
+		if info.Config.AckPolicy != jetstream.AckExplicitPolicy || info.Config.FilterSubject != expected.config.FilterSubject || info.Config.MaxDeliver != expected.config.MaxDeliver {
+			return fmt.Errorf("consumer %s configuration does not match required topology", expected.config.Durable)
 		}
 	}
 	return nil

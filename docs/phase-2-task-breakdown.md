@@ -63,4 +63,6 @@ P2-0-005 的运行说明见 [deploy/local/isolated/README.md](../deploy/local/is
 | P2-3-001 | Exact command policy registry | DONE | `RECORD_HUB_COMMAND_POLICIES` 严格 JSON、无通配符；workload identity 的 issuer/audience/scope/resource 精确匹配 |
 | P2-3-002 | Operation receipt and idempotency | DONE | Mongo unique receipt、payload canonical hash、相同键 replay、hash 冲突拒绝、状态枚举和审计摘要已实现 |
 | P2-3-003 | Controlled command HTTP contract | DONE | `POST/GET /api/v1/commands`、expectedVersion、256 KiB payload limit、OpenAPI 和负向测试已完成 |
-| P2-3-004 | Owner Inbox and result event | TODO | 需要 owner-system durable Inbox、事务 claim/commit、result event、ACK-loss/restart live 证据 |
+| P2-3-004 | Owner Inbox and result event | PARTIAL | `COMMAND_RESULTS` stream、Record Hub durable result pull/CAS/幂等终态推进、Mongo/Memory Inbox claim/commit 抽象和安全失败结果已完成；真实 Approver/Fluxion/Bids 业务库事务、outbox、ACK-loss/restart live 证据待四系统接入 |
+| P2-3-004a | Result event consumer | DONE | `results.<ownerSystem>.<action>.v1`、256 KiB bounded decode、terminal status CAS、event ID replay/conflict、DLQ runner、审计摘要和负向单测 |
+| P2-3-004b | Owner Inbox contract | PARTIAL | Mongo unique Inbox + revision CAS、Memory 测试实现和 callback/outbox 边界已完成；各 owner 仓库仍需接入自己的事务与 outbox |

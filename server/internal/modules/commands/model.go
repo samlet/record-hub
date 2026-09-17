@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -20,6 +22,8 @@ var (
 	ErrCommandExpectedVersion   = errors.New("expected record version is required")
 	ErrCommandPayloadTooLarge   = errors.New("command payload is too large")
 	ErrCommandPublicationFailed = errors.New("command publication failed")
+	ErrCommandResultConflict    = errors.New("command result conflicts with operation")
+	ErrCommandResultInvalid     = errors.New("invalid command result")
 )
 
 type Status string
@@ -100,6 +104,9 @@ type Operation struct {
 	Status          Status               `bson:"status" json:"status"`
 	Revision        int64                `bson:"revision" json:"revision"`
 	SafeError       string               `bson:"safeError,omitempty" json:"safeError,omitempty"`
+	ResultEventID   string               `bson:"resultEventId,omitempty" json:"resultEventId,omitempty"`
+	ResultHash      string               `bson:"resultHash,omitempty" json:"resultHash,omitempty"`
+	ResultVersion   *int64               `bson:"resultVersion,omitempty" json:"resultVersion,omitempty"`
 	CreatedBy       identity.IdentityKey `bson:"createdBy" json:"createdBy"`
 	CreatedAt       time.Time            `bson:"createdAt" json:"createdAt"`
 	UpdatedAt       time.Time            `bson:"updatedAt" json:"updatedAt"`
@@ -135,4 +142,57 @@ type Envelope struct {
 	Payload         []byte               `json:"payload"`
 	RequestedBy     identity.IdentityKey `json:"requestedBy"`
 	CreatedAt       time.Time            `json:"createdAt"`
+}
+
+// ResultEnvelope is published by the owner system after its own transaction
+// and outbox have committed. It carries safe metadata only; the owner keeps
+// the authoritative business result.
+type ResultEnvelope struct {
+	EventID       string    `json:"eventId"`
+	OperationID   string    `json:"operationId"`
+	TenantID      string    `json:"tenantId"`
+	WorkspaceID   string    `json:"workspaceId"`
+	OwnerSystem   string    `json:"ownerSystem"`
+	Action        string    `json:"action"`
+	Status        Status    `json:"status"`
+	ResultHash    string    `json:"resultHash,omitempty"`
+	ErrorCode     string    `json:"errorCode,omitempty"`
+	SafeError     string    `json:"safeError,omitempty"`
+	ResultVersion *int64    `json:"resultVersion,omitempty"`
+	OccurredAt    time.Time `json:"occurredAt"`
+}
+
+func (result ResultEnvelope) Validate() error {
+	if result.EventID == "" || result.OperationID == "" || result.TenantID == "" || result.WorkspaceID == "" || result.OwnerSystem == "" || result.Action == "" || result.OccurredAt.IsZero() {
+		return ErrCommandResultInvalid
+	}
+	switch result.Status {
+	case StatusSucceeded, StatusRejected, StatusFailed, StatusExpired:
+	default:
+		return ErrCommandResultInvalid
+	}
+	if len(result.EventID) > 256 || len(result.ErrorCode) > 128 || len(result.SafeError) > 512 || len(result.ResultHash) > 256 || strings.ContainsAny(result.EventID+result.ErrorCode+result.ResultHash+result.SafeError, "\r\n") {
+		return ErrCommandResultInvalid
+	}
+	if result.ResultVersion != nil && *result.ResultVersion < 1 {
+		return ErrCommandResultInvalid
+	}
+	return nil
+}
+
+func (envelope Envelope) Validate() error {
+	if envelope.OperationID == "" || envelope.TenantID == "" || envelope.WorkspaceID == "" || envelope.PolicyID == "" || envelope.OwnerSystem == "" || envelope.ResourceType == "" || envelope.Action == "" || envelope.Purpose == "" || envelope.ResourceRef == "" || envelope.PayloadHash == "" || envelope.CreatedAt.IsZero() {
+		return ErrCommandInvalidRequest
+	}
+	if len(envelope.OperationID) > 256 || len(envelope.Payload) == 0 || len(envelope.Payload) > MaxPayloadBytes {
+		return ErrCommandInvalidRequest
+	}
+	if envelope.ExpectedVersion != nil && *envelope.ExpectedVersion < 1 {
+		return ErrCommandInvalidRequest
+	}
+	hash := sha256.Sum256(envelope.Payload)
+	if envelope.PayloadHash != "sha256:"+hex.EncodeToString(hash[:]) {
+		return ErrCommandInvalidRequest
+	}
+	return nil
 }

@@ -90,7 +90,7 @@ func (store *MongoStore) SaveCAS(ctx context.Context, operation Operation, expec
 		return Operation{}, err
 	}
 	var result Operation
-	err := store.collection.FindOneAndUpdate(ctx, bson.D{{Key: "operationId", Value: operation.ID}, {Key: "tenantId", Value: operation.TenantID}, {Key: "workspaceId", Value: operation.WorkspaceID}, {Key: "revision", Value: expectedRevision}}, bson.D{{Key: "$set", Value: bson.D{{Key: "status", Value: operation.Status}, {Key: "revision", Value: operation.Revision}, {Key: "safeError", Value: operation.SafeError}, {Key: "updatedAt", Value: operation.UpdatedAt}}}}, options.FindOneAndUpdate().SetReturnDocument(options.After)).Decode(&result)
+	err := store.collection.FindOneAndUpdate(ctx, bson.D{{Key: "operationId", Value: operation.ID}, {Key: "tenantId", Value: operation.TenantID}, {Key: "workspaceId", Value: operation.WorkspaceID}, {Key: "revision", Value: expectedRevision}}, bson.D{{Key: "$set", Value: bson.D{{Key: "status", Value: operation.Status}, {Key: "revision", Value: operation.Revision}, {Key: "safeError", Value: operation.SafeError}, {Key: "resultEventId", Value: operation.ResultEventID}, {Key: "resultHash", Value: operation.ResultHash}, {Key: "resultVersion", Value: operation.ResultVersion}, {Key: "updatedAt", Value: operation.UpdatedAt}}}}, options.FindOneAndUpdate().SetReturnDocument(options.After)).Decode(&result)
 	if errors.Is(err, mongo.ErrNoDocuments) {
 		current, findErr := store.Find(ctx, operation.TenantID, operation.WorkspaceID, operation.ID)
 		if findErr != nil {

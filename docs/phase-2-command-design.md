@@ -18,8 +18,11 @@ purpose 和是否必须携带 `expectedVersion`。Record Hub 只生成 operation
 `DISPATCHED`，发布失败仍保留 `ACCEPTED`，后续重试同一幂等键时再次尝试发布。发布消息 subject 为
 `commands.<ownerSystem>.<action>.v1`，message ID 使用 operation ID。
 
-当前批次已经冻结状态枚举 `ACCEPTED/DISPATCHED/SUCCEEDED/REJECTED/FAILED/EXPIRED`，但 owner Inbox、结果
-事件和终态推进留给下一批；因此不宣称 exactly-once 或业务执行成功。
+当前批次已经冻结状态枚举 `ACCEPTED/DISPATCHED/SUCCEEDED/REJECTED/FAILED/EXPIRED`。本批增加了
+`COMMAND_RESULTS` durable pull consumer：owner 事务和本地 outbox 提交后发布 `results.<ownerSystem>.<action>.v1`
+结果事件，Record Hub 以 operation ID + event ID 做 CAS/幂等终态推进。Owner 侧提供 `InboxService` 的 durable
+claim/commit 抽象（Mongo 与 memory 实现）；实际 owner 业务库事务仍必须由 Approver/Fluxion/Bids 自己包住，
+不能把跨数据库操作误称为 exactly-once。
 
 ## 配置与安全边界
 
@@ -29,7 +32,7 @@ owner system、resource type、action 均必须精确匹配，禁止通配符。
 
 ## 后续验收
 
-- 增加 `APPROVAL_COMMANDS`/`OWNER_COMMANDS` JetStream stream 初始化和 owner durable Inbox；
+- 增加 `APPROVAL_COMMANDS`/`OWNER_COMMANDS`/`COMMAND_RESULTS` JetStream stream 初始化和 owner durable Inbox；
 - 选择一个低敏、可逆的 owner action，完成 result event、expected-version conflict 和 ACK-loss live E2E；
 - 为 Go/Java/TypeScript workflow client 提供 timeout、retry、error taxonomy 和兼容矩阵；
 - 补充旧 policy 撤销、owner outage、重启和 payload redaction 的隔离拓扑证据。

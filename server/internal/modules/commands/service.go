@@ -11,7 +11,9 @@ import (
 	"io"
 	"strings"
 	"time"
+	"unicode/utf8"
 
+	"github.com/nats-io/nats.go/jetstream"
 	"github.com/samlet/record-hub/server/internal/modules/audit"
 	"github.com/samlet/record-hub/server/internal/modules/binding"
 	"github.com/samlet/record-hub/server/internal/modules/identity"
@@ -207,6 +209,78 @@ func (service *Service) Get(ctx context.Context, principal identity.Principal, t
 	return operation, nil
 }
 
+// ApplyResult advances an accepted/dispatched operation from an owner result
+// event. Event IDs are the durable idempotency key: an identical replay is a
+// no-op, while a different terminal result is rejected as a conflict.
+func (service *Service) ApplyResult(ctx context.Context, result ResultEnvelope) (Operation, bool, error) {
+	if service == nil || service.store == nil || service.clock == nil {
+		return Operation{}, false, ErrCommandUnavailable
+	}
+	if err := result.Validate(); err != nil {
+		return Operation{}, false, err
+	}
+	operation, err := service.store.Find(ctx, result.TenantID, result.WorkspaceID, result.OperationID)
+	if err != nil {
+		return Operation{}, false, err
+	}
+	if operation.OwnerSystem != result.OwnerSystem || operation.Action != result.Action {
+		return Operation{}, false, ErrCommandResultConflict
+	}
+	if operation.Status != StatusAccepted && operation.Status != StatusDispatched {
+		if operation.ResultEventID == result.EventID && operation.Status == result.Status && operation.ResultHash == result.ResultHash && operation.SafeError == result.SafeError && sameOptionalVersion(operation.ResultVersion, result.ResultVersion) {
+			return operation, true, nil
+		}
+		return Operation{}, false, ErrCommandResultConflict
+	}
+	updated := operation
+	updated.Status = result.Status
+	updated.SafeError = result.SafeError
+	updated.ResultEventID = result.EventID
+	updated.ResultHash = result.ResultHash
+	updated.ResultVersion = result.ResultVersion
+	updated.Revision++
+	updated.UpdatedAt = result.OccurredAt.UTC()
+	if updated.UpdatedAt.Before(operation.UpdatedAt) {
+		updated.UpdatedAt = service.clock().UTC()
+	}
+	saved, err := service.store.SaveCAS(ctx, updated, operation.Revision)
+	if err != nil {
+		return Operation{}, false, err
+	}
+	if service.audit != nil {
+		_ = service.audit.Append(ctx, audit.Entry{TenantID: saved.TenantID, WorkspaceID: saved.WorkspaceID, Action: "command.result", Actor: identity.IdentityKey{Issuer: saved.OwnerSystem, Subject: saved.OwnerSystem}, ResourceType: "CommandOperation", ResourceID: saved.ID, ResourceVersion: saved.Revision, AfterHash: saved.ResultHash, CreatedAt: saved.UpdatedAt})
+	}
+	return saved, false, nil
+}
+
+func sameOptionalVersion(left, right *int64) bool {
+	if left == nil || right == nil {
+		return left == nil && right == nil
+	}
+	return *left == *right
+}
+
+// HandleResultMessage is the durable JetStream consumer handler. It bounds
+// input before decoding and rejects unknown/trailing JSON without logging the
+// raw message body.
+func (service *Service) HandleResultMessage(ctx context.Context, message jetstream.Msg) error {
+	if message == nil || len(message.Data()) == 0 || len(message.Data()) > MaxPayloadBytes || !utf8.Valid(message.Data()) {
+		return ErrCommandResultInvalid
+	}
+	decoder := json.NewDecoder(strings.NewReader(string(message.Data())))
+	decoder.DisallowUnknownFields()
+	var result ResultEnvelope
+	if err := decoder.Decode(&result); err != nil {
+		return ErrCommandResultInvalid
+	}
+	var trailing interface{}
+	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
+		return ErrCommandResultInvalid
+	}
+	_, _, err := service.ApplyResult(ctx, result)
+	return err
+}
+
 func normalizeRequest(request SubmitRequest) (SubmitRequest, []byte, string, error) {
 	request.TenantID = strings.TrimSpace(request.TenantID)
 	request.WorkspaceID = strings.TrimSpace(request.WorkspaceID)
@@ -235,7 +309,7 @@ func normalizeRequest(request SubmitRequest) (SubmitRequest, []byte, string, err
 }
 
 func canonicalPayload(raw []byte) ([]byte, error) {
-	if len(raw) == 0 || len(raw) > MaxPayloadBytes {
+	if len(raw) == 0 || len(raw) > MaxPayloadBytes || !utf8.Valid(raw) {
 		return nil, ErrCommandPayloadTooLarge
 	}
 	decoder := json.NewDecoder(strings.NewReader(string(raw)))
@@ -257,6 +331,10 @@ func canonicalPayload(raw []byte) ([]byte, error) {
 
 func commandSubject(ownerSystem, action string) string {
 	return "commands." + ownerSystem + "." + action + ".v1"
+}
+
+func ResultSubject(ownerSystem, action string) string {
+	return "results." + ownerSystem + "." + action + ".v1"
 }
 
 func newOperationID() (string, error) {

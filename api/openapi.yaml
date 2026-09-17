@@ -2199,6 +2199,15 @@ components:
         safeError:
           type: string
           maxLength: 512
+        resultEventId:
+          type: string
+          maxLength: 256
+        resultHash:
+          type: string
+          maxLength: 256
+        resultVersion:
+          type: integer
+          minimum: 1
         requestId:
           type: string
         createdBy:
