@@ -1,6 +1,6 @@
 # Source / Mapping Registry 设计（P2-1-003）
 
-状态：Draft for implementation
+状态：Control plane implemented / runtime generation pending
 日期：2026-09-17
 
 ## 目标
@@ -54,7 +54,7 @@ Mapping 绑定 source event 到一个 projection table/schema：
 query、网络访问和原始 payload 透传。fixture 是脱敏、大小有界的 envelope+payload 样本，
 用于发布前验证；生产日志不能复制 fixture 正文。
 
-## 生命周期与 API 草案
+## 生命周期与 API
 
 ```text
 POST /api/v1/sources
@@ -85,6 +85,26 @@ eventVersion)` 的精确索引。事件没有精确 mapping、mapping 已撤销�
 
 现有三个 v1 summary handler 将作为内置 mapping fixture 继续运行；Registry 接入后只把它们
 登记为系统拥有的 published records，不能让客户端覆盖内置 schema 或 source owner。
+
+## 当前实现边界
+
+本批已经实现 source/mapping 严格模型、workspace-scoped Mongo unique/index、OWNER mutation、
+viewer read、optimistic revision、幂等回执、审计、canonical hash，以及 source/event version、
+published target schema 和目标字段 allowlist 的发布校验。HTTP 路由和 OpenAPI 与 server runtime
+已经接通。
+
+fixture 当前只登记有界引用与 `sha256`，尚未从受控 fixture store 取回正文并执行 envelope/schema
+验证；published mapping 也尚未组装为 generation 并切换现有 JetStream projector。现有硬编码 v1
+summary handlers 因此仍是唯一运行时数据路径。这两项完成前 P2-1-003 保持 `PARTIAL`。
+
+本批验收命令：
+
+```bash
+make check
+RECORD_HUB_MONGODB_URI=mongodb://127.0.0.1:27017 \
+  go test ./server/internal/modules/projection \
+  -run TestMongoCatalogRepositoryScopesIDsAndTransitions -count=1 -v
+```
 
 ## 验收门
 

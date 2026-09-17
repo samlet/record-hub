@@ -11,6 +11,7 @@ tags:
   - name: Identity
   - name: Records
   - name: Schema
+  - name: Projection Catalog
   - name: Operations
   - name: Bindings
 paths:
@@ -536,6 +537,249 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Record"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "428":
+          $ref: "#/components/responses/PreconditionRequired"
+  /api/v1/sources:
+    get:
+      tags: [Projection Catalog]
+      operationId: listProjectionSources
+      summary: List source registrations visible to a workspace
+      parameters:
+        - $ref: "#/components/parameters/TenantIdQuery"
+        - $ref: "#/components/parameters/WorkspaceIdQuery"
+        - $ref: "#/components/parameters/LimitQuery"
+      responses:
+        "200":
+          description: Bounded source registration list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceRegistrationList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Projection Catalog]
+      operationId: createProjectionSource
+      summary: Register a draft event source
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/RequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SourceRegistrationCreateRequest"
+      responses:
+        "201":
+          description: Draft source registration created.
+          headers:
+            ETag:
+              $ref: "#/components/headers/RevisionETag"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceRegistration"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/v1/sources/{sourceId}/publish:
+    post:
+      tags: [Projection Catalog]
+      operationId: publishProjectionSource
+      summary: Publish a source registration with optimistic concurrency
+      parameters:
+        - name: sourceId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[a-z][a-z0-9.-]{0,127}$"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/RequestId"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CatalogTransitionRequest"
+      responses:
+        "200":
+          description: Source registration published.
+          headers:
+            ETag:
+              $ref: "#/components/headers/RevisionETag"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceRegistration"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "428":
+          $ref: "#/components/responses/PreconditionRequired"
+  /api/v1/mappings:
+    get:
+      tags: [Projection Catalog]
+      operationId: listProjectionMappings
+      summary: List mapping registrations visible to a workspace
+      parameters:
+        - $ref: "#/components/parameters/TenantIdQuery"
+        - $ref: "#/components/parameters/WorkspaceIdQuery"
+        - name: sourceId
+          in: query
+          required: false
+          schema:
+            type: string
+            pattern: "^[a-z][a-z0-9.-]{0,127}$"
+        - $ref: "#/components/parameters/LimitQuery"
+      responses:
+        "200":
+          description: Bounded mapping registration list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MappingRegistrationList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Projection Catalog]
+      operationId: createProjectionMapping
+      summary: Register a draft source-to-record mapping
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/RequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MappingRegistrationCreateRequest"
+      responses:
+        "201":
+          description: Draft mapping registration created.
+          headers:
+            ETag:
+              $ref: "#/components/headers/RevisionETag"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MappingRegistration"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/v1/mappings/{mappingId}/publish:
+    post:
+      tags: [Projection Catalog]
+      operationId: publishProjectionMapping
+      summary: Publish a validated mapping registration
+      parameters:
+        - name: mappingId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[a-z][a-z0-9.-]{0,127}$"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/RequestId"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CatalogTransitionRequest"
+      responses:
+        "200":
+          description: Mapping registration published.
+          headers:
+            ETag:
+              $ref: "#/components/headers/RevisionETag"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MappingRegistration"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "428":
+          $ref: "#/components/responses/PreconditionRequired"
+  /api/v1/mappings/{mappingId}/revoke:
+    post:
+      tags: [Projection Catalog]
+      operationId: revokeProjectionMapping
+      summary: Revoke a published mapping registration
+      parameters:
+        - name: mappingId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[a-z][a-z0-9.-]{0,127}$"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/RequestId"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CatalogTransitionRequest"
+      responses:
+        "200":
+          description: Mapping registration revoked.
+          headers:
+            ETag:
+              $ref: "#/components/headers/RevisionETag"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MappingRegistration"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -1795,6 +2039,273 @@ components:
         createdAt:
           type: string
           format: date-time
+    TenantResolutionRule:
+      type: object
+      additionalProperties: false
+      required: [tenantId, workspaceId]
+      properties:
+        tenantId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        workspaceId:
+          type: string
+          minLength: 1
+          maxLength: 128
+    TenantResolution:
+      type: object
+      additionalProperties: false
+      required: [mode]
+      properties:
+        mode:
+          type: string
+          enum: [metadata, allowlist]
+        field:
+          type: string
+          enum: [workspaceId]
+        allowlist:
+          type: array
+          minItems: 1
+          maxItems: 128
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/TenantResolutionRule"
+    SourceRegistrationCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [tenantId, workspaceId, sourceId, eventType, eventVersion, ownerContact, tenantResolution]
+      properties:
+        tenantId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        workspaceId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        sourceId:
+          type: string
+          pattern: "^[a-z][a-z0-9.-]{0,127}$"
+        eventType:
+          type: string
+          pattern: "^[a-z][a-z0-9.-]{0,159}$"
+        eventVersion:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+        ownerContact:
+          type: string
+          minLength: 1
+          maxLength: 256
+        tenantResolution:
+          $ref: "#/components/schemas/TenantResolution"
+    SourceRegistration:
+      type: object
+      additionalProperties: false
+      required: [tenantId, workspaceId, sourceId, eventType, eventVersion, ownerContact, tenantResolution, status, revision, createdBy, updatedBy, createdAt, updatedAt]
+      properties:
+        tenantId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        workspaceId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        sourceId:
+          type: string
+          pattern: "^[a-z][a-z0-9.-]{0,127}$"
+        eventType:
+          type: string
+          pattern: "^[a-z][a-z0-9.-]{0,159}$"
+        eventVersion:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+        ownerContact:
+          type: string
+          minLength: 1
+          maxLength: 256
+        tenantResolution:
+          $ref: "#/components/schemas/TenantResolution"
+        status:
+          type: string
+          enum: [DRAFT, PUBLISHED, REVOKED]
+        revision:
+          type: integer
+          minimum: 1
+        createdBy:
+          $ref: "#/components/schemas/IdentityKey"
+        updatedBy:
+          $ref: "#/components/schemas/IdentityKey"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        publishedAt:
+          type: string
+          format: date-time
+    SourceRegistrationList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/SourceRegistration"
+    MappingFixture:
+      type: object
+      additionalProperties: false
+      required: [eventRef, sha256]
+      properties:
+        eventRef:
+          type: string
+          minLength: 1
+          maxLength: 512
+        sha256:
+          type: string
+          pattern: "^sha256:[0-9a-f]{64}$"
+    MappingRegistrationCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [tenantId, workspaceId, mappingId, sourceId, eventType, eventVersion, targetTableId, targetSchemaId, targetSchemaVersion, fieldMap, fixture]
+      properties:
+        tenantId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        workspaceId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        mappingId:
+          type: string
+          pattern: "^[a-z][a-z0-9.-]{0,127}$"
+        sourceId:
+          type: string
+          pattern: "^[a-z][a-z0-9.-]{0,127}$"
+        eventType:
+          type: string
+          pattern: "^[a-z][a-z0-9.-]{0,159}$"
+        eventVersion:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+        targetTableId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        targetSchemaId:
+          type: string
+          minLength: 1
+          maxLength: 256
+        targetSchemaVersion:
+          type: integer
+          minimum: 1
+        fieldMap:
+          type: object
+          minProperties: 1
+          maxProperties: 128
+          additionalProperties:
+            type: string
+            pattern: "^(?:/|payload\\.)[A-Za-z0-9_./-]{1,255}$"
+        fixture:
+          $ref: "#/components/schemas/MappingFixture"
+    MappingRegistration:
+      type: object
+      additionalProperties: false
+      required: [tenantId, workspaceId, mappingId, sourceId, eventType, eventVersion, targetTableId, targetSchemaId, targetSchemaVersion, fieldMap, fixture, canonicalHash, status, revision, createdBy, updatedBy, createdAt, updatedAt]
+      properties:
+        tenantId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        workspaceId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        mappingId:
+          type: string
+          pattern: "^[a-z][a-z0-9.-]{0,127}$"
+        sourceId:
+          type: string
+          pattern: "^[a-z][a-z0-9.-]{0,127}$"
+        eventType:
+          type: string
+          pattern: "^[a-z][a-z0-9.-]{0,159}$"
+        eventVersion:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+        targetTableId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        targetSchemaId:
+          type: string
+          minLength: 1
+          maxLength: 256
+        targetSchemaVersion:
+          type: integer
+          minimum: 1
+        fieldMap:
+          type: object
+          minProperties: 1
+          maxProperties: 128
+          additionalProperties:
+            type: string
+            pattern: "^(?:/|payload\\.)[A-Za-z0-9_./-]{1,255}$"
+        fixture:
+          $ref: "#/components/schemas/MappingFixture"
+        canonicalHash:
+          type: string
+          pattern: "^sha256:[0-9a-f]{64}$"
+        status:
+          type: string
+          enum: [DRAFT, PUBLISHED, REVOKED]
+        revision:
+          type: integer
+          minimum: 1
+        createdBy:
+          $ref: "#/components/schemas/IdentityKey"
+        updatedBy:
+          $ref: "#/components/schemas/IdentityKey"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        publishedAt:
+          type: string
+          format: date-time
+    MappingRegistrationList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/MappingRegistration"
+    CatalogTransitionRequest:
+      type: object
+      additionalProperties: false
+      required: [tenantId, workspaceId]
+      properties:
+        tenantId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        workspaceId:
+          type: string
+          minLength: 1
+          maxLength: 128
     SchemaDraftRequest:
       type: object
       additionalProperties: false

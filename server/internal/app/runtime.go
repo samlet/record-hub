@@ -30,6 +30,7 @@ type runtimeDependencies struct {
 	checks      map[health.Dependency]health.Checker
 	records     http.Handler
 	schema      http.Handler
+	catalog     http.Handler
 	binding     http.Handler
 	operations  http.Handler
 	workers     []Service
@@ -93,11 +94,14 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 	recordRepo := records.NewMongoRepository(database)
 	schemaRepo := schema.NewMongoRepository(database)
 	auditWriter := audit.NewMongoWriter(database)
+	catalogRepo := projection.NewMongoCatalogRepository(database)
+	catalogReceipts := projection.NewMongoCatalogReceiptStore(database)
 	schemaReceipts := schema.NewMongoReceiptStore(database)
 	migrationReceipts := schema.NewMongoMigrationPlanReceiptStore(database)
 	recordReceipts := records.NewMongoRecordReceiptStore(database)
 	schemaService := schema.NewService(schemaRepo, authorizer, schemaReceipts, auditWriter)
 	migrationService := schema.NewMigrationService(schemaRepo, schemaRepo, authorizer, migrationReceipts, auditWriter)
+	catalogService := projection.NewCatalogService(catalogRepo, catalogRepo, schemaRepo, authorizer, catalogReceipts, auditWriter)
 	recordService := records.NewRecordService(recordRepo, recordRepo, schemaRepo, authorizer, recordRepo, recordReceipts, auditWriter).WithViewRepository(recordRepo).WithIndexRepository(recordRepo)
 	snapshotStore := binding.NewMongoSnapshotStore(database)
 	var machineAuthorizer binding.PolicyAuthorizer
@@ -121,6 +125,7 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 	operationsService := projection.NewOperationsService(projection.NewMongoProjectionRepository(database), authorizer).WithMetrics(metrics)
 	deps.records = records.NewHTTPHandler(recordService)
 	deps.schema = schema.NewHTTPHandler(schemaService, migrationService)
+	deps.catalog = projection.NewCatalogHTTPHandler(catalogService)
 	deps.binding = binding.NewHTTPHandler(bindingService)
 	deps.operations = projection.NewOperationsHTTPHandler(operationsService)
 
@@ -203,6 +208,12 @@ func ensureMongoIndexes(database *mongo.Database) error {
 		return err
 	}
 	if err := projection.NewMongoProjectionRepository(database).EnsureIndexes(ctx); err != nil {
+		return err
+	}
+	if err := projection.NewMongoCatalogRepository(database).EnsureIndexes(ctx); err != nil {
+		return err
+	}
+	if err := projection.NewMongoCatalogReceiptStore(database).EnsureIndexes(ctx); err != nil {
 		return err
 	}
 	return nil

@@ -42,6 +42,6 @@ P2-0-005 的运行说明见 [deploy/local/isolated/README.md](../deploy/local/is
 | --- | --- | --- | --- |
 | P2-1-001 | Schema compatibility diff API | DONE | `POST /api/v1/schemas/{schemaId}/compatibility` 以 OWNER 权限比较已发布版本和候选 JSON Schema，返回排序稳定的 JSON Pointer/path、kind、message；正向、breaking、非法对象和 Editor 拒绝测试通过 |
 | P2-1-002 | Explicit migration plan | PARTIAL | [phase-2-migration-design.md](phase-2-migration-design.md) 的计划登记/读取/取消 API、Mongo unique/index、compatibility hash、幂等和状态测试已完成；执行/恢复及 breaking publish 强制关联仍待实现 |
-| P2-1-003 | Source/mapping registry | IN_PROGRESS | [phase-2-source-mapping-design.md](phase-2-source-mapping-design.md) 已冻结 source/mapping 模型、发布校验和 runtime 精确 lookup；API、持久化和 generation 切换仍待实现 |
+| P2-1-003 | Source/mapping registry | PARTIAL | source/mapping API、严格校验、Mongo scoped unique/index、OWNER 授权、revision、事务化 audit/receipt、canonical hash、target schema/field 发布门已完成；受控 fixture 正文验证、published generation 组装与 JetStream projector 切换仍待实现 |
 | P2-1-004 | Projection rebuild operation | TODO | staging generation、校验、原子读指针切换、取消/失败恢复和 operation receipt |
 | P2-1-005 | Query cost and SLO baseline | TODO | 查询/投影成本边界、lag/backlog 指标、阈值和告警证据 |

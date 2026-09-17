@@ -86,7 +86,7 @@ func New(cfg config.Config, logger *slog.Logger) *App {
 			}
 		}
 		limiter := observability.NewRateLimiter(120, time.Minute)
-		resourceHandler := web.NewConsoleRouter(runtime.records, runtime.schema, runtime.operations)
+		resourceHandler := web.NewConsoleRouter(runtime.records, runtime.schema, runtime.operations, runtime.catalog)
 		if runtime.binding != nil {
 			mux.Handle("/api/v1/bindings/", runtime.binding)
 		}

@@ -20,7 +20,11 @@ func TestResourceRouterDispatchesSchemaAndRecordsPaths(t *testing.T) {
 		w.Header().Set("X-Resource", "schemas")
 		w.WriteHeader(http.StatusCreated)
 	})
-	router := NewResourceRouter(records, schemas)
+	catalog := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Resource", "catalog")
+		w.WriteHeader(http.StatusNoContent)
+	})
+	router := NewResourceRouter(records, schemas, catalog)
 
 	for _, test := range []struct {
 		path       string
@@ -31,8 +35,11 @@ func TestResourceRouterDispatchesSchemaAndRecordsPaths(t *testing.T) {
 		{path: "/api/v1/tables/table-1/records", wantHeader: "records", wantStatus: http.StatusAccepted},
 		{path: "/api/v1/schemas", wantHeader: "schemas", wantStatus: http.StatusCreated},
 		{path: "/api/v1/schemas/schema-1/publish", wantHeader: "schemas", wantStatus: http.StatusCreated},
+		{path: "/api/v1/sources", wantHeader: "catalog", wantStatus: http.StatusNoContent},
+		{path: "/api/v1/mappings/mapping-1/publish", wantHeader: "catalog", wantStatus: http.StatusNoContent},
 		// Similar prefixes must not be mistaken for the schema resource.
 		{path: "/api/v1/schemas-export", wantHeader: "records", wantStatus: http.StatusAccepted},
+		{path: "/api/v1/sources-export", wantHeader: "records", wantStatus: http.StatusAccepted},
 	} {
 		t.Run(test.path, func(t *testing.T) {
 			request := httptest.NewRequest(http.MethodGet, test.path, nil)
