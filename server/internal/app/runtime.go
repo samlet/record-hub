@@ -143,6 +143,17 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 	}
 	deps.natsClient = natsClient
 	deps.checks[health.NATS] = health.CheckFunc(natsClient.Check)
+	generations := projection.NewMappingGenerationRegistry()
+	generationBuilder := projection.NewMappingGenerationBuilder(catalogRepo, schemaRepo)
+	generationRefresher := projection.NewMappingGenerationRefresher(generationBuilder, generations, 5*time.Second, logger)
+	refreshCtx, refreshCancel := context.WithTimeout(context.Background(), 8*time.Second)
+	_, err = generationRefresher.Refresh(refreshCtx)
+	refreshCancel()
+	if err != nil {
+		natsClient.Close()
+		_ = client.Disconnect(context.Background())
+		return nil, fmt.Errorf("load projection mapping generation: %w", err)
+	}
 	registry := projection.NewHandlerRegistry()
 	if err := projection.RegisterSummaryHandlers(registry); err != nil {
 		natsClient.Close()
@@ -156,13 +167,14 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 		_ = client.Disconnect(context.Background())
 		return nil, fmt.Errorf("configure summary projector: %w", err)
 	}
-	projector.WithWorkspaceMappings(cfg.ProjectionWorkspaceMappings)
+	projector.WithWorkspaceMappings(cfg.ProjectionWorkspaceMappings).WithMappingGenerations(generations)
 	dlq, err := projection.NewNATSDeadLetterPublisher(natsClient.Publisher(), "dlq.record-hub")
 	if err != nil {
 		natsClient.Close()
 		_ = client.Disconnect(context.Background())
 		return nil, fmt.Errorf("configure projection DLQ: %w", err)
 	}
+	deps.workers = append(deps.workers, generationRefresher)
 	for _, durable := range []string{projection.ApproverProjectionConsumer, projection.FluxionProjectionConsumer, projection.BidsProjectionConsumer} {
 		runner, runnerErr := projection.NewPullRunner(natsClient, projection.PullRunnerConfig{Stream: "DOMAIN_EVENTS", Durable: durable, BatchSize: 16, FetchTimeout: time.Second}, projector.HandleMessage)
 		if runnerErr != nil {

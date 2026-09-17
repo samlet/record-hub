@@ -25,6 +25,7 @@ import (
 // It never copies arbitrary envelope metadata into the record.
 type SummaryProjector struct {
 	registry          *HandlerRegistry
+	mappings          *MappingGenerationRegistry
 	inbox             InboxRepository
 	projection        ProjectionRepository
 	workspaceID       string
@@ -80,6 +81,16 @@ func (projector *SummaryProjector) WithWorkspaceMappings(mappings map[string]str
 	return projector
 }
 
+// WithMappingGenerations enables catalog-backed mappings. Built-in summary
+// handlers remain an explicit exact-key path; a catalog entry can neither
+// shadow them nor cause a fuzzy fallback.
+func (projector *SummaryProjector) WithMappingGenerations(registry *MappingGenerationRegistry) *SummaryProjector {
+	if projector != nil {
+		projector.mappings = registry
+	}
+	return projector
+}
+
 // HandleMessage is suitable for PullRunner. Deterministic contract or scope
 // failures are classified for bounded retry/DLQ; Mongo/NATS errors remain
 // transient and are NAKed by the runner.
@@ -97,35 +108,72 @@ func (projector *SummaryProjector) Handle(ctx context.Context, subject string, r
 	if err := json.Unmarshal(raw, &envelope); err != nil {
 		return DeterministicError(err, "summary envelope rejected")
 	}
-	key := HandlerKey{SourceSystem: envelope.SourceSystem, EventType: envelope.EventType, SchemaVersion: envelope.SchemaVersion}
-	if err := projector.registry.Dispatch(ctx, key, raw); err != nil {
-		return err
-	}
 	if envelope.AggregateVersion < 1 {
 		return DeterministicError(errors.New("aggregateVersion must be positive for projection"), "summary aggregate version rejected")
-	}
-	workspaceID := strings.TrimSpace(envelope.Metadata["workspaceId"])
-	if workspaceID == "" {
-		workspaceID = strings.TrimSpace(projector.workspaceByTenant[envelope.TenantID])
-	}
-	if workspaceID == "" {
-		workspaceID = projector.workspaceID
-	}
-	if workspaceID == "" {
-		return DeterministicError(errors.New("workspaceId is required for projection"), "summary workspace scope is missing")
 	}
 	if strings.TrimSpace(envelope.EventID) == "" || strings.TrimSpace(envelope.TenantID) == "" || strings.TrimSpace(envelope.SourceSystem) == "" || strings.TrimSpace(envelope.AggregateType) == "" || strings.TrimSpace(envelope.AggregateID) == "" {
 		return DeterministicError(errors.New("summary envelope identity is incomplete"), "summary envelope identity rejected")
 	}
+
+	key := HandlerKey{SourceSystem: envelope.SourceSystem, EventType: envelope.EventType, SchemaVersion: envelope.SchemaVersion}
+	workspaceID := ""
+	tableID := ""
+	schemaID := ""
+	schemaVersion := int64(1)
+	recordVersion := envelope.AggregateVersion
 	var data bson.Raw
-	if err := bson.UnmarshalExtJSON(envelope.Payload, false, &data); err != nil {
-		return DeterministicError(err, "summary payload encoding rejected")
+	var runtimeMapping *RuntimeMapping
+	if projector.mappings != nil {
+		mapping, resolveErr := projector.mappings.Resolve(envelope.TenantID, envelope.SourceSystem, envelope.EventType, envelope.SchemaVersion, envelope.Metadata)
+		switch {
+		case resolveErr == nil:
+			runtimeMapping = &mapping
+		case errors.Is(resolveErr, ErrRuntimeMappingNotFound):
+		case errors.Is(resolveErr, ErrRuntimeMappingAmbiguous):
+			return DeterministicError(resolveErr, "projection mapping scope is ambiguous")
+		default:
+			return DeterministicError(resolveErr, "projection mapping lookup rejected")
+		}
 	}
-	var payload struct {
-		Version int64 `json:"version"`
-	}
-	if err := json.Unmarshal(envelope.Payload, &payload); err != nil || payload.Version < 1 {
-		return DeterministicError(errors.New("summary payload version is invalid"), "summary payload version rejected")
+	if runtimeMapping != nil {
+		workspaceID = runtimeMapping.Key.WorkspaceID
+		tableID = runtimeMapping.TargetTableID
+		schemaID = runtimeMapping.TargetSchemaID
+		schemaVersion = runtimeMapping.TargetSchemaVersion
+		mapped, err := runtimeMapping.Map(raw)
+		if err != nil {
+			return DeterministicError(err, "projection mapping rejected")
+		}
+		data = mapped
+	} else {
+		if err := projector.registry.Dispatch(ctx, key, raw); err != nil {
+			if errors.Is(err, ErrHandlerNotFound) {
+				return DeterministicError(err, "projection mapping not found")
+			}
+			return err
+		}
+		workspaceID = strings.TrimSpace(envelope.Metadata["workspaceId"])
+		if workspaceID == "" {
+			workspaceID = strings.TrimSpace(projector.workspaceByTenant[envelope.TenantID])
+		}
+		if workspaceID == "" {
+			workspaceID = projector.workspaceID
+		}
+		if workspaceID == "" {
+			return DeterministicError(errors.New("workspaceId is required for projection"), "summary workspace scope is missing")
+		}
+		if err := bson.UnmarshalExtJSON(envelope.Payload, false, &data); err != nil {
+			return DeterministicError(err, "summary payload encoding rejected")
+		}
+		var payload struct {
+			Version int64 `json:"version"`
+		}
+		if err := json.Unmarshal(envelope.Payload, &payload); err != nil || payload.Version < 1 {
+			return DeterministicError(errors.New("summary payload version is invalid"), "summary payload version rejected")
+		}
+		recordVersion = payload.Version
+		tableID = projectionTableID(envelope.SourceSystem)
+		schemaID = summarySchemaID(envelope.SourceSystem)
 	}
 	now := projector.now().UTC()
 	consumer := consumerForSource(envelope.SourceSystem)
@@ -143,16 +191,20 @@ func (projector *SummaryProjector) Handle(ctx context.Context, subject string, r
 	if claim.Duplicate && claim.Event.Status == InboxApplied {
 		return nil
 	}
+	recordID := projectionRecordID(envelope.TenantID, workspaceID, envelope.SourceSystem, envelope.AggregateType, envelope.AggregateID)
+	if runtimeMapping != nil {
+		recordID = projectionRecordIDForTable(envelope.TenantID, workspaceID, tableID, envelope.SourceSystem, envelope.AggregateType, envelope.AggregateID)
+	}
 	record := records.Record{
-		ID: projectionRecordID(envelope.TenantID, workspaceID, envelope.SourceSystem, envelope.AggregateType, envelope.AggregateID), TenantID: envelope.TenantID, WorkspaceID: workspaceID,
-		TableID: projectionTableID(envelope.SourceSystem), SchemaID: summarySchemaID(envelope.SourceSystem), SchemaVersion: 1,
+		ID: recordID, TenantID: envelope.TenantID, WorkspaceID: workspaceID,
+		TableID: tableID, SchemaID: schemaID, SchemaVersion: schemaVersion,
 		Source:        &records.RecordSource{System: envelope.SourceSystem, Type: strings.ToLower(envelope.AggregateType), ID: envelope.AggregateID, Version: envelope.AggregateVersion},
-		RecordVersion: payload.Version, Tags: []string{"projection", envelope.SourceSystem}, Data: data,
+		RecordVersion: recordVersion, Tags: []string{"projection", envelope.SourceSystem}, Data: data,
 		Projection: &records.ProjectionState{LastEventID: envelope.EventID, SyncedAt: now, Status: string(CheckpointCurrent)},
 		CreatedBy:  projector.projectorKey, UpdatedBy: projector.projectorKey, CreatedAt: envelope.OccurredAt.UTC(), UpdatedAt: now,
 	}
 	checkpoint := ProjectionCheckpoint{TenantID: envelope.TenantID, WorkspaceID: workspaceID, Consumer: consumer, SourceSystem: envelope.SourceSystem, AggregateType: envelope.AggregateType, AggregateID: envelope.AggregateID, SourceVersion: envelope.AggregateVersion, LastEventID: envelope.EventID, SyncedAt: now, Status: CheckpointCurrent}
-	return projector.projection.Apply(ctx, ProjectionApply{InboxEvent: claim.Event, Record: record, Checkpoint: checkpoint, Audit: audit.Entry{TenantID: envelope.TenantID, WorkspaceID: workspaceID, Action: "projection.apply", Actor: projector.projectorKey, ResourceType: "Record", ResourceID: record.ID, ResourceVersion: payload.Version, AfterHash: "sha256:" + hex.EncodeToString(payloadHash[:]), CreatedAt: now}})
+	return projector.projection.Apply(ctx, ProjectionApply{InboxEvent: claim.Event, Record: record, Checkpoint: checkpoint, Audit: audit.Entry{TenantID: envelope.TenantID, WorkspaceID: workspaceID, Action: "projection.apply", Actor: projector.projectorKey, ResourceType: "Record", ResourceID: record.ID, ResourceVersion: recordVersion, AfterHash: "sha256:" + hex.EncodeToString(payloadHash[:]), CreatedAt: now}})
 }
 
 func consumerForSource(source string) string {
@@ -172,6 +224,11 @@ func projectionTableID(source string) string { return "projection-" + source + "
 
 func projectionRecordID(tenantID, workspaceID, sourceSystem, aggregateType, aggregateID string) string {
 	digest := sha256.Sum256([]byte(strings.Join([]string{tenantID, workspaceID, sourceSystem, aggregateType, aggregateID}, "\x00")))
+	return "projection-" + hex.EncodeToString(digest[:])[:40]
+}
+
+func projectionRecordIDForTable(tenantID, workspaceID, tableID, sourceSystem, aggregateType, aggregateID string) string {
+	digest := sha256.Sum256([]byte(strings.Join([]string{tenantID, workspaceID, tableID, sourceSystem, aggregateType, aggregateID}, "\x00")))
 	return "projection-" + hex.EncodeToString(digest[:])[:40]
 }
 

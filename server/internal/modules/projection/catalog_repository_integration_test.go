@@ -82,9 +82,17 @@ func TestMongoCatalogRepositoryScopesIDsAndTransitions(t *testing.T) {
 	if err != nil || publishedMapping.Status != CatalogStatusPublished || publishedMapping.Revision != 2 {
 		t.Fatalf("published mapping = %#v err=%v", publishedMapping, err)
 	}
+	publishedMappings, err := repository.ListPublishedMappings(ctx, maxRuntimeMappings)
+	if err != nil || len(publishedMappings) != 1 || publishedMappings[0].ID != mapping.ID {
+		t.Fatalf("published runtime mappings = %#v err=%v", publishedMappings, err)
+	}
 	revoked, err := repository.TransitionMapping(ctx, mapping.TenantID, mapping.WorkspaceID, mapping.ID, CatalogStatusRevoked, actor, &now, 2)
 	if err != nil || revoked.Status != CatalogStatusRevoked || revoked.Revision != 3 || revoked.PublishedAt == nil {
 		t.Fatalf("revoked mapping = %#v err=%v", revoked, err)
+	}
+	publishedMappings, err = repository.ListPublishedMappings(ctx, maxRuntimeMappings)
+	if err != nil || len(publishedMappings) != 0 {
+		t.Fatalf("runtime mappings after revoke = %#v err=%v", publishedMappings, err)
 	}
 
 	receipt := CatalogReceipt{TenantID: base.TenantID, WorkspaceID: base.WorkspaceID, Operation: "source.create", IdempotencyKey: "request-1", RequestHash: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", Source: &base}

@@ -1,6 +1,6 @@
 # Source / Mapping Registry 设计（P2-1-003）
 
-状态：Control plane implemented / runtime generation pending
+状态：Implemented / accepted
 日期：2026-09-17
 
 ## 目标
@@ -79,8 +79,8 @@ transaction 同时写 registry、receipt 和 audit。发布前服务端必须：
 
 ## Runtime 读取规则
 
-Projector 启动时加载指定的 published mapping generation，并缓存 `(sourceId,eventType,
-eventVersion)` 的精确索引。事件没有精确 mapping、mapping 已撤销或 hash 不匹配时，必须
+Projector 启动时从 Mongo 组装 published mapping generation，并缓存 `(tenantId,workspaceId,
+sourceId,eventType,eventVersion)` 的精确索引。事件没有精确 mapping、mapping 已撤销或 hash 不匹配时，必须
 分类为 deterministic reject 并进入 DLQ；不能 fallback 到 source/type 的模糊匹配，也不能
 直接执行未发布 draft。更新 mapping 通过新 generation + bounded drain 切换，不能覆盖正在
 运行的 mapping。
@@ -88,7 +88,7 @@ eventVersion)` 的精确索引。事件没有精确 mapping、mapping 已撤销�
 现有三个 v1 summary handler 将作为内置 mapping fixture 继续运行；Registry 接入后只把它们
 登记为系统拥有的 published records，不能让客户端覆盖内置 schema 或 source owner。
 
-## 当前实现边界
+## Runtime generation 实现
 
 当前已经实现 source/mapping 严格模型、workspace-scoped Mongo unique/index、OWNER mutation、
 viewer read、optimistic revision、幂等回执、审计、canonical hash，以及 source/event version、
@@ -100,9 +100,21 @@ fixture 正文已采用独立 Mongo collection 受控存储，mapping 只公开 
 resolution、JSON Pointer/path 存在性，以及映射结果的目标 JSON Schema；fixture 正文不会进入
 mapping/list 响应、receipt 或 audit。
 
-published mapping 尚未组装为 generation 并切换现有 JetStream projector，现有硬编码 v1 summary
-handlers 因此仍是唯一运行时数据路径。完成 generation/live/recovery 证据前 P2-1-003 保持
-`PARTIAL`。
+worker 启动时会读取全部 published mappings，重新校验 registration/canonical hash、source 状态、
+target schema 状态与字段 allowlist，并预编译目标 JSON Schema。generation ID 由排序后的 mapping、
+source revision 和 schema content hash 计算，不依赖加载时间；完整 generation 构建成功后才通过
+atomic pointer 一次切换。后台每 5 秒刷新，Mongo 暂时不可用或任一 entry 无效时保留
+last-known-good generation，不暴露半组装状态。
+
+动态 projector 先按 tenant/source/type/version 精确定位候选，再执行 source 声明的 metadata 或
+allowlist workspace resolution，最终命中完整精确键。真实事件重新经过 Event Envelope v1、受限
+fieldMap 和编译后的 target schema 校验。记录版本使用 aggregateVersion，Inbox/checkpoint/audit 与
+现有 durable consumer 事务路径保持一致。撤销 mapping 后，新 generation 不再包含该 key，后续事件
+成为 deterministic reject。
+
+三个内置 summary handler 继续作为显式 built-in 路径；其三个完整 key 被保留，catalog generation
+拒绝覆盖。其他 Approver、Fluxion、Bids 事件可以走动态 mapping；没有对应 JetStream durable 的
+source 会在 generation 构建阶段失败，而不是成为永远不可消费的配置。
 
 本批验收命令：
 
@@ -111,10 +123,15 @@ make check
 RECORD_HUB_MONGODB_URI=mongodb://127.0.0.1:27017 \
   go test ./server/internal/modules/projection \
   -run TestMongoCatalogRepositoryScopesIDsAndTransitions -count=1 -v
+make p2-mapping-recovery
 ```
+
+`p2-mapping-recovery` 使用真实 Mongo replica set 和 JetStream：先在线消费 version 1，停止 worker，
+在停机期间把 version 2 写入同一 durable consumer，再从 Mongo 重新组装 generation 并恢复消费；
+最后断言 projection、checkpoint 和两个 `APPLIED` Inbox 记录。
 
 ## 验收门
 
-P2-1-003 完成必须有：OpenAPI/JSON Schema、Mongo unique/index、canonical hash 稳定性、
-fixture 正负样本、发布审批/撤销/幂等、跨租户拒绝和 projector 精确 lookup 的 live/恢复证据。
-没有 runtime generation 与真实 JetStream 消费切换测试时只能标记 `PARTIAL`。
+P2-1-003 完成门已经满足：OpenAPI/JSON Schema、Mongo unique/index、canonical hash 稳定性、
+fixture 正负样本、发布审批/撤销/幂等、跨租户拒绝、projector 精确 lookup，以及真实 Mongo +
+JetStream durable 的 generation 重建/恢复证据均已通过。

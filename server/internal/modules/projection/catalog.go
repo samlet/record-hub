@@ -258,6 +258,15 @@ type MappingStore interface {
 	TransitionMapping(context.Context, string, string, string, CatalogStatus, identity.IdentityKey, *time.Time, int64) (MappingRegistration, error)
 }
 
+// PublishedMappingReader is the internal runtime view of the catalog. It is
+// intentionally not exposed by the HTTP API: projector generations need a
+// bounded, cross-scope snapshot, while callers must continue to use the
+// tenant/workspace-authorized list endpoints.
+type PublishedMappingReader interface {
+	ListPublishedMappings(context.Context, int64) ([]MappingRegistration, error)
+	FindSource(context.Context, string, string, string) (SourceRegistration, error)
+}
+
 type MappingFixtureStore interface {
 	PutFixture(context.Context, MappingFixtureDocument) error
 	GetFixture(context.Context, string, string, string, string) (MappingFixtureDocument, error)
@@ -867,6 +876,28 @@ func (repository *MongoCatalogRepository) ListMappings(ctx context.Context, tena
 	var result []MappingRegistration
 	if err := cursor.All(ctx, &result); err != nil {
 		return nil, fmt.Errorf("decode mapping registrations: %w", err)
+	}
+	return result, nil
+}
+
+func (repository *MongoCatalogRepository) ListPublishedMappings(ctx context.Context, limit int64) ([]MappingRegistration, error) {
+	if repository == nil || repository.mappings == nil {
+		return nil, ErrCatalogUnavailable
+	}
+	if limit < 1 || limit > maxRuntimeMappings+1 {
+		return nil, ErrCatalogInvalid
+	}
+	cursor, err := repository.mappings.Find(ctx,
+		bson.D{{Key: "status", Value: CatalogStatusPublished}},
+		options.Find().SetSort(bson.D{{Key: "tenantId", Value: 1}, {Key: "workspaceId", Value: 1}, {Key: "sourceId", Value: 1}, {Key: "eventType", Value: 1}, {Key: "eventVersion", Value: 1}, {Key: "mappingId", Value: 1}}).SetLimit(limit),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list published mapping registrations: %w", err)
+	}
+	defer cursor.Close(ctx)
+	var result []MappingRegistration
+	if err := cursor.All(ctx, &result); err != nil {
+		return nil, fmt.Errorf("decode published mapping registrations: %w", err)
 	}
 	return result, nil
 }
