@@ -14,6 +14,7 @@ import (
 	"github.com/samlet/record-hub/server/internal/modules/audit"
 	"github.com/samlet/record-hub/server/internal/modules/identity"
 	"github.com/samlet/record-hub/server/internal/modules/schema"
+	"github.com/samlet/record-hub/server/internal/observability"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -22,20 +23,22 @@ type SchemaReader interface {
 }
 
 type Service struct {
-	workspaces WorkspaceRepository
-	tables     TableRepository
-	schemas    SchemaReader
-	authorizer *identity.Authorizer
-	clock      func() time.Time
-	records    RecordRepository
-	receipts   RecordReceiptStore
-	audit      audit.Writer
-	views      ViewRepository
-	indexes    IndexRepository
+	workspaces  WorkspaceRepository
+	tables      TableRepository
+	schemas     SchemaReader
+	authorizer  *identity.Authorizer
+	clock       func() time.Time
+	records     RecordRepository
+	receipts    RecordReceiptStore
+	audit       audit.Writer
+	views       ViewRepository
+	indexes     IndexRepository
+	metrics     *observability.Registry
+	queryBudget observability.QueryBudget
 }
 
 func NewService(workspaces WorkspaceRepository, tables TableRepository, schemas SchemaReader, authorizer *identity.Authorizer) *Service {
-	return &Service{workspaces: workspaces, tables: tables, schemas: schemas, authorizer: authorizer, clock: time.Now}
+	return &Service{workspaces: workspaces, tables: tables, schemas: schemas, authorizer: authorizer, clock: time.Now, queryBudget: observability.DefaultQueryBudget()}
 }
 
 func NewRecordService(workspaces WorkspaceRepository, tables TableRepository, schemas SchemaReader, authorizer *identity.Authorizer, records RecordRepository, receipts RecordReceiptStore, auditWriter audit.Writer) *Service {
@@ -59,6 +62,26 @@ func (service *Service) WithIndexRepository(indexes IndexRepository) *Service {
 	}
 	return service
 }
+
+// WithMetrics attaches low-cardinality query cost telemetry. Tenant, table,
+// record and field identifiers are intentionally never metric labels.
+func (service *Service) WithMetrics(registry *observability.Registry) *Service {
+	if service != nil {
+		service.metrics = registry
+	}
+	return service
+}
+
+func (service *Service) WithQueryBudget(budget observability.QueryBudget) *Service {
+	if service != nil {
+		if budget.Validate() == nil {
+			service.queryBudget = budget
+		}
+	}
+	return service
+}
+
+var ErrQueryCostExceeded = observability.ErrQueryBudgetExceeded
 
 type WorkspaceInput struct {
 	TenantID string
@@ -225,14 +248,34 @@ func (service *Service) ListViews(ctx context.Context, principal identity.Princi
 }
 
 func (service *Service) ListRecords(ctx context.Context, principal identity.Principal, tenantID, workspaceID, tableID, viewID, cursor string, limit int) (RecordPage, error) {
+	started := time.Now()
+	outcome := "error"
+	rows := 0
+	defer func() {
+		if service == nil || service.metrics == nil {
+			return
+		}
+		labels := observability.Labels{"operation": "records", "outcome": outcome}
+		service.metrics.IncCounter("record_hub_record_queries_total", labels)
+		service.metrics.ObserveDuration("record_hub_record_query_duration_seconds", time.Since(started), labels)
+		service.metrics.SetGauge("record_hub_record_query_rows", float64(rows), labels)
+		if outcome == "rejected" {
+			service.metrics.IncCounter("record_hub_record_query_budget_exceeded_total", nil)
+		}
+	}()
 	if err := service.recordDependencies(ctx, principal, tenantID, workspaceID, identity.ActionRecordRead); err != nil {
 		return RecordPage{}, err
 	}
 	if service.views == nil {
 		return RecordPage{}, identity.ErrForbidden
 	}
-	if limit < 1 || limit > 100 {
-		return RecordPage{}, errors.New("record page limit must be between 1 and 100")
+	budget := service.queryBudget
+	if err := budget.Validate(); err != nil {
+		return RecordPage{}, err
+	}
+	if limit < 1 || limit > budget.MaxPageRows {
+		outcome = "rejected"
+		return RecordPage{}, fmt.Errorf("%w: page rows must be between 1 and %d", ErrQueryCostExceeded, budget.MaxPageRows)
 	}
 	var view ViewDefinition
 	var err error
@@ -244,7 +287,27 @@ func (service *Service) ListRecords(ctx context.Context, principal identity.Prin
 	} else {
 		view = ViewDefinition{TenantID: tenantID, WorkspaceID: workspaceID, TableID: tableID, Sorts: []ViewSort{{Field: "id", Direction: SortAscending}}}
 	}
-	return service.views.ListRecords(ctx, tenantID, workspaceID, tableID, view, cursor, limit)
+	queryContext, cancel := context.WithTimeout(ctx, budget.MaxDuration)
+	defer cancel()
+	page, err := service.views.ListRecords(queryContext, tenantID, workspaceID, tableID, view, cursor, limit)
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) && ctx.Err() == nil {
+			outcome = "rejected"
+			return RecordPage{}, fmt.Errorf("%w: execution exceeded %s", ErrQueryCostExceeded, budget.MaxDuration)
+		}
+		return RecordPage{}, err
+	}
+	encoded, err := bson.Marshal(page)
+	if err != nil {
+		return RecordPage{}, fmt.Errorf("measure record page cost: %w", err)
+	}
+	if int64(len(encoded)) > budget.MaxResponseBytes {
+		outcome = "rejected"
+		return RecordPage{}, fmt.Errorf("%w: response exceeds %d bytes", ErrQueryCostExceeded, budget.MaxResponseBytes)
+	}
+	rows = len(page.Items)
+	outcome = "success"
+	return page, nil
 }
 
 type IndexInput struct {

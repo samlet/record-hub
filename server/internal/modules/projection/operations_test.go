@@ -67,6 +67,9 @@ func TestOperationsServiceAuthorizesScopedReadAndReturnsSafeSnapshot(t *testing.
 	if snapshot.Inbox.Processing != 2 || len(snapshot.Checkpoints) != 1 || snapshot.Checkpoints[0].Status != CheckpointGap {
 		t.Fatalf("unexpected operations snapshot: %#v", snapshot)
 	}
+	if snapshot.Freshness.LastEventID != "event-8" || snapshot.Freshness.LastProjectedVersion != 8 || snapshot.Freshness.Backlog != 2 || snapshot.Freshness.Failures != 2 || snapshot.Freshness.SLOBreached {
+		t.Fatalf("unexpected projection freshness: %#v", snapshot.Freshness)
+	}
 	if reader.query.TenantID != "tenant-1" || reader.query.Limit != 1 {
 		t.Fatalf("query was not normalized: %#v", reader.query)
 	}
@@ -83,13 +86,16 @@ func TestOperationsServiceUpdatesBoundedBacklogMetrics(t *testing.T) {
 	reader := &memoryOperationsReader{snapshot: validOperationsSnapshot()}
 	service, principal := operationsService(t, reader, identity.RoleViewer)
 	metrics := observability.NewRegistry()
-	service.WithMetrics(metrics)
+	service.WithMetrics(metrics).WithSLOThresholds(ProjectionSLOThresholds{BacklogWarning: 1, LagWarning: time.Hour, FailureBudget: 10})
 	if _, err := service.Snapshot(context.Background(), principal, OperationsQuery{TenantID: "tenant-1", WorkspaceID: "workspace-1", Consumer: "record-hub-approver-v1"}); err != nil {
 		t.Fatal(err)
 	}
 	body := metrics.Render()
 	if !strings.Contains(body, `record_hub_projection_backlog{consumer="record-hub-approver-v1"} 2.000000`) || !strings.Contains(body, `record_hub_projection_failures{consumer="record-hub-approver-v1"} 2.000000`) {
 		t.Fatalf("backlog metrics missing: %s", body)
+	}
+	if !strings.Contains(body, `record_hub_projection_slo_breach{consumer="record-hub-approver-v1"} 1.000000`) || !strings.Contains(body, `record_hub_projection_error_budget_remaining{consumer="record-hub-approver-v1"} 8.000000`) {
+		t.Fatalf("projection SLO metrics missing: %s", body)
 	}
 }
 

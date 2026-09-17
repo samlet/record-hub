@@ -27,6 +27,34 @@ func TestLoadAllMode(t *testing.T) {
 	}
 }
 
+func TestLoadQueryAndProjectionSLOBudgets(t *testing.T) {
+	cfg, err := load(mapLookup(map[string]string{
+		"RECORD_HUB_MODE":                       "worker",
+		"RECORD_HUB_QUERY_MAX_PAGE_ROWS":        "80",
+		"RECORD_HUB_QUERY_MAX_RESPONSE_BYTES":   "2097152",
+		"RECORD_HUB_QUERY_MAX_DURATION":         "1500ms",
+		"RECORD_HUB_PROJECTION_BACKLOG_WARNING": "25",
+		"RECORD_HUB_PROJECTION_LAG_WARNING":     "45s",
+		"RECORD_HUB_PROJECTION_FAILURE_BUDGET":  "7",
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.QueryBudget.MaxPageRows != 80 || cfg.QueryBudget.MaxResponseBytes != 2097152 || cfg.QueryBudget.MaxDuration != 1500*time.Millisecond {
+		t.Fatalf("query budget = %+v", cfg.QueryBudget)
+	}
+	if cfg.ProjectionSLO.BacklogWarning != 25 || cfg.ProjectionSLO.LagWarning != 45*time.Second || cfg.ProjectionSLO.FailureBudget != 7 {
+		t.Fatalf("projection SLO = %+v", cfg.ProjectionSLO)
+	}
+}
+
+func TestLoadRejectsUnboundedQueryBudget(t *testing.T) {
+	_, err := load(mapLookup(map[string]string{"RECORD_HUB_MODE": "worker", "RECORD_HUB_QUERY_MAX_RESPONSE_BYTES": "1"}))
+	if err == nil || !strings.Contains(err.Error(), "RECORD_HUB_QUERY_MAX_RESPONSE_BYTES") {
+		t.Fatalf("query budget error = %v", err)
+	}
+}
+
 func TestLoadRuntimeDependencyConfig(t *testing.T) {
 	env := map[string]string{
 		"RECORD_HUB_MODE":                       "all",

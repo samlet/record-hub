@@ -324,7 +324,17 @@ func (runner *PullRunner) Run(ctx context.Context) error {
 			if runner.logger != nil {
 				runner.logger.Debug("projection message received", "consumer", runner.config.Durable)
 			}
+			started := time.Now()
 			handled, timedOut := runner.handle(ctx, message)
+			if runner.metrics != nil {
+				outcome := "success"
+				if handled != nil {
+					outcome = "error"
+				} else if timedOut {
+					outcome = "timeout"
+				}
+				runner.metrics.ObserveDuration("record_hub_projection_handler_duration_seconds", time.Since(started), observability.Labels{"consumer": runner.config.Durable, "outcome": outcome})
+			}
 			if runner.logger != nil {
 				runner.logger.Debug("projection message handler returned", "consumer", runner.config.Durable, "failed", handled != nil, "timedOut", timedOut)
 			}
@@ -360,6 +370,9 @@ func (runner *PullRunner) Run(ctx context.Context) error {
 				reconnect = true
 				break
 			}
+			if runner.metrics != nil {
+				runner.metrics.IncCounter("record_hub_projection_applied_total", observability.Labels{"consumer": runner.config.Durable})
+			}
 		}
 		if batchErr := batch.Error(); batchErr != nil && ctx.Err() == nil {
 			consumer = nil
@@ -377,6 +390,9 @@ func (runner *PullRunner) Run(ctx context.Context) error {
 
 func (runner *PullRunner) retryMessage(ctx context.Context, message jetstream.Msg, handlerErr error) error {
 	class, safeMessage := errorClass(handlerErr)
+	if runner.metrics != nil {
+		runner.metrics.IncCounter("record_hub_projection_failures_total", observability.Labels{"consumer": runner.config.Durable})
+	}
 	attempts := uint64(1)
 	if metadata, err := message.Metadata(); err == nil && metadata != nil && metadata.NumDelivered > 0 {
 		attempts = metadata.NumDelivered

@@ -604,6 +604,8 @@ func writeRecordsError(writer http.ResponseWriter, err error) {
 		writeError(writer, http.StatusBadRequest, "INDEX_FIELD_NOT_ALLOWED", "The index field is not an allowed published schema property.")
 	case errors.Is(err, ErrInvalidCursor):
 		writeError(writer, http.StatusBadRequest, "INVALID_CURSOR", "The record cursor is invalid or expired.")
+	case errors.Is(err, ErrQueryCostExceeded):
+		writeError(writer, http.StatusRequestEntityTooLarge, "QUERY_COST_EXCEEDED", "The record query exceeded the bounded cost budget.")
 	case errors.Is(err, ErrIdempotencyKeyRequired):
 		writeError(writer, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key is required.")
 	case errors.Is(err, ErrIdempotencyConflict):

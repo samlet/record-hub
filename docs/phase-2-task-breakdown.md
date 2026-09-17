@@ -44,4 +44,4 @@ P2-0-005 的运行说明见 [deploy/local/isolated/README.md](../deploy/local/is
 | P2-1-002 | Explicit migration plan | PARTIAL | [phase-2-migration-design.md](phase-2-migration-design.md) 的计划登记/读取/取消 API、Mongo unique/index、compatibility hash、幂等和状态测试已完成；执行/恢复及 breaking publish 强制关联仍待实现 |
 | P2-1-003 | Source/mapping registry | DONE | 控制面、fixture 发布门、不可变 published generation、tenant/workspace/source/type/version 精确索引、原子 active pointer、last-known-good refresh、动态 projector 与 Mongo/JetStream durable restart recovery 均通过；`make p2-mapping-recovery` |
 | P2-1-004 | Projection rebuild operation | DONE | Owner API、operation receipt、CAS 状态机、Mongo raw event archive、隔离 staging records、版本单调 replay、checkpoint 补齐、read pointer 原子切换、取消/失败恢复和 live continuation 已完成；归档启用前的历史事件不在可重放窗口内，超过 100,000 条的 scope 需先扩展 archive 分页策略 |
-| P2-1-005 | Query cost and SLO baseline | TODO | 查询/投影成本边界、lag/backlog 指标、阈值和告警证据 |
+| P2-1-005 | Query cost and SLO baseline | DONE | [phase-2-slo-design.md](phase-2-slo-design.md) 固化 page/response/time budget、查询拒绝、freshness snapshot、lag/backlog/error budget 指标、可配置阈值和 `slo_breach` 告警谓词；外部通知由部署层消费 metrics |

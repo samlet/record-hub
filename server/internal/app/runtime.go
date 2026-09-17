@@ -107,7 +107,7 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 	schemaService := schema.NewService(schemaRepo, authorizer, schemaReceipts, auditWriter)
 	migrationService := schema.NewMigrationService(schemaRepo, schemaRepo, authorizer, migrationReceipts, auditWriter)
 	catalogService := projection.NewCatalogService(catalogRepo, catalogRepo, schemaRepo, authorizer, catalogReceipts, auditWriter)
-	recordService := records.NewRecordService(recordRepo, recordRepo, schemaRepo, authorizer, recordRepo, recordReceipts, auditWriter).WithViewRepository(recordRepo).WithIndexRepository(recordRepo)
+	recordService := records.NewRecordService(recordRepo, recordRepo, schemaRepo, authorizer, recordRepo, recordReceipts, auditWriter).WithViewRepository(recordRepo).WithIndexRepository(recordRepo).WithMetrics(metrics).WithQueryBudget(observability.QueryBudget{MaxPageRows: cfg.QueryBudget.MaxPageRows, MaxResponseBytes: cfg.QueryBudget.MaxResponseBytes, MaxDuration: cfg.QueryBudget.MaxDuration})
 	snapshotStore := binding.NewMongoSnapshotStore(database)
 	var machineAuthorizer binding.PolicyAuthorizer
 	if len(cfg.BindingMachinePolicies) > 0 {
@@ -127,7 +127,7 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 		machineAuthorizer = binding.NewStaticMachinePolicyAuthorizer(policies...)
 	}
 	bindingService := binding.NewService(binding.NewMongoRecordReader(recordRepo), snapshotStore, authorizer, machineAuthorizer)
-	operationsService := projection.NewOperationsService(projection.NewMongoProjectionRepository(database), authorizer).WithMetrics(metrics)
+	operationsService := projection.NewOperationsService(projection.NewMongoProjectionRepository(database), authorizer).WithMetrics(metrics).WithSLOThresholds(projection.ProjectionSLOThresholds{BacklogWarning: cfg.ProjectionSLO.BacklogWarning, LagWarning: cfg.ProjectionSLO.LagWarning, FailureBudget: cfg.ProjectionSLO.FailureBudget})
 	generations := projection.NewMappingGenerationRegistry()
 	generationBuilder := projection.NewMappingGenerationBuilder(catalogRepo, schemaRepo)
 	rebuildService := projection.NewProjectionRebuildService(rebuildRepo, generationBuilder, generations, authorizer, rebuildReceipts, auditWriter).WithReplayDependencies(eventArchive, readPointers)

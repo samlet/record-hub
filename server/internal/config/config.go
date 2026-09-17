@@ -26,6 +26,27 @@ const (
 const defaultShutdownTimeout = 10 * time.Second
 const defaultWebSessionTTL = 8 * time.Hour
 
+const (
+	defaultQueryMaxPageRows         = 100
+	defaultQueryMaxResponseBytes    = 1 << 20
+	defaultQueryMaxDuration         = 2 * time.Second
+	defaultProjectionBacklogWarning = 100
+	defaultProjectionLagWarning     = 30 * time.Second
+	defaultProjectionFailureBudget  = 10
+)
+
+type QueryBudgetConfig struct {
+	MaxPageRows      int
+	MaxResponseBytes int64
+	MaxDuration      time.Duration
+}
+
+type ProjectionSLOConfig struct {
+	BacklogWarning int64
+	LagWarning     time.Duration
+	FailureBudget  int64
+}
+
 // WebAuthConfig contains the optional browser/BFF OIDC boundary. It is kept
 // separate from API bearer-token configuration so a Web client secret can
 // never be accidentally reused as a service credential.
@@ -91,6 +112,8 @@ type Config struct {
 	OIDCPrincipalKind       string
 	OIDCAllowInsecureIssuer bool
 	BindingMachinePolicies  []BindingMachinePolicyConfig
+	QueryBudget             QueryBudgetConfig
+	ProjectionSLO           ProjectionSLOConfig
 	Web                     WebAuthConfig
 }
 
@@ -148,11 +171,61 @@ func load(lookup lookupEnv) (Config, error) {
 		cfg.MongoURI = value
 	}
 	cfg.MongoDatabase = "record_hub"
+	cfg.QueryBudget = QueryBudgetConfig{MaxPageRows: defaultQueryMaxPageRows, MaxResponseBytes: defaultQueryMaxResponseBytes, MaxDuration: defaultQueryMaxDuration}
+	cfg.ProjectionSLO = ProjectionSLOConfig{BacklogWarning: defaultProjectionBacklogWarning, LagWarning: defaultProjectionLagWarning, FailureBudget: defaultProjectionFailureBudget}
 	if value, present := optional(lookup, "RECORD_HUB_MONGODB_DATABASE"); present {
 		cfg.MongoDatabase = value
 	}
 	if value, present := optional(lookup, "RECORD_HUB_NATS_URL"); present {
 		cfg.NATSURL = value
+	}
+	if value, present := optional(lookup, "RECORD_HUB_QUERY_MAX_PAGE_ROWS"); present {
+		parsed, err := strconv.Atoi(value)
+		if err != nil || parsed < 1 || parsed > 1000 {
+			errs = append(errs, fmt.Errorf("RECORD_HUB_QUERY_MAX_PAGE_ROWS must be between 1 and 1000; got %q", value))
+		} else {
+			cfg.QueryBudget.MaxPageRows = parsed
+		}
+	}
+	if value, present := optional(lookup, "RECORD_HUB_QUERY_MAX_RESPONSE_BYTES"); present {
+		parsed, err := strconv.ParseInt(value, 10, 64)
+		if err != nil || parsed < 1024 || parsed > 16<<20 {
+			errs = append(errs, fmt.Errorf("RECORD_HUB_QUERY_MAX_RESPONSE_BYTES must be between 1024 and 16777216; got %q", value))
+		} else {
+			cfg.QueryBudget.MaxResponseBytes = parsed
+		}
+	}
+	if value, present := optional(lookup, "RECORD_HUB_QUERY_MAX_DURATION"); present {
+		duration, err := time.ParseDuration(value)
+		if err != nil || duration < 10*time.Millisecond || duration > 30*time.Second {
+			errs = append(errs, fmt.Errorf("RECORD_HUB_QUERY_MAX_DURATION must be between 10ms and 30s; got %q", value))
+		} else {
+			cfg.QueryBudget.MaxDuration = duration
+		}
+	}
+	if value, present := optional(lookup, "RECORD_HUB_PROJECTION_BACKLOG_WARNING"); present {
+		parsed, err := strconv.ParseInt(value, 10, 64)
+		if err != nil || parsed < 1 || parsed > 1_000_000 {
+			errs = append(errs, fmt.Errorf("RECORD_HUB_PROJECTION_BACKLOG_WARNING must be between 1 and 1000000; got %q", value))
+		} else {
+			cfg.ProjectionSLO.BacklogWarning = parsed
+		}
+	}
+	if value, present := optional(lookup, "RECORD_HUB_PROJECTION_LAG_WARNING"); present {
+		duration, err := time.ParseDuration(value)
+		if err != nil || duration <= 0 || duration > 24*time.Hour {
+			errs = append(errs, fmt.Errorf("RECORD_HUB_PROJECTION_LAG_WARNING must be between 1ms and 24h; got %q", value))
+		} else {
+			cfg.ProjectionSLO.LagWarning = duration
+		}
+	}
+	if value, present := optional(lookup, "RECORD_HUB_PROJECTION_FAILURE_BUDGET"); present {
+		parsed, err := strconv.ParseInt(value, 10, 64)
+		if err != nil || parsed < 1 || parsed > 1_000_000 {
+			errs = append(errs, fmt.Errorf("RECORD_HUB_PROJECTION_FAILURE_BUDGET must be between 1 and 1000000; got %q", value))
+		} else {
+			cfg.ProjectionSLO.FailureBudget = parsed
+		}
 	}
 	if value, present := optional(lookup, "RECORD_HUB_PROJECTION_WORKSPACE_ID"); present {
 		cfg.ProjectionWorkspaceID = value

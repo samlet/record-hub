@@ -1,4 +1,4 @@
-.PHONY: build test lint web-check openapi-lint generate-clients dependency-scan sbom secret-scan mongo-up mongo-smoke mongo-down schema-persistence-smoke records-persistence-smoke projection-persistence-smoke nats-up nats-init nats-smoke nats-permissions-smoke nats-down dex-env dex-up dex-smoke dex-down m5-runtime-smoke m5-supervised-live m7-native-restart m7-native-nats-recovery m8-happy-path m8-failure-path m8-local-smoke m8-native-smoke p2-workload-identity-smoke p2-isolated-core p2-engine-foundation p2-mapping-recovery p2-rebuild-cas p2-rebuild-replay check ci clean
+.PHONY: build test lint web-check openapi-lint generate-clients dependency-scan sbom secret-scan mongo-up mongo-smoke mongo-down schema-persistence-smoke records-persistence-smoke projection-persistence-smoke nats-up nats-init nats-smoke nats-permissions-smoke nats-down dex-env dex-up dex-smoke dex-down m5-runtime-smoke m5-supervised-live m7-native-restart m7-native-nats-recovery m8-happy-path m8-failure-path m8-local-smoke m8-native-smoke p2-workload-identity-smoke p2-isolated-core p2-engine-foundation p2-mapping-recovery p2-rebuild-cas p2-rebuild-replay p2-slo-baseline check ci clean
 
 BUILD_DIR := build
 BINARY := $(BUILD_DIR)/record-hub
@@ -122,6 +122,9 @@ p2-rebuild-cas:
 p2-rebuild-replay:
 	RECORD_HUB_MONGODB_URI="$${RECORD_HUB_MONGODB_URI:-mongodb://127.0.0.1:27017/?replicaSet=rs0&directConnection=true}" \
 	go test ./server/internal/modules/projection -run TestMongoProjectionReplayStagingReadPointerAndLiveContinuation -count=1 -v
+
+p2-slo-baseline:
+	go test ./server/internal/observability ./server/internal/config ./server/internal/modules/records ./server/internal/modules/projection -count=1 -v
 
 check: lint web-check openapi-lint test build
 

@@ -48,7 +48,7 @@
 | P2-DATA-002 | 显式迁移计划 | breaking 版本必须引用 migration plan；支持 dry-run、受影响记录计数、失败样本上限和取消 |
 | P2-DATA-003 | 迁移幂等与恢复 | 每条记录以 operation ID/CAS 迁移；中断后续跑不重复副作用；旧 snapshot/history 不被重写 |
 | P2-DATA-004 | View 生命周期 | View 支持版本化 create/update/delete、共享范围与 OWNER/EDITOR 权限；冲突返回当前版本 |
-| P2-DATA-005 | 查询成本保护 | limit、filter/sort/index allowlist、执行时间、响应大小和并发均有界；拒绝任意 Mongo query |
+| P2-DATA-005 | 查询成本保护 | limit、filter/sort/index allowlist、执行时间、BSON 响应大小和并发均有界；超出 page/response/time budget 返回 `QUERY_COST_EXCEEDED`，拒绝任意 Mongo query |
 | P2-DATA-006 | 数据导出 | workspace-scoped NDJSON/CSV 异步导出，带审计、过期和字段授权；projection 敏感字段仍禁止导出 |
 
 ### 3.3 Source、Mapping 与 Projection（P2-PROJ）
@@ -59,7 +59,7 @@
 | P2-PROJ-002 | Mapping registry | event→record mapping 有 schema、版本、canonical hash、fixture 和发布审批；runtime 只运行已发布版本 |
 | P2-PROJ-003 | Replay/rebuild operation | projector 先将原始 envelope 写入 scope-scoped archive；rebuild 使用独立 staging generation/records，按 record version 单调 replay，补齐 checkpoints，并在校验通过后原子切换 read pointer；失败/取消不得暴露 staging |
 | P2-PROJ-004 | Gap/DLQ remediation | UI/API 展示安全摘要、建议动作和关联 operation；重放必须使用原 event ID，不允许手改 projection |
-| P2-PROJ-005 | Freshness SLO | 每 source 暴露 last event、projected version、lag age、backlog、error budget；超阈值可告警 |
+| P2-PROJ-005 | Freshness SLO | operations snapshot 和 metrics 暴露 last event、projected version、lag age、backlog、error budget；阈值与 `slo_breach` 谓词稳定可供部署层告警 |
 
 ### 3.4 Realtime read feed（P2-RT）
 

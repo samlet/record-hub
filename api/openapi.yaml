@@ -1446,7 +1446,7 @@ components:
     ProjectionOperationsSnapshot:
       type: object
       additionalProperties: false
-      required: [tenantId, workspaceId, consumer, inbox, checkpoints, generatedAt]
+      required: [tenantId, workspaceId, consumer, inbox, checkpoints, freshness, generatedAt]
       properties:
         tenantId:
           type: string
@@ -1461,9 +1461,38 @@ components:
           maxItems: 100
           items:
             $ref: "#/components/schemas/ProjectionCheckpoint"
+        freshness:
+          $ref: "#/components/schemas/ProjectionFreshness"
         generatedAt:
           type: string
           format: date-time
+    ProjectionFreshness:
+      type: object
+      additionalProperties: false
+      required: [lastProjectedVersion, lagAgeSeconds, backlog, failures, errorBudgetRemaining, sloBreached]
+      properties:
+        lastProjectedAt:
+          type: string
+          format: date-time
+        lastEventId:
+          type: string
+        lastProjectedVersion:
+          type: integer
+          minimum: 0
+        lagAgeSeconds:
+          type: number
+          minimum: 0
+        backlog:
+          type: integer
+          minimum: 0
+        failures:
+          type: integer
+          minimum: 0
+        errorBudgetRemaining:
+          type: integer
+          minimum: 0
+        sloBreached:
+          type: boolean
     ProjectionRebuildScopeRequest:
       type: object
       additionalProperties: false

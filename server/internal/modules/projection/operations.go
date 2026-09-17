@@ -18,11 +18,14 @@ import (
 )
 
 const (
-	DefaultOperationsLimit     = 50
-	MaxOperationsLimit         = 100
-	ApproverProjectionConsumer = "record-hub-approver-projection-v1"
-	FluxionProjectionConsumer  = "record-hub-fluxion-projection-v1"
-	BidsProjectionConsumer     = "record-hub-bids-projection-v1"
+	DefaultOperationsLimit          = 50
+	MaxOperationsLimit              = 100
+	DefaultProjectionBacklogWarning = 100
+	DefaultProjectionLagWarning     = 30 * time.Second
+	DefaultProjectionFailureBudget  = 10
+	ApproverProjectionConsumer      = "record-hub-approver-projection-v1"
+	FluxionProjectionConsumer       = "record-hub-fluxion-projection-v1"
+	BidsProjectionConsumer          = "record-hub-bids-projection-v1"
 )
 
 var supportedProjectionConsumers = map[string]struct{}{
@@ -83,12 +86,41 @@ type InboxOperationsSummary struct {
 	OldestProcessingAt *time.Time `json:"oldestProcessingAt,omitempty"`
 }
 
+type ProjectionSLOThresholds struct {
+	BacklogWarning int64
+	LagWarning     time.Duration
+	FailureBudget  int64
+}
+
+func DefaultProjectionSLOThresholds() ProjectionSLOThresholds {
+	return ProjectionSLOThresholds{BacklogWarning: DefaultProjectionBacklogWarning, LagWarning: DefaultProjectionLagWarning, FailureBudget: DefaultProjectionFailureBudget}
+}
+
+func (thresholds ProjectionSLOThresholds) Validate() error {
+	if thresholds.BacklogWarning < 1 || thresholds.BacklogWarning > 1_000_000 || thresholds.LagWarning <= 0 || thresholds.LagWarning > 24*time.Hour || thresholds.FailureBudget < 1 || thresholds.FailureBudget > 1_000_000 {
+		return ErrOperationsQueryInvalid
+	}
+	return nil
+}
+
+type ProjectionFreshness struct {
+	LastProjectedAt      *time.Time `json:"lastProjectedAt,omitempty"`
+	LastEventID          string     `json:"lastEventId,omitempty"`
+	LastProjectedVersion int64      `json:"lastProjectedVersion"`
+	LagAgeSeconds        float64    `json:"lagAgeSeconds"`
+	Backlog              int64      `json:"backlog"`
+	Failures             int64      `json:"failures"`
+	ErrorBudgetRemaining int64      `json:"errorBudgetRemaining"`
+	SLOBreached          bool       `json:"sloBreached"`
+}
+
 type OperationsSnapshot struct {
 	TenantID    string                 `json:"tenantId"`
 	WorkspaceID string                 `json:"workspaceId"`
 	Consumer    string                 `json:"consumer"`
 	Inbox       InboxOperationsSummary `json:"inbox"`
 	Checkpoints []ProjectionCheckpoint `json:"checkpoints"`
+	Freshness   ProjectionFreshness    `json:"freshness"`
 	GeneratedAt time.Time              `json:"generatedAt"`
 }
 
@@ -97,6 +129,9 @@ func (snapshot OperationsSnapshot) Validate() error {
 		return ErrOperationsQueryInvalid
 	}
 	if snapshot.Inbox.Processing < 0 || snapshot.Inbox.Applied < 0 || snapshot.Inbox.Rejected < 0 || snapshot.Inbox.Failed < 0 {
+		return ErrOperationsQueryInvalid
+	}
+	if snapshot.Freshness.LastProjectedVersion < 0 || snapshot.Freshness.LagAgeSeconds < 0 || snapshot.Freshness.Backlog < 0 || snapshot.Freshness.Failures < 0 || snapshot.Freshness.ErrorBudgetRemaining < 0 {
 		return ErrOperationsQueryInvalid
 	}
 	if len(snapshot.Checkpoints) > MaxOperationsLimit {
@@ -124,6 +159,7 @@ type OperationsService struct {
 	authorizer *identity.Authorizer
 	clock      func() time.Time
 	metrics    *observability.Registry
+	thresholds ProjectionSLOThresholds
 }
 
 // WithMetrics records bounded backlog gauges for the selected consumer.
@@ -135,10 +171,20 @@ func (service *OperationsService) WithMetrics(registry *observability.Registry) 
 }
 
 func NewOperationsService(reader OperationsReader, authorizer *identity.Authorizer) *OperationsService {
-	return &OperationsService{reader: reader, authorizer: authorizer, clock: time.Now}
+	return &OperationsService{reader: reader, authorizer: authorizer, clock: time.Now, thresholds: DefaultProjectionSLOThresholds()}
+}
+
+func (service *OperationsService) WithSLOThresholds(thresholds ProjectionSLOThresholds) *OperationsService {
+	if service != nil {
+		if thresholds.Validate() == nil {
+			service.thresholds = thresholds
+		}
+	}
+	return service
 }
 
 func (service *OperationsService) Snapshot(ctx context.Context, principal identity.Principal, query OperationsQuery) (OperationsSnapshot, error) {
+	started := time.Now()
 	query, err := query.normalized()
 	if err != nil {
 		return OperationsSnapshot{}, err
@@ -173,6 +219,7 @@ func (service *OperationsService) Snapshot(ctx context.Context, principal identi
 	if snapshot.GeneratedAt.IsZero() {
 		snapshot.GeneratedAt = service.clock().UTC()
 	}
+	service.populateFreshness(&snapshot)
 	if err := snapshot.Validate(); err != nil {
 		return OperationsSnapshot{}, fmt.Errorf("operations snapshot: %w", err)
 	}
@@ -180,8 +227,53 @@ func (service *OperationsService) Snapshot(ctx context.Context, principal identi
 		labels := observability.Labels{"consumer": query.Consumer}
 		service.metrics.SetGauge("record_hub_projection_backlog", float64(snapshot.Inbox.Processing), labels)
 		service.metrics.SetGauge("record_hub_projection_failures", float64(snapshot.Inbox.Failed+snapshot.Inbox.Rejected), labels)
+		service.metrics.SetGauge("record_hub_projection_last_projected_version", float64(snapshot.Freshness.LastProjectedVersion), labels)
+		if snapshot.Freshness.LastProjectedAt != nil {
+			service.metrics.SetGauge("record_hub_projection_last_projected_timestamp_seconds", float64(snapshot.Freshness.LastProjectedAt.Unix()), labels)
+		}
+		service.metrics.SetGauge("record_hub_projection_lag_age_seconds", snapshot.Freshness.LagAgeSeconds, labels)
+		service.metrics.SetGauge("record_hub_projection_error_budget_remaining", float64(snapshot.Freshness.ErrorBudgetRemaining), labels)
+		breach := 0.0
+		if snapshot.Freshness.SLOBreached {
+			breach = 1
+		}
+		service.metrics.SetGauge("record_hub_projection_slo_breach", breach, labels)
+		service.metrics.SetGauge("record_hub_projection_backlog_warning", float64(service.thresholds.BacklogWarning), labels)
+		service.metrics.SetGauge("record_hub_projection_lag_warning_seconds", service.thresholds.LagWarning.Seconds(), labels)
+		service.metrics.ObserveDuration("record_hub_projection_snapshot_duration_seconds", time.Since(started), labels)
 	}
 	return snapshot, nil
+}
+
+func (service *OperationsService) populateFreshness(snapshot *OperationsSnapshot) {
+	if service == nil || snapshot == nil {
+		return
+	}
+	latest := snapshot.Freshness.LastProjectedAt
+	for _, checkpoint := range snapshot.Checkpoints {
+		if latest == nil || checkpoint.SyncedAt.After(*latest) {
+			value := checkpoint.SyncedAt.UTC()
+			latest = &value
+			snapshot.Freshness.LastEventID = checkpoint.LastEventID
+		}
+		if checkpoint.SourceVersion > snapshot.Freshness.LastProjectedVersion {
+			snapshot.Freshness.LastProjectedVersion = checkpoint.SourceVersion
+		}
+	}
+	snapshot.Freshness.LastProjectedAt = latest
+	snapshot.Freshness.Backlog = snapshot.Inbox.Processing
+	snapshot.Freshness.Failures = snapshot.Inbox.Failed + snapshot.Inbox.Rejected
+	snapshot.Freshness.ErrorBudgetRemaining = service.thresholds.FailureBudget - snapshot.Freshness.Failures
+	if snapshot.Freshness.ErrorBudgetRemaining < 0 {
+		snapshot.Freshness.ErrorBudgetRemaining = 0
+	}
+	if latest != nil {
+		age := snapshot.GeneratedAt.Sub(*latest).Seconds()
+		if age > 0 {
+			snapshot.Freshness.LagAgeSeconds = age
+		}
+	}
+	snapshot.Freshness.SLOBreached = snapshot.Freshness.Backlog >= service.thresholds.BacklogWarning || snapshot.Freshness.LagAgeSeconds >= service.thresholds.LagWarning.Seconds() || snapshot.Freshness.Failures >= service.thresholds.FailureBudget
 }
 
 // Snapshot reads bounded operator metadata from MongoDB. It never selects or

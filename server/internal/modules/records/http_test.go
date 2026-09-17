@@ -7,9 +7,11 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/samlet/record-hub/server/internal/modules/identity"
 	"github.com/samlet/record-hub/server/internal/modules/schema"
+	"github.com/samlet/record-hub/server/internal/observability"
 )
 
 func TestRecordsHTTPWorkspaceAndTableContract(t *testing.T) {
@@ -119,6 +121,17 @@ func TestRecordsHTTPViewAndQueryContract(t *testing.T) {
 	page := doRecordsRequest(handler, &principal, http.MethodGet, "/api/v1/tables/table-1/records?tenantId=tenant-1&workspaceId=workspace-1&viewId=view-1&limit=1", "")
 	if page.Code != http.StatusOK || !strings.Contains(page.Body.String(), `"record-1"`) {
 		t.Fatalf("view records status=%d body=%s", page.Code, page.Body.String())
+	}
+	metrics := observability.NewRegistry()
+	service.WithMetrics(metrics)
+	metricsRequest := doRecordsRequest(handler, &principal, http.MethodGet, "/api/v1/tables/table-1/records?tenantId=tenant-1&workspaceId=workspace-1&viewId=view-1&limit=1", "")
+	if metricsRequest.Code != http.StatusOK || !strings.Contains(metrics.Render(), `record_hub_record_queries_total{operation="records",outcome="success"}`) {
+		t.Fatalf("query metrics missing: status=%d metrics=%s", metricsRequest.Code, metrics.Render())
+	}
+	service.WithQueryBudget(observability.QueryBudget{MaxPageRows: 1, MaxResponseBytes: 1 << 20, MaxDuration: 2 * time.Second})
+	tooLarge := doRecordsRequest(handler, &principal, http.MethodGet, "/api/v1/tables/table-1/records?tenantId=tenant-1&workspaceId=workspace-1&viewId=view-1&limit=2", "")
+	if tooLarge.Code != http.StatusRequestEntityTooLarge || !strings.Contains(tooLarge.Body.String(), "QUERY_COST_EXCEEDED") {
+		t.Fatalf("query budget status=%d body=%s", tooLarge.Code, tooLarge.Body.String())
 	}
 	indexBody := `{"tenantId":"tenant-1","workspaceId":"workspace-1","id":"index-1","field":"title","direction":"asc"}`
 	createdIndex := doRecordsRequest(handler, &principal, http.MethodPost, "/api/v1/tables/table-1/indexes", indexBody)
