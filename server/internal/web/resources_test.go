@@ -24,7 +24,11 @@ func TestResourceRouterDispatchesSchemaAndRecordsPaths(t *testing.T) {
 		w.Header().Set("X-Resource", "catalog")
 		w.WriteHeader(http.StatusNoContent)
 	})
-	router := NewResourceRouter(records, schemas, catalog)
+	feed := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Resource", "feed")
+		w.WriteHeader(http.StatusOK)
+	})
+	router := NewResourceRouter(records, schemas, catalog, nil, feed)
 
 	for _, test := range []struct {
 		path       string
@@ -33,6 +37,7 @@ func TestResourceRouterDispatchesSchemaAndRecordsPaths(t *testing.T) {
 	}{
 		{path: "/api/v1/workspaces", wantHeader: "records", wantStatus: http.StatusAccepted},
 		{path: "/api/v1/tables/table-1/records", wantHeader: "records", wantStatus: http.StatusAccepted},
+		{path: "/api/v1/tables/table-1/records/stream", wantHeader: "feed", wantStatus: http.StatusOK},
 		{path: "/api/v1/schemas", wantHeader: "schemas", wantStatus: http.StatusCreated},
 		{path: "/api/v1/schemas/schema-1/publish", wantHeader: "schemas", wantStatus: http.StatusCreated},
 		{path: "/api/v1/sources", wantHeader: "catalog", wantStatus: http.StatusNoContent},

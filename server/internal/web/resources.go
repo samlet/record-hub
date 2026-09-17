@@ -15,10 +15,18 @@ import (
 // still being assembled during a staged rollout.
 func NewResourceRouter(recordsHandler, schemaHandler http.Handler, catalogHandlers ...http.Handler) http.Handler {
 	var catalogHandler http.Handler
+	var feedHandler http.Handler
 	if len(catalogHandlers) > 0 {
 		catalogHandler = catalogHandlers[0]
 	}
+	if len(catalogHandlers) > 2 {
+		feedHandler = catalogHandlers[2]
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if isFeedPath(r.URL.Path) {
+			serveResourceHandler(w, r, feedHandler)
+			return
+		}
 		if isSchemaPath(r.URL.Path) {
 			serveResourceHandler(w, r, schemaHandler)
 			return
@@ -59,6 +67,10 @@ func isSchemaPath(path string) bool {
 
 func isCatalogPath(path string) bool {
 	return path == "/api/v1/sources" || strings.HasPrefix(path, "/api/v1/sources/") || path == "/api/v1/mappings" || strings.HasPrefix(path, "/api/v1/mappings/")
+}
+
+func isFeedPath(path string) bool {
+	return strings.HasPrefix(path, "/api/v1/tables/") && strings.HasSuffix(path, "/records/stream")
 }
 
 func serveResourceHandler(w http.ResponseWriter, r *http.Request, handler http.Handler) {

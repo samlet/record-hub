@@ -34,6 +34,7 @@ type runtimeDependencies struct {
 	binding     http.Handler
 	operations  http.Handler
 	rebuild     http.Handler
+	feed        http.Handler
 	workers     []Service
 	webVerifier identity.TokenVerifier
 	closer      Service
@@ -92,6 +93,7 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 
 	membership := identity.NewMongoMembershipReader(database)
 	authorizer := identity.NewAuthorizer(membership)
+	feed := records.NewRecordFeed(records.DefaultFeedHistoryLimit, records.DefaultFeedBufferSize)
 	recordRepo := records.NewMongoRepository(database)
 	schemaRepo := schema.NewMongoRepository(database)
 	auditWriter := audit.NewMongoWriter(database)
@@ -107,7 +109,7 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 	schemaService := schema.NewService(schemaRepo, authorizer, schemaReceipts, auditWriter)
 	migrationService := schema.NewMigrationService(schemaRepo, schemaRepo, authorizer, migrationReceipts, auditWriter)
 	catalogService := projection.NewCatalogService(catalogRepo, catalogRepo, schemaRepo, authorizer, catalogReceipts, auditWriter)
-	recordService := records.NewRecordService(recordRepo, recordRepo, schemaRepo, authorizer, recordRepo, recordReceipts, auditWriter).WithViewRepository(recordRepo).WithIndexRepository(recordRepo).WithMetrics(metrics).WithQueryBudget(observability.QueryBudget{MaxPageRows: cfg.QueryBudget.MaxPageRows, MaxResponseBytes: cfg.QueryBudget.MaxResponseBytes, MaxDuration: cfg.QueryBudget.MaxDuration})
+	recordService := records.NewRecordService(recordRepo, recordRepo, schemaRepo, authorizer, recordRepo, recordReceipts, auditWriter).WithViewRepository(recordRepo).WithIndexRepository(recordRepo).WithMetrics(metrics).WithQueryBudget(observability.QueryBudget{MaxPageRows: cfg.QueryBudget.MaxPageRows, MaxResponseBytes: cfg.QueryBudget.MaxResponseBytes, MaxDuration: cfg.QueryBudget.MaxDuration}).WithFeed(feed)
 	snapshotStore := binding.NewMongoSnapshotStore(database)
 	var machineAuthorizer binding.PolicyAuthorizer
 	if len(cfg.BindingMachinePolicies) > 0 {
@@ -137,6 +139,7 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 	deps.binding = binding.NewHTTPHandler(bindingService)
 	deps.operations = projection.NewOperationsHTTPHandler(operationsService)
 	deps.rebuild = projection.NewProjectionRebuildHTTPHandler(rebuildService)
+	deps.feed = records.NewFeedHTTPHandler(feed, authorizer, records.FeedHTTPOptions{})
 
 	if strings.TrimSpace(cfg.NATSURL) == "" {
 		if cfg.Mode == config.ModeWorker || cfg.Mode == config.ModeAll {
@@ -167,7 +170,7 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 		_ = client.Disconnect(context.Background())
 		return nil, fmt.Errorf("register projection handlers: %w", err)
 	}
-	projectionRepo := projection.NewMongoProjectionRepository(database)
+	projectionRepo := projection.NewMongoProjectionRepository(database).WithFeed(feed)
 	projector, err := projection.NewSummaryProjector(registry, projection.NewMongoInboxRepository(database), projectionRepo, cfg.ProjectionWorkspaceID)
 	if err != nil {
 		natsClient.Close()

@@ -10,6 +10,7 @@ tags:
   - name: System
   - name: Identity
   - name: Records
+  - name: Realtime
   - name: Schema
   - name: Projection Catalog
   - name: Operations
@@ -430,6 +431,46 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+  /api/v1/tables/{tableId}/records/stream:
+    parameters:
+      - $ref: "#/components/parameters/TableId"
+    get:
+      tags: [Realtime]
+      operationId: streamRecordChanges
+      summary: Stream bounded record references over Server-Sent Events
+      description: Events are scoped to one tenant/workspace/table and contain references only. Use Last-Event-ID or cursor to resume within the retained recovery window.
+      parameters:
+        - $ref: "#/components/parameters/TenantIdQuery"
+        - $ref: "#/components/parameters/WorkspaceIdQuery"
+        - $ref: "#/components/parameters/CursorQuery"
+        - $ref: "#/components/parameters/LastEventID"
+      responses:
+        "200":
+          description: A long-lived Server-Sent Events stream.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: The cursor is older than the retained recovery window and the client must requery.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: The bounded feed connection quota has been reached.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
   /api/v1/tables/{tableId}/views:
     parameters:
       - $ref: "#/components/parameters/TableId"
@@ -1301,6 +1342,15 @@ components:
       schema:
         type: string
         maxLength: 2048
+    LastEventID:
+      name: Last-Event-ID
+      in: header
+      required: false
+      description: Last SSE event id received by the client.
+      schema:
+        type: string
+        pattern: "^[1-9][0-9]*$"
+        maxLength: 20
     LimitQuery:
       name: limit
       in: query
@@ -2002,6 +2052,30 @@ components:
             $ref: "#/components/schemas/Record"
         nextCursor:
           type: string
+    RecordFeedEvent:
+      type: object
+      additionalProperties: false
+      required: [recordId, recordVersion, tenantId, workspaceId, tableId, changeType, occurredAt]
+      properties:
+        recordId:
+          type: string
+        recordVersion:
+          type: integer
+          minimum: 0
+        tenantId:
+          type: string
+        workspaceId:
+          type: string
+        tableId:
+          type: string
+        changeType:
+          type: string
+          enum: [upsert, delete]
+        lastEventId:
+          type: string
+        occurredAt:
+          type: string
+          format: date-time
     RecordCreateRequest:
       type: object
       additionalProperties: false

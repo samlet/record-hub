@@ -78,6 +78,7 @@ type MongoProjectionRepository struct {
 	readPointers *mongo.Collection
 	checkpoints  *mongo.Collection
 	audit        *mongo.Collection
+	feed         *records.RecordFeed
 	staging      bool
 	// afterCommit is a narrow fault-injection hook used by the live recovery
 	// test to model a lost client response after Mongo has committed.
@@ -91,6 +92,15 @@ func NewMongoProjectionRepository(database *mongo.Database) *MongoProjectionRepo
 		return &MongoProjectionRepository{}
 	}
 	return &MongoProjectionRepository{database: database, inbox: database.Collection(inboxCollectionName), records: database.Collection("records"), readPointers: database.Collection(records.ProjectionReadPointerCollectionName), checkpoints: database.Collection(checkpointCollectionName), audit: database.Collection("audit_entries")}
+}
+
+// WithFeed enables best-effort publication of successfully applied live
+// projection changes. Replay repositories intentionally do not publish.
+func (repository *MongoProjectionRepository) WithFeed(feed *records.RecordFeed) *MongoProjectionRepository {
+	if repository != nil {
+		repository.feed = feed
+	}
+	return repository
 }
 
 // WithStaging returns an isolated repository used only during replay. It does
@@ -155,6 +165,7 @@ func (repository *MongoProjectionRepository) Apply(ctx context.Context, input Pr
 	}
 	defer session.EndSession(context.Background())
 	gapDetected := false
+	var feedChange *records.RecordChange
 	_, err = session.WithTransaction(ctx, func(transactionContext context.Context) (interface{}, error) {
 		var existing InboxEvent
 		if findErr := repository.inbox.FindOne(transactionContext, bson.D{{Key: "eventId", Value: input.InboxEvent.EventID}, {Key: "consumer", Value: input.InboxEvent.Consumer}}).Decode(&existing); findErr != nil {
@@ -205,6 +216,7 @@ func (repository *MongoProjectionRepository) Apply(ctx context.Context, input Pr
 		if _, replaceErr := recordsCollection.ReplaceOne(transactionContext, bson.D{{Key: "tenantId", Value: input.Record.TenantID}, {Key: "workspaceId", Value: input.Record.WorkspaceID}, {Key: "tableId", Value: input.Record.TableID}, {Key: "_id", Value: input.Record.ID}}, input.Record, options.Replace().SetUpsert(true)); replaceErr != nil {
 			return nil, fmt.Errorf("upsert projection record: %w", replaceErr)
 		}
+		feedChange = &records.RecordChange{TenantID: input.Record.TenantID, WorkspaceID: input.Record.WorkspaceID, TableID: input.Record.TableID, RecordID: input.Record.ID, RecordVersion: input.Record.RecordVersion, ChangeType: "upsert", LastEventID: input.InboxEvent.EventID, OccurredAt: input.Checkpoint.SyncedAt, DedupKey: "projection:" + input.InboxEvent.Consumer + ":" + input.InboxEvent.EventID}
 		if _, checkpointErr := repository.checkpoints.UpdateOne(transactionContext, checkpointFilter, bson.D{{Key: "$set", Value: input.Checkpoint}}, options.UpdateOne().SetUpsert(true)); checkpointErr != nil {
 			return nil, fmt.Errorf("upsert projection checkpoint: %w", checkpointErr)
 		}
@@ -218,6 +230,9 @@ func (repository *MongoProjectionRepository) Apply(ctx context.Context, input Pr
 	}
 	if err != nil {
 		return err
+	}
+	if feedChange != nil && repository.feed != nil {
+		_ = repository.feed.Publish(*feedChange)
 	}
 	if repository.afterCommit != nil {
 		hook := repository.afterCommit

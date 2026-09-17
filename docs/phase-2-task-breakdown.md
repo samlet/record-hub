@@ -30,7 +30,7 @@
 | 批次 | 状态 | 范围 |
 | --- | --- | --- |
 | P2-1 Operable Data | IN_PROGRESS | Schema diff/migration、source/mapping registry、projection rebuild、SLO |
-| P2-2 Realtime Read Feed | TODO | SSE、cursor、背压、撤权和配额 |
+| P2-2 Realtime Read Feed | IN_PROGRESS | SSE、cursor、背压、撤权和配额 |
 | P2-3 Controlled Command | TODO | policy、receipt、owner Inbox、单一低风险 command |
 | P2-4 Approval/Beta | TODO | Approver connector/试点、备份恢复、升级回滚、Beta 准入 |
 
@@ -45,3 +45,13 @@ P2-0-005 的运行说明见 [deploy/local/isolated/README.md](../deploy/local/is
 | P2-1-003 | Source/mapping registry | DONE | 控制面、fixture 发布门、不可变 published generation、tenant/workspace/source/type/version 精确索引、原子 active pointer、last-known-good refresh、动态 projector 与 Mongo/JetStream durable restart recovery 均通过；`make p2-mapping-recovery` |
 | P2-1-004 | Projection rebuild operation | DONE | Owner API、operation receipt、CAS 状态机、Mongo raw event archive、隔离 staging records、版本单调 replay、checkpoint 补齐、read pointer 原子切换、取消/失败恢复和 live continuation 已完成；归档启用前的历史事件不在可重放窗口内，超过 100,000 条的 scope 需先扩展 archive 分页策略 |
 | P2-1-005 | Query cost and SLO baseline | DONE | [phase-2-slo-design.md](phase-2-slo-design.md) 固化 page/response/time budget、查询拒绝、freshness snapshot、lag/backlog/error budget 指标、可配置阈值和 `slo_breach` 告警谓词；外部通知由部署层消费 metrics |
+
+## P2-2 当前任务
+
+| ID | 任务 | 状态 | 验收 |
+| --- | --- | --- | --- |
+| P2-2-001 | Bounded record feed broker | DONE | 按 tenant/workspace/table scope fan-out；2,048 条有界历史、单调 SSE id、游标过期和慢消费者断开单测通过 |
+| P2-2-002 | SSE HTTP contract | DONE | `GET /api/v1/tables/{tableId}/records/stream` 支持 `Last-Event-ID`/`cursor`、引用事件、heartbeat、64 KiB 事件上限、256 连接上限；OpenAPI 已更新 |
+| P2-2-003 | Mutation/projection publication | DONE | 普通记录 create/update/delete 与 live projection apply 发布引用事件；projection retry 以 source event dedup；staging replay 不发布 |
+| P2-2-003a | Backpressure and connection quotas | PARTIAL | 单连接缓冲、单事件大小、principal/scope 连接数和进程连接数有界；速率令牌桶和跨实例 quota 尚未实现，待 Beta capacity baseline |
+| P2-2-004 | Revocation and live acceptance | PARTIAL | 每 5 秒重新授权并撤权后关闭连接；单测和错误路径已通过，真实 Dex 浏览器撤权、跨实例恢复和容量基线待 P2-0-007/009 及 Beta 拓扑就绪后补跑 |

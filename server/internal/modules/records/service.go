@@ -35,6 +35,7 @@ type Service struct {
 	indexes     IndexRepository
 	metrics     *observability.Registry
 	queryBudget observability.QueryBudget
+	feed        *RecordFeed
 }
 
 func NewService(workspaces WorkspaceRepository, tables TableRepository, schemas SchemaReader, authorizer *identity.Authorizer) *Service {
@@ -77,6 +78,16 @@ func (service *Service) WithQueryBudget(budget observability.QueryBudget) *Servi
 		if budget.Validate() == nil {
 			service.queryBudget = budget
 		}
+	}
+	return service
+}
+
+// WithFeed attaches best-effort post-commit record notifications. Publishing
+// is performed by the service, after the audit and idempotency receipt have
+// committed, so a rolled-back mutation can never become a live event.
+func (service *Service) WithFeed(feed *RecordFeed) *Service {
+	if service != nil {
+		service.feed = feed
 	}
 	return service
 }
@@ -501,6 +512,9 @@ func (service *Service) CreateRecord(ctx context.Context, principal identity.Pri
 		return Record{}, err
 	}
 	if result, found, err := service.recordReceipt(ctx, input.TenantID, input.WorkspaceID, "record.create", input.IdempotencyKey, requestHash); err != nil || found {
+		if err == nil && found {
+			service.publishRecordChange(result, "upsert", "record.create")
+		}
 		return result, err
 	}
 	now := service.clock().UTC()
@@ -517,6 +531,9 @@ func (service *Service) CreateRecord(ctx context.Context, principal identity.Pri
 		result, completeErr = service.completeRecord(transactionContext, input.TenantID, input.WorkspaceID, "record.create", input.IdempotencyKey, requestHash, record, audit.Entry{TenantID: input.TenantID, WorkspaceID: input.WorkspaceID, Action: "record.create", Actor: principal.IdentityKey(), ResourceType: "Record", ResourceID: record.ID, ResourceVersion: record.RecordVersion, RequestID: input.RequestID, IdempotencyKey: input.IdempotencyKey, AfterHash: hashRecord(record), CreatedAt: now})
 		return completeErr
 	})
+	if err == nil {
+		service.publishRecordChange(result, "upsert", "record.create")
+	}
 	return result, err
 }
 
@@ -562,6 +579,9 @@ func (service *Service) UpdateRecord(ctx context.Context, principal identity.Pri
 		return Record{}, err
 	}
 	if result, found, err := service.recordReceipt(ctx, input.TenantID, input.WorkspaceID, "record.update", input.IdempotencyKey, requestHash); err != nil || found {
+		if err == nil && found {
+			service.publishRecordChange(result, "upsert", "record.update")
+		}
 		return result, err
 	}
 	existing, err := service.records.GetRecord(ctx, input.TenantID, input.WorkspaceID, input.ID)
@@ -590,6 +610,9 @@ func (service *Service) UpdateRecord(ctx context.Context, principal identity.Pri
 		result, completeErr = service.completeRecord(transactionContext, input.TenantID, input.WorkspaceID, "record.update", input.IdempotencyKey, requestHash, updatedRecord, audit.Entry{TenantID: input.TenantID, WorkspaceID: input.WorkspaceID, Action: "record.update", Actor: principal.IdentityKey(), ResourceType: "Record", ResourceID: updatedRecord.ID, ResourceVersion: updatedRecord.RecordVersion, RequestID: input.RequestID, IdempotencyKey: input.IdempotencyKey, BeforeHash: hashRecord(existing), AfterHash: hashRecord(updatedRecord), CreatedAt: updatedRecord.UpdatedAt})
 		return completeErr
 	})
+	if err == nil {
+		service.publishRecordChange(result, "upsert", "record.update")
+	}
 	return result, err
 }
 
@@ -612,6 +635,9 @@ func (service *Service) DeleteRecord(ctx context.Context, principal identity.Pri
 		return Record{}, err
 	}
 	if result, found, err := service.recordReceipt(ctx, input.TenantID, input.WorkspaceID, "record.delete", input.IdempotencyKey, requestHash); err != nil || found {
+		if err == nil && found {
+			service.publishRecordChange(result, "delete", "record.delete")
+		}
 		return result, err
 	}
 	existing, err := service.records.GetRecord(ctx, input.TenantID, input.WorkspaceID, input.RecordID)
@@ -630,7 +656,17 @@ func (service *Service) DeleteRecord(ctx context.Context, principal identity.Pri
 		result, completeErr = service.completeRecord(transactionContext, input.TenantID, input.WorkspaceID, "record.delete", input.IdempotencyKey, requestHash, existing, audit.Entry{TenantID: input.TenantID, WorkspaceID: input.WorkspaceID, Action: "record.delete", Actor: principal.IdentityKey(), ResourceType: "Record", ResourceID: existing.ID, ResourceVersion: existing.RecordVersion, RequestID: input.RequestID, IdempotencyKey: input.IdempotencyKey, BeforeHash: hashRecord(existing), CreatedAt: service.clock().UTC()})
 		return completeErr
 	})
+	if err == nil {
+		service.publishRecordChange(existing, "delete", "record.delete")
+	}
 	return result, err
+}
+
+func (service *Service) publishRecordChange(record Record, changeType, operation string) {
+	if service == nil || service.feed == nil {
+		return
+	}
+	_ = service.feed.Publish(RecordChange{TenantID: record.TenantID, WorkspaceID: record.WorkspaceID, TableID: record.TableID, RecordID: record.ID, RecordVersion: record.RecordVersion, ChangeType: changeType, OccurredAt: record.UpdatedAt, DedupKey: fmt.Sprintf("%s:%s:%s:%s:%d", operation, record.TenantID, record.WorkspaceID, record.ID, record.RecordVersion)})
 }
 
 func (service *Service) recordDependencies(ctx context.Context, principal identity.Principal, tenantID, workspaceID string, action identity.Action) error {
