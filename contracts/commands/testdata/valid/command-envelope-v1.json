@@ -1,0 +1,23 @@
+{
+  "operationId": "cmd-0123456789abcdef0123456789abcdef",
+  "tenantId": "tenant-1",
+  "workspaceId": "workspace-1",
+  "policyId": "project.annotate",
+  "ownerSystem": "fluxion",
+  "resourceType": "PROJECT",
+  "action": "project.annotate",
+  "purpose": "project-annotation",
+  "resourceRef": "fluxion:PROJECT:00000000-0000-0000-0000-000000000001",
+  "expectedVersion": 7,
+  "payloadHash": "sha256:504b692664ab9572943846a9513a4e177d5555788d2143be07d174e81e79cc9a",
+  "payload": {
+    "annotationId": "ann-00000001",
+    "mode": "APPEND",
+    "text": "operator note"
+  },
+  "requestedBy": {
+    "issuer": "http://workload.test",
+    "subject": "fluxion-to-record-hub"
+  },
+  "createdAt": "2026-09-18T00:00:00Z"
+}

@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "phase": "3",
+  "baselineKind": "pre-batch-0",
+  "baselineDate": "2026-09-18",
+  "repositories": [
+    {
+      "name": "record-hub",
+      "path": "/Users/xiaofeiwu/apps/record-hub",
+      "commit": "76898980bf8efcf6e682aae4640dcd389108a1c4",
+      "build": {
+        "workingDirectory": ".",
+        "testCommand": "go test ./...",
+        "buildCommand": "go build -trimpath -o build/record-hub ./server/cmd/record-hub"
+      },
+      "runtime": { "language": "go", "version": "1.27.0" },
+      "dependencies": {
+        "mongodbDriver": "go.mongodb.org/mongo-driver/v2 v2.9.1",
+        "nats": "github.com/nats-io/nats.go v1.53.1",
+        "jsonSchema": "github.com/santhosh-tekuri/jsonschema/v6 v6.0.3"
+      }
+    },
+    {
+      "name": "approver",
+      "path": "/Users/xiaofeiwu/apps/approver",
+      "commit": "71e7f4f0f35814062524805c12faf86d7bf804c2",
+      "build": {
+        "workingDirectory": ".",
+        "testCommand": "mvn test",
+        "buildCommand": "mvn -DskipTests package"
+      },
+      "runtime": { "language": "java", "version": "21" },
+      "dependencies": {
+        "springBoot": "3.5.16",
+        "temporal": "1.38.0"
+      }
+    },
+    {
+      "name": "fluxion",
+      "path": "/Users/xiaofeiwu/portals/fluxion",
+      "commit": "5f872deeccb814ad2440725507b2e04a5c6cea6b",
+      "build": {
+        "workingDirectory": "server",
+        "testCommand": "./gradlew test",
+        "buildCommand": "./gradlew build"
+      },
+      "runtime": { "language": "kotlin-jvm", "version": "21" },
+      "dependencies": {
+        "ktor": "3.2.0",
+        "temporal": "1.30.1",
+        "nats": "2.20.5",
+        "flyway": "11.8.2"
+      }
+    },
+    {
+      "name": "bids",
+      "path": "/Users/xiaofeiwu/apps/bids",
+      "commit": "21599a1c8d553026343e43d3af472728847b8025",
+      "build": {
+        "workingDirectory": "backend",
+        "testCommand": "go test ./...",
+        "buildCommand": "go build ./..."
+      },
+      "runtime": { "language": "go", "version": "1.23.0" },
+      "dependencies": {
+        "conductor": "github.com/conductor-sdk/conductor-go v1.10.2",
+        "nats": "github.com/nats-io/nats.go v1.44.0",
+        "gorm": "gorm.io/gorm v1.30.0"
+      }
+    }
+  ],
+  "contractGate": {
+    "family": "record-hub-command-result",
+    "manifest": "contracts/commands/manifest.json",
+    "command": "make p3-contract-gate"
+  }
+}

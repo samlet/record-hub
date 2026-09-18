@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:record-hub:command-envelope:v1",
+  "title": "Record Hub Command Envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "operationId",
+    "tenantId",
+    "workspaceId",
+    "policyId",
+    "ownerSystem",
+    "resourceType",
+    "action",
+    "purpose",
+    "resourceRef",
+    "payloadHash",
+    "payload",
+    "requestedBy",
+    "createdAt"
+  ],
+  "properties": {
+    "operationId": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "tenantId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "workspaceId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "policyId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "ownerSystem": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "resourceType": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "action": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "purpose": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "resourceRef": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "expectedVersion": { "type": "integer", "minimum": 1 },
+    "payloadHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "payload": { "type": "object" },
+    "requestedBy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["issuer", "subject"],
+      "properties": {
+        "issuer": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "subject": { "type": "string", "minLength": 1, "maxLength": 256 }
+      }
+    },
+    "createdAt": { "type": "string", "format": "date-time" }
+  }
+}

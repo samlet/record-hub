@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "codes": [
+    { "code": "INVALID_REQUEST", "class": "validation", "retryable": false },
+    { "code": "COMMAND_POLICY_DENIED", "class": "authorization", "retryable": false },
+    { "code": "COMMAND_NOT_FOUND", "class": "not_found", "retryable": false },
+    { "code": "IDEMPOTENCY_CONFLICT", "class": "conflict", "retryable": false },
+    { "code": "EXPECTED_VERSION_REQUIRED", "class": "conflict", "retryable": false },
+    { "code": "VERSION_CONFLICT", "class": "conflict", "retryable": false },
+    { "code": "PAYLOAD_TOO_LARGE", "class": "validation", "retryable": false },
+    { "code": "COMMAND_UNAVAILABLE", "class": "availability", "retryable": true },
+    { "code": "OWNER_UNAVAILABLE", "class": "availability", "retryable": true },
+    { "code": "BUSINESS_REJECTED", "class": "business", "retryable": false },
+    { "code": "OWNER_INTERNAL_SAFE", "class": "owner", "retryable": false },
+    { "code": "COMMAND_RESULT_CONFLICT", "class": "conflict", "retryable": false },
+    { "code": "COMMAND_RESULT_INVALID", "class": "validation", "retryable": false },
+    { "code": "COMMAND_EXPIRED", "class": "lifecycle", "retryable": false }
+  ]
+}

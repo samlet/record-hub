@@ -1,7 +1,7 @@
 # Phase 3 真实业务系统接入任务分解
 
 - 日期：2026-09-18
-- 状态：Planned
+- 状态：Batch 0 contract gate complete; owner adapters planned
 - 方案：[phase-3-integration-design.md](phase-3-integration-design.md)
 - 需求：[phase-3-requirements.md](phase-3-requirements.md)
 - 验收：[phase-3-acceptance-plan.md](phase-3-acceptance-plan.md)
@@ -25,12 +25,12 @@
 | ID | 仓库 | 任务 | 状态 | 验收 |
 | --- | --- | --- | --- | --- |
 | P3-000 | Record Hub | 冻结 Phase 3 方案、需求、任务和验收计划 | DONE | 四份文档交叉链接，明确 owner/非目标/Gate |
-| P3-001 | 四仓库 | 记录语言、数据库、engine、migration 和现有 integration inventory | TODO | inventory 与实际代码/版本一致，无未知 owner |
-| P3-002 | Record Hub | 建 command/result v1 schema、safe fixtures、error codes、manifest | TODO | 严格 verifier、canonical hash、非法/超限 fixture |
-| P3-003 | Approver/Fluxion/Bids | 镜像 contract assets | TODO | 四仓库逐文件 hash 一致 |
-| P3-004 | 四仓库 | 建 contract mirror CI gate | TODO | 漂移、缺文件、未知 artifact 和 breaking mutation 均失败 |
-| P3-005 | Record Hub | 发布 owner adapter 接入说明和示例，不发布内部 Mongo 实现包 | TODO | Java/Kotlin/Go 能仅凭公共契约实现 |
-| P3-006 | 四仓库 | 固定每仓库基线 commit、构建命令和依赖版本 | TODO | acceptance manifest 可机器读取 |
+| P3-001 | 四仓库 | 记录语言、数据库、engine、migration 和现有 integration inventory | DONE | [phase-3-baseline-manifest.json](phase-3-baseline-manifest.json) 固定四仓库 commit、构建命令和依赖版本 |
+| P3-002 | Record Hub | 建 command/result v1 schema、safe fixtures、error codes、manifest | DONE | `contracts/commands` strict JSON、canonical payload hash、valid/invalid fixture 和 error catalog 已测试 |
+| P3-003 | Approver/Fluxion/Bids | 镜像 contract assets | DONE | 四仓库 8 个 asset 逐字节一致，见 `make p3-contract-gate` |
+| P3-004 | 四仓库 | 建 contract mirror CI gate | DONE | `scripts/verify-p3-contract-mirrors.sh` 检查缺失、漂移、manifest hash 和 JSON 资产 |
+| P3-005 | Record Hub | 发布 owner adapter 接入说明和示例，不发布内部 Mongo 实现包 | DONE | v1 schema、fixture、错误分类和 Envelope wire 语义可供 Java/Kotlin/Go 独立实现 |
+| P3-006 | 四仓库 | 固定每仓库基线 commit、构建命令和依赖版本 | DONE | 机器可读 baseline manifest 已提交；后续批次以该基线记录 commit 演进 |
 
 ## Batch 1：Fluxion Controlled Command
 

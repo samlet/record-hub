@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "contractFamily": "record-hub-command-result",
+  "contracts": [
+    {
+      "kind": "command-envelope",
+      "schemaId": "urn:record-hub:command-envelope:v1",
+      "schemaFile": "command-envelope-v1.schema.json",
+      "validFixtureFile": "testdata/valid/command-envelope-v1.json",
+      "invalidFixtureFiles": ["testdata/invalid/command-envelope-v1-unknown-field.json"],
+      "schemaContentHash": "sha256:3f738746784be6837cc30609c551189b3a44aa5c74a44c9e4d498a36188314d3"
+    },
+    {
+      "kind": "result-envelope",
+      "schemaId": "urn:record-hub:result-envelope:v1",
+      "schemaFile": "result-envelope-v1.schema.json",
+      "validFixtureFile": "testdata/valid/result-envelope-v1.json",
+      "invalidFixtureFiles": ["testdata/invalid/result-envelope-v1-status.json"],
+      "schemaContentHash": "sha256:4c4fccf5141d18a0069c346d06b3edd926f111e6f5095d12671f254b4f7ef29e"
+    }
+  ],
+  "errorCodesFile": "error-codes.json",
+  "errorCodesContentHash": "sha256:f013861c8700c02644fc2f86a8765625ddba00f944090fd421b7f325df96086f"
+}

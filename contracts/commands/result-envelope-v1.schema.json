@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:record-hub:result-envelope:v1",
+  "title": "Record Hub Command Result Envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "eventId",
+    "operationId",
+    "tenantId",
+    "workspaceId",
+    "ownerSystem",
+    "action",
+    "status",
+    "occurredAt"
+  ],
+  "properties": {
+    "eventId": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "operationId": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "tenantId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "workspaceId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "ownerSystem": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "action": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "status": { "enum": ["SUCCEEDED", "REJECTED", "FAILED", "EXPIRED"] },
+    "resultHash": { "type": "string", "maxLength": 256 },
+    "errorCode": { "type": "string", "maxLength": 128 },
+    "safeError": { "type": "string", "maxLength": 512, "pattern": "^[^\\r\\n]*$" },
+    "resultVersion": { "type": "integer", "minimum": 1 },
+    "occurredAt": { "type": "string", "format": "date-time" }
+  }
+}

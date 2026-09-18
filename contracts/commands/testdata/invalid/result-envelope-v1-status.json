@@ -1,0 +1,10 @@
+{
+  "eventId": "command-result-cmd-0123456789abcdef0123456789abcdef",
+  "operationId": "cmd-0123456789abcdef0123456789abcdef",
+  "tenantId": "tenant-1",
+  "workspaceId": "workspace-1",
+  "ownerSystem": "fluxion",
+  "action": "project.annotate",
+  "status": "PROCESSING",
+  "occurredAt": "2026-09-18T00:00:01Z"
+}

@@ -1,10 +1,13 @@
 package commands
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -142,6 +145,81 @@ type Envelope struct {
 	Payload         []byte               `json:"payload"`
 	RequestedBy     identity.IdentityKey `json:"requestedBy"`
 	CreatedAt       time.Time            `json:"createdAt"`
+}
+
+// MarshalJSON keeps the public v1 contract faithful to the command API: the
+// canonical payload is a JSON object on the wire, rather than encoding the
+// internal []byte representation as base64.
+func (envelope Envelope) MarshalJSON() ([]byte, error) {
+	type wireEnvelope struct {
+		OperationID     string               `json:"operationId"`
+		TenantID        string               `json:"tenantId"`
+		WorkspaceID     string               `json:"workspaceId"`
+		PolicyID        string               `json:"policyId"`
+		OwnerSystem     string               `json:"ownerSystem"`
+		ResourceType    string               `json:"resourceType"`
+		Action          string               `json:"action"`
+		Purpose         string               `json:"purpose"`
+		ResourceRef     string               `json:"resourceRef"`
+		ExpectedVersion *int64               `json:"expectedVersion,omitempty"`
+		PayloadHash     string               `json:"payloadHash"`
+		Payload         json.RawMessage      `json:"payload"`
+		RequestedBy     identity.IdentityKey `json:"requestedBy"`
+		CreatedAt       time.Time            `json:"createdAt"`
+	}
+	return json.Marshal(wireEnvelope{
+		OperationID: envelope.OperationID, TenantID: envelope.TenantID, WorkspaceID: envelope.WorkspaceID,
+		PolicyID: envelope.PolicyID, OwnerSystem: envelope.OwnerSystem, ResourceType: envelope.ResourceType,
+		Action: envelope.Action, Purpose: envelope.Purpose, ResourceRef: envelope.ResourceRef,
+		ExpectedVersion: envelope.ExpectedVersion, PayloadHash: envelope.PayloadHash,
+		Payload: json.RawMessage(envelope.Payload), RequestedBy: envelope.RequestedBy, CreatedAt: envelope.CreatedAt,
+	})
+}
+
+// UnmarshalJSON mirrors MarshalJSON and rejects unknown/trailing fields before
+// an owner can claim the command in its Inbox.
+func (envelope *Envelope) UnmarshalJSON(data []byte) error {
+	if envelope == nil {
+		return ErrCommandInvalidRequest
+	}
+	type wireEnvelope struct {
+		OperationID     string               `json:"operationId"`
+		TenantID        string               `json:"tenantId"`
+		WorkspaceID     string               `json:"workspaceId"`
+		PolicyID        string               `json:"policyId"`
+		OwnerSystem     string               `json:"ownerSystem"`
+		ResourceType    string               `json:"resourceType"`
+		Action          string               `json:"action"`
+		Purpose         string               `json:"purpose"`
+		ResourceRef     string               `json:"resourceRef"`
+		ExpectedVersion *int64               `json:"expectedVersion,omitempty"`
+		PayloadHash     string               `json:"payloadHash"`
+		Payload         json.RawMessage      `json:"payload"`
+		RequestedBy     identity.IdentityKey `json:"requestedBy"`
+		CreatedAt       time.Time            `json:"createdAt"`
+	}
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	var wire wireEnvelope
+	if err := decoder.Decode(&wire); err != nil {
+		return ErrCommandInvalidRequest
+	}
+	var trailing any
+	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
+		return ErrCommandInvalidRequest
+	}
+	var payload map[string]json.RawMessage
+	if len(wire.Payload) == 0 || json.Unmarshal(wire.Payload, &payload) != nil || payload == nil {
+		return ErrCommandInvalidRequest
+	}
+	*envelope = Envelope{
+		OperationID: wire.OperationID, TenantID: wire.TenantID, WorkspaceID: wire.WorkspaceID,
+		PolicyID: wire.PolicyID, OwnerSystem: wire.OwnerSystem, ResourceType: wire.ResourceType,
+		Action: wire.Action, Purpose: wire.Purpose, ResourceRef: wire.ResourceRef,
+		ExpectedVersion: wire.ExpectedVersion, PayloadHash: wire.PayloadHash,
+		Payload: append([]byte(nil), wire.Payload...), RequestedBy: wire.RequestedBy, CreatedAt: wire.CreatedAt,
+	}
+	return nil
 }
 
 // ResultEnvelope is published by the owner system after its own transaction
