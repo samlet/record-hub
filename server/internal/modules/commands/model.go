@@ -212,12 +212,16 @@ func (envelope *Envelope) UnmarshalJSON(data []byte) error {
 	if len(wire.Payload) == 0 || json.Unmarshal(wire.Payload, &payload) != nil || payload == nil {
 		return ErrCommandInvalidRequest
 	}
+	canonicalPayload, err := json.Marshal(payload)
+	if err != nil {
+		return ErrCommandInvalidRequest
+	}
 	*envelope = Envelope{
 		OperationID: wire.OperationID, TenantID: wire.TenantID, WorkspaceID: wire.WorkspaceID,
 		PolicyID: wire.PolicyID, OwnerSystem: wire.OwnerSystem, ResourceType: wire.ResourceType,
 		Action: wire.Action, Purpose: wire.Purpose, ResourceRef: wire.ResourceRef,
 		ExpectedVersion: wire.ExpectedVersion, PayloadHash: wire.PayloadHash,
-		Payload: append([]byte(nil), wire.Payload...), RequestedBy: wire.RequestedBy, CreatedAt: wire.CreatedAt,
+		Payload: canonicalPayload, RequestedBy: wire.RequestedBy, CreatedAt: wire.CreatedAt,
 	}
 	return nil
 }

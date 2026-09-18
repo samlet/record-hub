@@ -3,6 +3,8 @@ package commands
 import (
 	"bytes"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -38,5 +40,34 @@ func TestEnvelopeWirePayloadIsJSONObjectAndStrict(t *testing.T) {
 	}
 	if err := json.Unmarshal(append(raw[:len(raw)-1], []byte(`,"unexpected":true}`)...), &decoded); err == nil {
 		t.Fatal("unknown command field was accepted")
+	}
+}
+
+func TestFluxionProjectAnnotateFixtureMatchesRuntimeWireContract(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "..", "contracts", "commands", "testdata", "valid")
+	commandRaw, err := os.ReadFile(filepath.Join(root, "command-envelope-v1.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var command Envelope
+	if err := json.Unmarshal(commandRaw, &command); err != nil {
+		t.Fatal(err)
+	}
+	if err := command.Validate(); err != nil {
+		t.Fatalf("command fixture rejected by runtime wire model: %v", err)
+	}
+	if got := commandSubject(command.OwnerSystem, command.Action); got != "commands.fluxion.project.annotate.v1" {
+		t.Fatalf("unexpected Fluxion subject: %s", got)
+	}
+	resultRaw, err := os.ReadFile(filepath.Join(root, "result-envelope-v1.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var result ResultEnvelope
+	if err := json.Unmarshal(resultRaw, &result); err != nil {
+		t.Fatal(err)
+	}
+	if err := result.Validate(); err != nil {
+		t.Fatalf("result fixture rejected by runtime wire model: %v", err)
 	}
 }
