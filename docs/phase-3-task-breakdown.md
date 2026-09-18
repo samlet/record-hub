@@ -45,9 +45,9 @@
 | P3-106 | Fluxion | 实现 result Outbox relay | DONE | `results.fluxion.<action>.v1`、event ID message ID、lease/retry/dead、ACK-loss 单测 |
 | P3-107 | Fluxion | 增加 Inbox/Outbox 运维查询和安全 metrics | DONE | supervisor-only `/api/operations/record-hub/commands` 仅返回状态计数/backlog，不返回 ID、payload 或 secret |
 | P3-108 | Record Hub | 增加真实 Fluxion policy fixture/config | DONE | `deploy/local/p3/fluxion-project-annotate-policy.json` 固定 workload issuer/subject/audience/scope、tenant/workspace/purpose/action |
-| P3-109 | Record Hub/Fluxion | command/result 跨仓库 contract test | TODO | success/replay/hash conflict/version conflict/error redaction |
-| P3-110 | Record Hub/Fluxion | live command E2E | TODO | commit-before-ACK、ACK loss、双进程竞争、两侧重启无重复副作用 |
-| P3-111 | Record Hub/Fluxion | annotation semantic compensation | TODO | VOID 引用校验、重复 VOID、跨项目拒绝和审计通过 |
+| P3-109 | Record Hub/Fluxion | command/result 跨仓库 contract test | PARTIAL | Fluxion fixture 已由 Kotlin decoder、Record Hub runtime wire test 和四仓库 hash gate 接受；replay/hash-conflict/version/error-redaction live matrix 待 P3-110 |
+| P3-110 | Record Hub/Fluxion | live command E2E | SKIPPED | 当前批次未启动隔离 PostgreSQL/NATS/Record Hub/Fluxion 四进程；重试条件见 [phase-3-live-skip-log.md](phase-3-live-skip-log.md) |
+| P3-111 | Record Hub/Fluxion | annotation semantic compensation | PARTIAL | payload allowlist、VOID target/重复/版本/workspace/tenant 负向单测已完成；真实 DB 审计与跨项目 Gate 待 live 验收 |
 
 ## Batch 2：Fluxion → Approver 审批试点
 
