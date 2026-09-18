@@ -35,6 +35,17 @@ for root in roots:
     if not root.is_dir():
         raise SystemExit(f"missing command contract root: {root}")
 
+expected_assets = set(assets)
+for root in roots:
+    actual_assets = {
+        file_path.relative_to(root).as_posix()
+        for file_path in root.rglob("*")
+        if file_path.is_file() and file_path.name != "contract_test.go"
+    }
+    unknown_assets = actual_assets - expected_assets
+    if unknown_assets:
+        raise SystemExit(f"unknown command contract assets in {root}: {sorted(unknown_assets)}")
+
 for relative in assets:
     contents = []
     for root in roots:
