@@ -36,13 +36,13 @@
 
 | ID | 仓库 | 任务 | 状态 | 验收 |
 | --- | --- | --- | --- | --- |
-| P3-100 | Fluxion | 增加 command Inbox 与 result Outbox Flyway migration | TODO | 空库/升级库、unique/index、rollback strategy 通过 |
-| P3-101 | Fluxion | 实现 command envelope strict decoder/validator | TODO | 256 KiB、UTF-8、未知字段、subject/owner/action 负向通过 |
-| P3-102 | Fluxion | 实现专属 JetStream durable pull runner | TODO | `fluxion-command-inbox-v1`、explicit ACK、drain、backoff、DLQ |
-| P3-103 | Fluxion | 实现 Inbox claim/replay/hash-conflict | TODO | 并发重复只一条 claim；已完成返回原结果 |
-| P3-104 | Fluxion | 实现 `project.annotate` APPEND/VOID | TODO | 不改变 workflow stage；payload allowlist 和长度限制通过 |
-| P3-105 | Fluxion | 领域事务写 summary version/event Outbox/result Outbox | TODO | 故障回滚时五者全部不提交；成功时全部提交 |
-| P3-106 | Fluxion | 实现 result Outbox relay | TODO | `results.fluxion.project.annotate.v1`、message ID、lease/retry/dead |
+| P3-100 | Fluxion | 增加 command Inbox 与 result Outbox Flyway migration | DONE | V8 migration 建表、状态约束、operation/event unique、scope/dispatch index；commit `ccac8cf` |
+| P3-101 | Fluxion | 实现 command envelope strict decoder/validator | DONE | 256 KiB、UTF-8、未知字段、尾随 JSON、payload canonical hash、owner/action subject 校验已测试 |
+| P3-102 | Fluxion | 实现专属 JetStream durable pull runner | DONE | `fluxion-command-inbox-v1`、`OWNER_COMMANDS`、explicit ACK、NAK backoff、terminal poison、重连循环 |
+| P3-103 | Fluxion | 实现 Inbox claim/replay/hash-conflict | DONE | Exposed transaction claim、相同 operation/hash replay、scope/action/hash conflict；与领域及 result Outbox 同事务处理 |
+| P3-104 | Fluxion | 实现 `project.annotate` APPEND/VOID | DONE | integration event append/void、annotation allowlist、active target/version/workspace 校验；不改变 workflow stage |
+| P3-105 | Fluxion | 领域事务写 summary version/event Outbox/result Outbox | DONE | Exposed outer transaction 包含 Inbox claim、project event、summary version/Outbox、result Outbox；commit-before-ACK |
+| P3-106 | Fluxion | 实现 result Outbox relay | DONE | `results.fluxion.<action>.v1`、event ID message ID、lease/retry/dead、ACK-loss 单测 |
 | P3-107 | Fluxion | 增加 Inbox/Outbox 运维查询和安全 metrics | TODO | 无原始 payload/secret，operator scope 与 tenant filter 完整 |
 | P3-108 | Record Hub | 增加真实 Fluxion policy fixture/config | TODO | exact workload principal、tenant/workspace/purpose/action |
 | P3-109 | Record Hub/Fluxion | command/result 跨仓库 contract test | TODO | success/replay/hash conflict/version conflict/error redaction |
