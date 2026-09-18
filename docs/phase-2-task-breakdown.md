@@ -66,3 +66,6 @@ P2-0-005 的运行说明见 [deploy/local/isolated/README.md](../deploy/local/is
 | P2-3-004 | Owner Inbox and result event | PARTIAL | `COMMAND_RESULTS` stream、Record Hub durable result pull/CAS/幂等终态推进、Mongo/Memory Inbox claim/commit 抽象和安全失败结果已完成；真实 Approver/Fluxion/Bids 业务库事务、outbox、ACK-loss/restart live 证据待四系统接入 |
 | P2-3-004a | Result event consumer | DONE | `results.<ownerSystem>.<action>.v1`、256 KiB bounded decode、terminal status CAS、event ID replay/conflict、DLQ runner、审计摘要和负向单测 |
 | P2-3-004b | Owner Inbox contract | PARTIAL | Mongo unique Inbox + revision CAS、Memory 测试实现和 callback/outbox 边界已完成；各 owner 仓库仍需接入自己的事务与 outbox |
+
+真实 Approver、Fluxion、Bids 接入已转入 [Phase 3 任务分解](phase-3-task-breakdown.md)；本表保留平台侧
+基线状态，不提前把 owner transaction、审批试点或 live 故障矩阵标为完成。

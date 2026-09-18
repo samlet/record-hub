@@ -42,6 +42,10 @@
 
 ## Phase 3：受控命令
 
+真实系统接入的方案、需求、任务与验收见
+[Phase 3 接入方案](phase-3-integration-design.md)、[需求](phase-3-requirements.md)、
+[任务分解](phase-3-task-breakdown.md)和[验收计划](phase-3-acceptance-plan.md)。
+
 - Command Gateway、operation receipt 和 owner-system Inbox。
 - expected version、冲突和 Saga 策略。
 - 将一个低风险操作从表格路由回 owner system。
