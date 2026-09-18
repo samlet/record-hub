@@ -22,7 +22,7 @@
     "ownerSystem": { "type": "string", "minLength": 1, "maxLength": 64 },
     "action": { "type": "string", "minLength": 1, "maxLength": 128 },
     "status": { "enum": ["SUCCEEDED", "REJECTED", "FAILED", "EXPIRED"] },
-    "resultHash": { "type": "string", "maxLength": 256 },
+    "resultHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
     "errorCode": { "type": "string", "maxLength": 128 },
     "safeError": { "type": "string", "maxLength": 512, "pattern": "^[^\\r\\n]*$" },
     "resultVersion": { "type": "integer", "minimum": 1 },

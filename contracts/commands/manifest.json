@@ -16,7 +16,7 @@
       "schemaFile": "result-envelope-v1.schema.json",
       "validFixtureFile": "testdata/valid/result-envelope-v1.json",
       "invalidFixtureFiles": ["testdata/invalid/result-envelope-v1-status.json"],
-      "schemaContentHash": "sha256:4c4fccf5141d18a0069c346d06b3edd926f111e6f5095d12671f254b4f7ef29e"
+      "schemaContentHash": "sha256:ce0171d9ac2b549f0d4813cdf207a451d3f8c265f512da819e90e6655480bbf0"
     }
   ],
   "errorCodesFile": "error-codes.json",
