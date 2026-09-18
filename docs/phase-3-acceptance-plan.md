@@ -1,7 +1,7 @@
 # Phase 3 真实业务系统接入验收计划
 
 - 日期：2026-09-18
-- 状态：Planned
+- 状态：Gate A contract baseline complete; live owner gates planned
 - 需求：[phase-3-requirements.md](phase-3-requirements.md)
 - 任务：[phase-3-task-breakdown.md](phase-3-task-breakdown.md)
 
@@ -44,10 +44,10 @@ db-assertions/         计数/hash/version/unique 断言，不保存敏感正文
 所有端口可通过 `RECORD_HUB_P3_*` 覆盖。启动脚本先检查端口和二进制；任一冲突应 fail fast，
 不得杀死未知 PID。随机 secret 只存在临时目录/进程环境；成功后删除，失败时保留目录但先脱敏。
 
-计划提供以下统一入口；实现前它们只是验收目标，不表示当前 Makefile 已存在：
+当前已提供契约门禁入口；owner live 入口仍是后续批次目标：
 
 ```text
-make p3-contract-gate
+make p3-contract-gate        # 已实现：四仓库 command/result 镜像与 manifest hash
 make p3-fluxion-command-live
 make p3-approval-pilot-live
 make p3-three-owner-live
