@@ -68,7 +68,7 @@ make p3-full-topology
 
 ## 4. Gate B：Fluxion Command 正常路径
 
-实现基线已完成（Fluxion commit `b0f8a5c`）：V8 Inbox/Outbox、strict decoder、durable pull runner、
+实现基线已完成（Fluxion commit `3530d96`）：V8 Inbox/Outbox、strict decoder、durable pull runner、
 `project.annotate` APPEND/VOID 和 result relay 均已接入。以下 live 验收仍需真实 PostgreSQL、NATS、
 Record Hub 与 Fluxion worker 进程共同运行；单测不能替代 Gate B。
 

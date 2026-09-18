@@ -36,7 +36,7 @@
 
 | ID | 仓库 | 任务 | 状态 | 验收 |
 | --- | --- | --- | --- | --- |
-| P3-100 | Fluxion | 增加 command Inbox 与 result Outbox Flyway migration | DONE | V8 migration 建表、状态约束、operation/event unique、scope/dispatch index；commit `b0f8a5c` |
+| P3-100 | Fluxion | 增加 command Inbox 与 result Outbox Flyway migration | DONE | V8 migration 建表、状态约束、operation/event unique、scope/dispatch index；当前切片基线 commit `3530d96` |
 | P3-101 | Fluxion | 实现 command envelope strict decoder/validator | DONE | 256 KiB、UTF-8、未知字段、尾随 JSON、payload canonical hash、owner/action subject 校验已测试 |
 | P3-102 | Fluxion | 实现专属 JetStream durable pull runner | DONE | `fluxion-command-inbox-v1`、`OWNER_COMMANDS`、explicit ACK、NAK backoff、terminal poison、重连循环 |
 | P3-103 | Fluxion | 实现 Inbox claim/replay/hash-conflict | DONE | Exposed transaction claim、相同 operation/hash replay、scope/action/hash conflict；与领域及 result Outbox 同事务处理 |
