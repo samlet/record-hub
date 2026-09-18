@@ -43,8 +43,8 @@
 | P3-104 | Fluxion | 实现 `project.annotate` APPEND/VOID | DONE | integration event append/void、annotation allowlist、active target/version/tenant/workspace 校验；不改变 workflow stage |
 | P3-105 | Fluxion | 领域事务写 summary version/event Outbox/result Outbox | DONE | Exposed outer transaction 包含 Inbox claim、project event、summary version/Outbox、result Outbox；commit-before-ACK |
 | P3-106 | Fluxion | 实现 result Outbox relay | DONE | `results.fluxion.<action>.v1`、event ID message ID、lease/retry/dead、ACK-loss 单测 |
-| P3-107 | Fluxion | 增加 Inbox/Outbox 运维查询和安全 metrics | TODO | 无原始 payload/secret，operator scope 与 tenant filter 完整 |
-| P3-108 | Record Hub | 增加真实 Fluxion policy fixture/config | TODO | exact workload principal、tenant/workspace/purpose/action |
+| P3-107 | Fluxion | 增加 Inbox/Outbox 运维查询和安全 metrics | DONE | supervisor-only `/api/operations/record-hub/commands` 仅返回状态计数/backlog，不返回 ID、payload 或 secret |
+| P3-108 | Record Hub | 增加真实 Fluxion policy fixture/config | DONE | `deploy/local/p3/fluxion-project-annotate-policy.json` 固定 workload issuer/subject/audience/scope、tenant/workspace/purpose/action |
 | P3-109 | Record Hub/Fluxion | command/result 跨仓库 contract test | TODO | success/replay/hash conflict/version conflict/error redaction |
 | P3-110 | Record Hub/Fluxion | live command E2E | TODO | commit-before-ACK、ACK loss、双进程竞争、两侧重启无重复副作用 |
 | P3-111 | Record Hub/Fluxion | annotation semantic compensation | TODO | VOID 引用校验、重复 VOID、跨项目拒绝和审计通过 |

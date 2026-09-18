@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "policies": [
+    {
+      "policyId": "project.annotate",
+      "issuer": "http://127.0.0.1:15557/workload",
+      "subject": "fluxion",
+      "audience": "record-hub-api",
+      "scope": "recordhub.command.submit",
+      "tenantId": "tenant-p3-fluxion",
+      "workspaceId": "workspace-p3-fluxion",
+      "purpose": "project-annotation",
+      "ownerSystem": "fluxion",
+      "resourceType": "PROJECT",
+      "action": "project.annotate",
+      "expectedVersionRequired": true,
+      "maxPayloadBytes": 262144
+    }
+  ]
+}
