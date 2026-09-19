@@ -35,7 +35,7 @@ manifest 必须记录当次实际 commit 和 artifact checksum。
 
 | ID | 仓库 | 任务 | 依赖 | 状态 | 验收 |
 | --- | --- | --- | --- | --- | --- |
-| P4-200 | Fluxion | tenant/workspace feature flag 与在途 drain | P4-101,106 | TODO | 默认关闭；关闭后停止新流量，既有 request 可管理 |
+| P4-200 | Fluxion | tenant/workspace feature flag 与在途 drain | P4-101,106 | PARTIAL | 静态 config/relay/result boundary 与 Fluxion 全量单测 PASS；C-001/C-008 live 因隔离拓扑缺失 SKIPPED，详见 [P4-200 closure](phase-4-batch2-p4-200.md) |
 | P4-201 | Fluxion/Approver | 五类终态与稳定 request state machine | P4-200 | TODO | approve/reject/cancel/expire/fail live E2E |
 | P4-202 | Fluxion/Approver | late result、generation guard 与 reconciliation | P4-201 | TODO | 不覆盖新事实；finding taxonomy、operator view 与审计完整 |
 | P4-203 | Fluxion | local human fallback 与 replay/Continue-As-New | P4-200..202 | TODO | 单 generation 不双写；replay 不重新创建 Application |
