@@ -20,7 +20,7 @@
 | P4-102 | PASS | SKIPPED | 复用 P3 native dump/restore/archive runner；缺显式 disposable source/restore targets |
 | P4-103 | PASS | SKIPPED | 规格固定 10k history、50/200 msg/s、100 pending、10 分钟 drain；mixed workflow load 未执行 |
 | P4-104 | PASS | SKIPPED | expand-contract/old reader/flag/durable 规则已固定；缺 immutable old/new artifacts 与隔离升级目标 |
-| P4-105 | SKIPPED | SKIPPED | 现有 runner 尚未提供 transaction rollback 和 publish-before-SENT 两个精确注入点 |
+| P4-105 | PASS | SKIPPED | Fluxion 已加入 owner transaction rollback、publish-before-SENT crash、短 lease 与持久化证据；本机 pull consumer handoff 仍未形成可重复 live PASS |
 | P4-106 | PASS | SKIPPED | contract mirror 通过；四 owner 同时运行的 live behavior matrix 未执行 |
 
 在 2026-09-20 的一次显式 live 尝试中，聚合结果进一步细化为：P4-100、P4-101、P4-102、P4-104
@@ -28,6 +28,12 @@
 `fourOwnerMixedWorkload` 明确为 `SKIPPED`）；P4-106 为 `PARTIAL`（Fluxion restart/ACK-loss
 子矩阵 PASS，但不是 Approver/Fluxion/Bids 三 owner 全矩阵）。原始临时证据目录为
 `/tmp/record-hub-p4-batch1-live-final/`，可通过同一命令重建，不作为持久报告路径。
+
+P4-105 的实现已落在 Fluxion：`FLUXION_RECORD_HUB_TEST_ROLLBACK_BEFORE_COMMIT` 在 owner
+transaction 内制造回滚并硬停 worker，`FLUXION_RECORD_HUB_TEST_CRASH_BEFORE_RESULT_SENT`
+在 publish 后、SENT 前硬停 relay；`FLUXION_RECORD_HUB_RESULT_OUTBOX_LEASE_SECONDS` 让恢复
+窗口可控。P3-110 fault matrix 已生成对应断言，但本机 jnats pull durable 在硬停后的 handoff
+仍不能稳定重放，故 live gate 暂记 `SKIPPED`，待独立 NATS/worker 拓扑复验。
 
 默认运行会在 `build/evidence/phase4/batch1-<run-id>/` 保存报告；现场重试需显式设置：
 
@@ -39,4 +45,4 @@ RECORD_HUB_P4_BATCH1_LIVE=1 make p4-batch1
 
 ## 退出条件与下一步
 
-Batch 1 不能作为 Beta readiness PASS，因为 P4-100/101/102/103/104/106 的 live 部分仍未完成，P4-105 还缺 fault injection。下一步应先准备可复现四 owner 隔离拓扑和 recovery/rollback 目标，再重跑本批；完成前不关闭旧 worker、旧 schema reader 或 Fluxion 本地 fallback。
+Batch 1 不能作为 Beta readiness PASS，因为 P4-100/101/102/103/104/105/106 的 live 部分仍未完成。P4-105 的实现与静态契约已经完成，但当前本机 NATS pull consumer 在 owner 进程硬停后的 durable handoff 未形成稳定重放，因此保留 `SKIPPED`，不把失败尝试冒充 PASS。下一步应先准备可复现四 owner 隔离拓扑和 recovery/rollback 目标，再重跑本批；完成前不关闭旧 worker、旧 schema reader 或 Fluxion 本地 fallback。

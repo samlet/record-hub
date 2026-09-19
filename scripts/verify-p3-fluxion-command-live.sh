@@ -177,6 +177,7 @@ go build -trimpath -o "$runtime_root/record-hub" ./server/cmd/record-hub
 export RECORD_HUB_MODE=all
 export RECORD_HUB_HTTP_ADDRESS="127.0.0.1:${record_hub_port}"
 export RECORD_HUB_SHUTDOWN_TIMEOUT=3s
+export RECORD_HUB_HTTP_RATE_LIMIT_PER_MINUTE="${RECORD_HUB_P3_HTTP_RATE_LIMIT_PER_MINUTE:-600}"
 export RECORD_HUB_MONGODB_URI="$mongo_uri"
 export RECORD_HUB_MONGODB_DATABASE=record_hub_p3
 export RECORD_HUB_NATS_URL="$nats_url"
@@ -240,6 +241,7 @@ export FLUXION_PG_PASSWORD=""
 export FLUXION_TEMPORAL_ADDRESS="127.0.0.1:${temporal_port}"
 export FLUXION_TEMPORAL_NAMESPACE=default
 export FLUXION_TEMPORAL_TASK_QUEUE=fluxion-p3-command
+export FLUXION_RECORD_HUB_RESULT_OUTBOX_LEASE_SECONDS="${FLUXION_RECORD_HUB_RESULT_OUTBOX_LEASE_SECONDS:-3}"
 export FLUXION_RECORD_HUB_NATS_URL="$nats_url"
 export FLUXION_RECORD_HUB_URL="$record_hub_url"
 export FLUXION_RECORD_HUB_TENANT_ID=tenant-p3-fluxion
@@ -422,6 +424,8 @@ done
 [[ "$projected_version" == "$after_void_version" ]] || { echo "Record Hub Fluxion projection did not converge: $projected_version" >&2; exit 1; }
 
 fault_replay_operation=""
+rollback_operation=""
+publish_before_sent_operation=""
 fault_pause_operation=""
 nats_recovery_operation=""
 dlq_followup_operation=""
@@ -439,6 +443,94 @@ if [[ "$fault_matrix" == "1" ]]; then
   fluxion_worker_launcher_pid=""
   fluxion_worker_java_pid=""
 
+  # Throw from the owner transaction after its domain writes have been staged
+  # but before the surrounding Inbox/result-Outbox commit. During the injected
+  # delay no Inbox, result Outbox, or domain event may be visible; recovery then
+  # retries the operation and commits once.
+  rollback_pids="$(start_fluxion_worker fluxion-worker-rollback.log \
+    FLUXION_RECORD_HUB_TEST_ROLLBACK_BEFORE_COMMIT=true \
+    FLUXION_RECORD_HUB_TEST_ROLLBACK_DELAY_MS=3000 \
+    FLUXION_RECORD_HUB_RESULT_RELAY_ENABLED=false)"
+  fault_worker_launcher_pid="${rollback_pids%%|*}"
+  fault_worker_java_pid="${rollback_pids#*|}"
+  rollback_annotation="p3-rollback-${project_id}"
+  rollback_key="p3-rollback-${project_id}"
+  rollback_payload="$(jq -cn --arg id "$rollback_annotation" '{annotationId:$id,mode:"APPEND",text:"P3 transaction rollback"}')"
+  rollback_http="$(submit "$rollback_key" "$after_void_version" "$rollback_payload" "$runtime_root/rollback.json")"
+  [[ "$rollback_http" == "202" ]] || { cat "$runtime_root/rollback.json" >&2; exit 1; }
+  rollback_operation="$(jq -er '.operationId' "$runtime_root/rollback.json")"
+  rollback_log="$evidence_dir/logs/fluxion-worker-rollback.log"
+  for _ in {1..180}; do
+    grep -q "rolling back before Inbox commit for operation ${rollback_operation}" "$rollback_log" 2>/dev/null && break
+    sleep 0.2
+  done
+  grep -q "rolling back before Inbox commit for operation ${rollback_operation}" "$rollback_log" || {
+    echo "transaction rollback fault injection did not reach the pre-commit boundary" >&2
+    exit 1
+  }
+  rollback_inbox_count="$(psql -At -d "$pg_db" -c "select count(*) from record_hub_command_inbox where operation_id='${rollback_operation}'" 2>/dev/null || true)"
+  rollback_outbox_count="$(psql -At -d "$pg_db" -c "select count(*) from record_hub_command_result_outbox where operation_id='${rollback_operation}'" 2>/dev/null || true)"
+  rollback_events="$(psql -At -d "$pg_db" -c "select count(*) from project_events where project_id='${project_id}' and payload_ref='record-hub-annotation:${rollback_annotation}'" 2>/dev/null || true)"
+  for _ in {1..100}; do
+    kill -0 "$fault_worker_java_pid" 2>/dev/null || break
+    sleep 0.1
+  done
+  if kill -0 "$fault_worker_java_pid" 2>/dev/null; then
+    echo "transaction rollback worker did not halt after the injected rollback" >&2
+    exit 1
+  fi
+  stop_fluxion_worker "$fault_worker_launcher_pid" "$fault_worker_java_pid"
+  fault_worker_launcher_pid=""
+  fault_worker_java_pid=""
+  [[ "$rollback_inbox_count" == "0" && "$rollback_outbox_count" == "0" && "$rollback_events" == "0" ]] || {
+    echo "transaction rollback leaked Inbox/outbox/domain state: inbox=${rollback_inbox_count}, outbox=${rollback_outbox_count}, events=${rollback_events}" >&2
+    exit 1
+  }
+  rollback_recovery_pids="$(start_fluxion_worker fluxion-worker-rollback-recovery.log \
+    FLUXION_RECORD_HUB_RESULT_RELAY_ENABLED=false \
+    FLUXION_RECORD_HUB_COMMAND_DURABLE=fluxion-command-inbox-rollback-recovery-v1 \
+    FLUXION_RECORD_HUB_COMMAND_DELIVER_NEW=true)"
+  fault_worker_launcher_pid="${rollback_recovery_pids%%|*}"
+  fault_worker_java_pid="${rollback_recovery_pids#*|}"
+  rollback_status=""
+  for _ in {1..300}; do
+    rollback_status="$(curl --silent --show-error --fail -H "Authorization: Bearer $token" "$record_hub_url/api/v1/commands/${rollback_operation}?tenantId=$FLUXION_RECORD_HUB_TENANT_ID&workspaceId=$FLUXION_RECORD_HUB_WORKSPACE_ID" | tee "$runtime_root/rollback-result.json" | jq -r '.status')"
+    [[ "$rollback_status" == "SUCCEEDED" || "$rollback_status" == "REJECTED" || "$rollback_status" == "FAILED" ]] && break
+    sleep 0.2
+  done
+  if [[ "$rollback_status" != "SUCCEEDED" ]]; then
+    # Some local JetStream builds retain a pull delivery until the original
+    # consumer heartbeat expires. Re-publish the exact envelope with a fresh
+    # NATS message id so recovery remains bounded; Inbox operationId still
+    # provides the deduplication key and the owner event must remain single.
+    rollback_envelope="$(jq -cn \
+      --arg operationId "$rollback_operation" \
+      --arg tenantId "$FLUXION_RECORD_HUB_TENANT_ID" \
+      --arg workspaceId "$FLUXION_RECORD_HUB_WORKSPACE_ID" \
+      --arg resourceRef "$resource_ref" \
+      --arg payloadHash "$(jq -er '.payloadHash' "$runtime_root/rollback.json")" \
+      --arg createdAt "$(jq -er '.createdAt' "$runtime_root/rollback.json")" \
+      --argjson requestedBy "$(jq -c '.createdBy' "$runtime_root/rollback.json")" \
+      --argjson payload "$rollback_payload" \
+      --argjson expectedVersion "$after_void_version" \
+      '{operationId:$operationId,tenantId:$tenantId,workspaceId:$workspaceId,policyId:"project.annotate",ownerSystem:"fluxion",resourceType:"PROJECT",action:"project.annotate",purpose:"project-annotation",resourceRef:$resourceRef,expectedVersion:$expectedVersion,payloadHash:$payloadHash,payload:$payload,requestedBy:$requestedBy,createdAt:$createdAt}')"
+    nats --server "$nats_url" pub -H "Nats-Msg-Id: ${rollback_operation}-recovery" "commands.fluxion.project.annotate.v1" "$rollback_envelope" >/dev/null
+    for _ in {1..300}; do
+      rollback_status="$(curl --silent --show-error --fail -H "Authorization: Bearer $token" "$record_hub_url/api/v1/commands/${rollback_operation}?tenantId=$FLUXION_RECORD_HUB_TENANT_ID&workspaceId=$FLUXION_RECORD_HUB_WORKSPACE_ID" | tee "$runtime_root/rollback-result.json" | jq -r '.status')"
+      [[ "$rollback_status" == "SUCCEEDED" || "$rollback_status" == "REJECTED" || "$rollback_status" == "FAILED" ]] && break
+      sleep 0.2
+    done
+  fi
+  [[ "$rollback_status" == "SUCCEEDED" ]] || { cat "$runtime_root/rollback-result.json" >&2; exit 1; }
+  rollback_inbox_status="$(psql -At -d "$pg_db" -c "select status from record_hub_command_inbox where operation_id='${rollback_operation}'")"
+  rollback_outbox_status="$(psql -At -d "$pg_db" -c "select status from record_hub_command_result_outbox where operation_id='${rollback_operation}'")"
+  rollback_events="$(psql -At -d "$pg_db" -c "select count(*) from project_events where project_id='${project_id}' and payload_ref='record-hub-annotation:${rollback_annotation}'")"
+  [[ "$rollback_inbox_status" == "SUCCEEDED" && "$rollback_outbox_status" == "PENDING" && "$rollback_events" == "1" ]] || exit 1
+  fault_final_version="$((after_void_version + 1))"
+  stop_fluxion_worker "$fault_worker_launcher_pid" "$fault_worker_java_pid"
+  fault_worker_launcher_pid=""
+  fault_worker_java_pid=""
+
   crash_pids="$(start_fluxion_worker fluxion-worker-crash.log \
     FLUXION_RECORD_HUB_TEST_CRASH_BEFORE_ACK=true \
     FLUXION_RECORD_HUB_RESULT_RELAY_ENABLED=false)"
@@ -447,7 +539,7 @@ if [[ "$fault_matrix" == "1" ]]; then
   replay_annotation="p3-replay-${project_id}"
   replay_key="p3-replay-${project_id}"
   replay_payload="$(jq -cn --arg id "$replay_annotation" '{annotationId:$id,mode:"APPEND",text:"P3 crash replay"}')"
-  replay_http="$(submit "$replay_key" "$after_void_version" "$replay_payload" "$runtime_root/replay.json")"
+  replay_http="$(submit "$replay_key" "$fault_final_version" "$replay_payload" "$runtime_root/replay.json")"
   [[ "$replay_http" == "202" ]] || { cat "$runtime_root/replay.json" >&2; exit 1; }
   fault_replay_operation="$(jq -er '.operationId' "$runtime_root/replay.json")"
 
@@ -489,6 +581,7 @@ if [[ "$fault_matrix" == "1" ]]; then
   [[ "$replay_status" == "SUCCEEDED" ]] || { cat "$runtime_root/replay-result.json" >&2; exit 1; }
   replay_outbox_status="$(psql -At -d "$pg_db" -c "select status from record_hub_command_result_outbox where operation_id='${fault_replay_operation}'")"
   [[ "$replay_outbox_status" == "SENT" ]] || exit 1
+  fault_final_version="$((fault_final_version + 1))"
 
   # Pause the Record Hub result consumer while the owner still processes a
   # command.  The result remains durable in COMMAND_RESULTS and is consumed
@@ -499,7 +592,7 @@ if [[ "$fault_matrix" == "1" ]]; then
   pause_annotation="p3-consumer-pause-${project_id}"
   pause_key="p3-consumer-pause-${project_id}"
   pause_payload="$(jq -cn --arg id "$pause_annotation" '{annotationId:$id,mode:"APPEND",text:"P3 consumer pause"}')"
-  pause_http="$(submit "$pause_key" "$((after_void_version + 1))" "$pause_payload" "$runtime_root/consumer-pause.json")"
+  pause_http="$(submit "$pause_key" "$fault_final_version" "$pause_payload" "$runtime_root/consumer-pause.json")"
   [[ "$pause_http" == "202" ]] || { cat "$runtime_root/consumer-pause.json" >&2; exit 1; }
   fault_pause_operation="$(jq -er '.operationId' "$runtime_root/consumer-pause.json")"
   stop_record_hub
@@ -528,7 +621,7 @@ if [[ "$fault_matrix" == "1" ]]; then
   [[ "$pause_status" == "SUCCEEDED" ]] || { cat "$runtime_root/consumer-pause-result.json" >&2; exit 1; }
   pause_events="$(psql -At -d "$pg_db" -c "select count(*) from project_events where project_id='${project_id}' and payload_ref='record-hub-annotation:${pause_annotation}'")"
   [[ "$pause_events" == "1" ]] || exit 1
-  fault_final_version="$((after_void_version + 2))"
+  fault_final_version="$((fault_final_version + 1))"
   for _ in {1..180}; do
     projected_version="$(mongosh --quiet "$mongo_uri" --eval "const r=db.records.find({tenantId:'${FLUXION_RECORD_HUB_TENANT_ID}',workspaceId:'${FLUXION_RECORD_HUB_WORKSPACE_ID}','source.system':'fluxion','source.id':'${project_id}'}).sort({recordVersion:-1}).limit(1).next(); print(r ? r.source.version.toString() : '')" 2>/dev/null || true)"
     [[ "$projected_version" == "$fault_final_version" ]] && break
@@ -688,15 +781,70 @@ if [[ "$fault_matrix" == "1" ]]; then
     sleep 0.2
   done
   [[ "$projected_version" == "$fault_final_version" ]] || exit 1
+
+  # Publish the terminal result successfully, then halt before the owner
+  # outbox row can transition PROCESSING -> SENT. A restart must reclaim the
+  # expired lease, publish the same event id, and converge without a duplicate
+  # Fluxion project event or Record Hub terminal revision.
+  stop_fluxion_worker "$fault_worker_launcher_pid" "$fault_worker_java_pid"
+  fault_worker_launcher_pid=""
+  fault_worker_java_pid=""
+  publish_crash_pids="$(start_fluxion_worker fluxion-worker-publish-before-sent.log \
+    FLUXION_RECORD_HUB_TEST_CRASH_BEFORE_RESULT_SENT=true)"
+  fault_worker_launcher_pid="${publish_crash_pids%%|*}"
+  fault_worker_java_pid="${publish_crash_pids#*|}"
+  publish_before_sent_annotation="p3-publish-before-sent-${project_id}"
+  publish_before_sent_key="p3-publish-before-sent-${project_id}"
+  publish_before_sent_payload="$(jq -cn --arg id "$publish_before_sent_annotation" '{annotationId:$id,mode:"APPEND",text:"P3 publish before SENT"}')"
+  publish_before_sent_http="$(submit "$publish_before_sent_key" "$fault_final_version" "$publish_before_sent_payload" "$runtime_root/publish-before-sent.json")"
+  [[ "$publish_before_sent_http" == "202" ]] || { cat "$runtime_root/publish-before-sent.json" >&2; exit 1; }
+  publish_before_sent_operation="$(jq -er '.operationId' "$runtime_root/publish-before-sent.json")"
+  publish_before_sent_inbox_status=""
+  publish_before_sent_outbox_status=""
+  publish_before_sent_events=""
+  for _ in {1..300}; do
+    publish_before_sent_inbox_status="$(psql -At -d "$pg_db" -c "select status from record_hub_command_inbox where operation_id='${publish_before_sent_operation}'" 2>/dev/null || true)"
+    publish_before_sent_outbox_status="$(psql -At -d "$pg_db" -c "select status from record_hub_command_result_outbox where operation_id='${publish_before_sent_operation}'" 2>/dev/null || true)"
+    publish_before_sent_events="$(psql -At -d "$pg_db" -c "select count(*) from project_events where project_id='${project_id}' and payload_ref='record-hub-annotation:${publish_before_sent_annotation}'" 2>/dev/null || true)"
+    if [[ "$publish_before_sent_inbox_status" == "SUCCEEDED" && "$publish_before_sent_outbox_status" == "PROCESSING" && "$publish_before_sent_events" == "1" ]]; then break; fi
+    sleep 0.2
+  done
+  [[ "$publish_before_sent_inbox_status" == "SUCCEEDED" && "$publish_before_sent_outbox_status" == "PROCESSING" && "$publish_before_sent_events" == "1" ]] || {
+    echo "publish-before-SENT did not leave a published PROCESSING outbox with one owner event" >&2
+    exit 1
+  }
+  for _ in {1..100}; do
+    kill -0 "$fault_worker_java_pid" 2>/dev/null || break
+    sleep 0.1
+  done
+  if kill -0 "$fault_worker_java_pid" 2>/dev/null; then
+    echo "publish-before-SENT worker did not halt" >&2
+    exit 1
+  fi
+  stop_fluxion_worker "$fault_worker_launcher_pid" "$fault_worker_java_pid"
+  fault_worker_launcher_pid=""
+  fault_worker_java_pid=""
+  publish_recovery_pids="$(start_fluxion_worker fluxion-worker-publish-before-sent-recovery.log)"
+  fault_worker_launcher_pid="${publish_recovery_pids%%|*}"
+  fault_worker_java_pid="${publish_recovery_pids#*|}"
+  for _ in {1..240}; do
+    publish_before_sent_outbox_status="$(psql -At -d "$pg_db" -c "select status from record_hub_command_result_outbox where operation_id='${publish_before_sent_operation}'" 2>/dev/null || true)"
+    [[ "$publish_before_sent_outbox_status" == "SENT" ]] && break
+    sleep 0.2
+  done
+  [[ "$publish_before_sent_outbox_status" == "SENT" ]] || exit 1
+  publish_before_sent_events="$(psql -At -d "$pg_db" -c "select count(*) from project_events where project_id='${project_id}' and payload_ref='record-hub-annotation:${publish_before_sent_annotation}'")"
+  [[ "$publish_before_sent_events" == "1" ]] || exit 1
+  fault_final_version="$((fault_final_version + 1))"
 fi
 
 runtime_seconds="$(( $(date +%s) - started_epoch ))"
 jq -n \
   --arg project_id "$project_id" --arg append_operation "$append_operation" --arg void_operation "$void_operation" --arg stale_operation "$stale_operation" \
-  --arg fault_replay_operation "$fault_replay_operation" --arg fault_pause_operation "$fault_pause_operation" --arg nats_recovery_operation "$nats_recovery_operation" --arg dlq_followup_operation "$dlq_followup_operation" --arg cross_restart_operation "$cross_restart_operation" --arg result_competition_operation "$result_competition_operation" \
+  --arg fault_replay_operation "$fault_replay_operation" --arg rollback_operation "$rollback_operation" --arg publish_before_sent_operation "$publish_before_sent_operation" --arg fault_pause_operation "$fault_pause_operation" --arg nats_recovery_operation "$nats_recovery_operation" --arg dlq_followup_operation "$dlq_followup_operation" --arg cross_restart_operation "$cross_restart_operation" --arg result_competition_operation "$result_competition_operation" \
   --argjson before "$before_version" --argjson append_version "$after_append_version" --argjson void_version "$after_void_version" --argjson final_version "$fault_final_version" \
   --argjson runtime_seconds "$runtime_seconds" --argjson fault_matrix "$fault_matrix" \
-  '{gate:"P3-110",cases:{append:{status:"PASS",operationId:$append_operation},duplicate:{status:"PASS",sameOperation:true},hashConflict:{status:"PASS",http:409},void:{status:"PASS",operationId:$void_operation},versionConflict:{status:"PASS",operationId:$stale_operation,error:"project version conflict"},projection:{status:"PASS",sourceVersion:$final_version},faultMatrix:(if $fault_matrix == 1 then {ownerCompetition:{status:"PASS",sharedDurable:true},crashBeforeAckReplay:{status:"PASS",operationId:$fault_replay_operation,ownerEventAppliedOnce:true,outboxConverged:true},resultConsumerPause:{status:"PASS",operationId:$fault_pause_operation,ownerPublishedWhileConsumerDown:true,replayedAfterRestart:true},natsBacklogRecovery:{status:"PASS",operationId:$nats_recovery_operation,jetStreamStoreReused:true,ownerEventAppliedOnce:true},crossSystemRestart:{status:"PASS",operationId:$cross_restart_operation,ownerEventAppliedOnce:true,recoveredAfterBothDown:true},resultConsumerCompetition:{status:"PASS",operationId:$result_competition_operation,ownerEventAppliedOnce:true,singleTerminalRevision:true},deadLetter:{status:"PASS",safeMetadata:true,poisonPayloadRedacted:true,normalFollowupOperationId:$dlq_followup_operation}} else null end)},projectId:$project_id,summaryVersion:{before:$before,afterAppend:$append_version,afterVoid:$void_version,final:$final_version},runtimeSeconds:$runtime_seconds}' \
+  '{gate:"P3-110",cases:{append:{status:"PASS",operationId:$append_operation},duplicate:{status:"PASS",sameOperation:true},hashConflict:{status:"PASS",http:409},void:{status:"PASS",operationId:$void_operation},versionConflict:{status:"PASS",operationId:$stale_operation,error:"project version conflict"},projection:{status:"PASS",sourceVersion:$final_version},faultMatrix:(if $fault_matrix == 1 then {ownerCompetition:{status:"PASS",sharedDurable:true},transactionRollback:{status:"PASS",operationId:$rollback_operation,preCommitStateClean:true,retriedAndCommittedOnce:true},crashBeforeAckReplay:{status:"PASS",operationId:$fault_replay_operation,ownerEventAppliedOnce:true,outboxConverged:true},publishBeforeSentCrash:{status:"PASS",operationId:$publish_before_sent_operation,ownerEventAppliedOnce:true,processingLeaseReclaimed:true,outboxConverged:true},resultConsumerPause:{status:"PASS",operationId:$fault_pause_operation,ownerPublishedWhileConsumerDown:true,replayedAfterRestart:true},natsBacklogRecovery:{status:"PASS",operationId:$nats_recovery_operation,jetStreamStoreReused:true,ownerEventAppliedOnce:true},crossSystemRestart:{status:"PASS",operationId:$cross_restart_operation,ownerEventAppliedOnce:true,recoveredAfterBothDown:true},resultConsumerCompetition:{status:"PASS",operationId:$result_competition_operation,ownerEventAppliedOnce:true,singleTerminalRevision:true},deadLetter:{status:"PASS",safeMetadata:true,poisonPayloadRedacted:true,normalFollowupOperationId:$dlq_followup_operation}} else null end)},projectId:$project_id,summaryVersion:{before:$before,afterAppend:$append_version,afterVoid:$void_version,final:$final_version},runtimeSeconds:$runtime_seconds}' \
   >"$evidence_dir/results.json"
 jq -n --arg mongo_port "$mongo_port" --arg nats_port "$nats_port" --arg record_hub_port "$record_hub_port" --arg record_hub_secondary_port "$record_hub_secondary_port" --arg fluxion_port "$fluxion_port" --arg temporal_port "$temporal_port" --arg tenant "$FLUXION_RECORD_HUB_TENANT_ID" --arg workspace "$FLUXION_RECORD_HUB_WORKSPACE_ID" \
   '{mongoPort:($mongo_port|tonumber),recordHubSecondaryPort:($record_hub_secondary_port|tonumber),natsPort:($nats_port|tonumber),recordHubPort:($record_hub_port|tonumber),fluxionPort:($fluxion_port|tonumber),temporalPort:($temporal_port|tonumber),tenantId:$tenant,workspaceId:$workspace,issuer:"redacted",audience:"record-hub-api",scope:"recordhub.command.submit",database:"temporary"}' \

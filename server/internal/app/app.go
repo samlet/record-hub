@@ -7,6 +7,9 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/samlet/record-hub/server/internal/config"
@@ -85,7 +88,13 @@ func New(cfg config.Config, logger *slog.Logger) *App {
 				}
 			}
 		}
-		limiter := observability.NewRateLimiter(120, time.Minute)
+		rateLimitPerMinute := 120
+		if raw := strings.TrimSpace(os.Getenv("RECORD_HUB_HTTP_RATE_LIMIT_PER_MINUTE")); raw != "" {
+			if parsed, err := strconv.Atoi(raw); err == nil && parsed > 0 && parsed <= 100_000 {
+				rateLimitPerMinute = parsed
+			}
+		}
+		limiter := observability.NewRateLimiter(rateLimitPerMinute, time.Minute)
 		resourceHandler := web.NewConsoleRouter(runtime.records, runtime.schema, runtime.operations, runtime.catalog, runtime.rebuild, runtime.feed)
 		if runtime.binding != nil {
 			mux.Handle("/api/v1/bindings/", runtime.binding)
