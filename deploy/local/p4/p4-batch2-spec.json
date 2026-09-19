@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "phase": "4",
+  "batch": "2",
+  "name": "fluxion-approval-beta-fault-matrix",
+  "liveRequired": true,
+  "liveTopology": ["record-hub", "fluxion", "approver", "mongodb", "fluxion-postgres", "approver-postgres", "nats-jetstream", "temporal"],
+  "cases": [
+    {"id": "response-loss", "scope": "request/result response loss and idempotent recovery"},
+    {"id": "restart", "scope": "owner, projection and worker restart"},
+    {"id": "nats-outage", "scope": "JetStream outage, durable backlog and recovery"},
+    {"id": "late-result", "scope": "late generation result and reconciliation"},
+    {"id": "flag-rollback", "scope": "tenant/workspace flag rollback and in-flight drain"}
+  ],
+  "livePolicy": "Do not use a developer workstation's ordinary services as a live gate; require an isolated topology and explicit evidence directory."
+}
