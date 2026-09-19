@@ -23,12 +23,13 @@ nats_port="${RECORD_HUB_P3_NATS_PORT:-14233}"
 nats_monitor_port="${RECORD_HUB_P3_NATS_MONITOR_PORT:-18233}"
 workload_port="${RECORD_HUB_P3_WORKLOAD_PORT:-15567}"
 record_hub_port="${RECORD_HUB_P3_RECORD_HUB_PORT:-18082}"
+record_hub_secondary_port="${RECORD_HUB_P3_RECORD_HUB_SECONDARY_PORT:-18083}"
 temporal_port="${RECORD_HUB_P3_TEMPORAL_PORT:-17233}"
 temporal_ui_port="${RECORD_HUB_P3_TEMPORAL_UI_PORT:-18233}"
 fluxion_port="${RECORD_HUB_P3_FLUXION_PORT:-18091}"
 fault_matrix="${RECORD_HUB_P3_FAULT_MATRIX:-0}"
 
-for port in "$mongo_port" "$nats_port" "$nats_monitor_port" "$workload_port" "$record_hub_port" "$temporal_port" "$temporal_ui_port" "$fluxion_port"; do
+for port in "$mongo_port" "$nats_port" "$nats_monitor_port" "$workload_port" "$record_hub_port" "$record_hub_secondary_port" "$temporal_port" "$temporal_ui_port" "$fluxion_port"; do
   if lsof -nP -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1; then
     echo "P3-110 port $port is already in use; override the matching RECORD_HUB_P3_*_PORT" >&2
     exit 2
@@ -43,6 +44,7 @@ fluxion_api_java_pid=""
 fluxion_worker_java_pid=""
 fluxion_worker_launcher_pid=""
 record_hub_pid=""
+secondary_record_hub_pid=""
 fault_worker_java_pid=""
 fault_worker_launcher_pid=""
 competition_worker_java_pid=""
@@ -72,18 +74,18 @@ cleanup() {
       jq -n '{gate:"P3-110",status:"FAIL",note:"live gate terminated before all cases completed"}' >"$evidence_dir/results.json"
     fi
   fi
-  for pid in "${fluxion_api_java_pid:-}" "${fluxion_worker_java_pid:-}" "${fault_worker_java_pid:-}" "${competition_worker_java_pid:-}" "${record_hub_pid:-}" "${nats_pid:-}" "${pids[@]}"; do
+  for pid in "${fluxion_api_java_pid:-}" "${fluxion_worker_java_pid:-}" "${fault_worker_java_pid:-}" "${competition_worker_java_pid:-}" "${record_hub_pid:-}" "${secondary_record_hub_pid:-}" "${nats_pid:-}" "${pids[@]}"; do
     [[ -n "$pid" ]] && kill -TERM "$pid" 2>/dev/null || true
   done
   for _ in {1..100}; do
     local running=0
-    for pid in "${fluxion_api_java_pid:-}" "${fluxion_worker_java_pid:-}" "${fault_worker_java_pid:-}" "${competition_worker_java_pid:-}" "${record_hub_pid:-}" "${nats_pid:-}" "${pids[@]}"; do
+    for pid in "${fluxion_api_java_pid:-}" "${fluxion_worker_java_pid:-}" "${fault_worker_java_pid:-}" "${competition_worker_java_pid:-}" "${record_hub_pid:-}" "${secondary_record_hub_pid:-}" "${nats_pid:-}" "${pids[@]}"; do
       [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null && running=1
     done
     [[ "$running" == "0" ]] && break
     sleep 0.1
   done
-  for pid in "${fluxion_api_java_pid:-}" "${fluxion_worker_java_pid:-}" "${fault_worker_java_pid:-}" "${competition_worker_java_pid:-}" "${record_hub_pid:-}" "${nats_pid:-}" "${pids[@]}"; do
+  for pid in "${fluxion_api_java_pid:-}" "${fluxion_worker_java_pid:-}" "${fault_worker_java_pid:-}" "${competition_worker_java_pid:-}" "${record_hub_pid:-}" "${secondary_record_hub_pid:-}" "${nats_pid:-}" "${pids[@]}"; do
     [[ -n "$pid" ]] && kill -KILL "$pid" 2>/dev/null || true
     [[ -n "$pid" ]] && wait "$pid" 2>/dev/null || true
   done
@@ -203,6 +205,26 @@ stop_record_hub() {
   kill -KILL "$record_hub_pid" 2>/dev/null || true
   wait "$record_hub_pid" 2>/dev/null || true
   record_hub_pid=""
+}
+start_secondary_record_hub() {
+  local log_file="${1:-record-hub-secondary.log}"
+  RECORD_HUB_HTTP_ADDRESS="127.0.0.1:${record_hub_secondary_port}" "$runtime_root/record-hub" serve >"$evidence_dir/logs/$log_file" 2>&1 &
+  secondary_record_hub_pid="$!"
+  pids+=("$secondary_record_hub_pid")
+  local secondary_url="http://127.0.0.1:${record_hub_secondary_port}"
+  wait_http "$secondary_url/healthz" "secondary Record Hub API"
+  curl --silent --show-error --fail "$secondary_url/readyz" | jq -e '.status == "ready"' >/dev/null
+}
+stop_secondary_record_hub() {
+  [[ -n "${secondary_record_hub_pid:-}" ]] || return 0
+  kill -TERM "$secondary_record_hub_pid" 2>/dev/null || true
+  for _ in {1..100}; do
+    kill -0 "$secondary_record_hub_pid" 2>/dev/null || break
+    sleep 0.1
+  done
+  kill -KILL "$secondary_record_hub_pid" 2>/dev/null || true
+  wait "$secondary_record_hub_pid" 2>/dev/null || true
+  secondary_record_hub_pid=""
 }
 start_record_hub
 
@@ -403,6 +425,8 @@ fault_replay_operation=""
 fault_pause_operation=""
 nats_recovery_operation=""
 dlq_followup_operation=""
+cross_restart_operation=""
+result_competition_operation=""
 fault_final_version="$after_void_version"
 if [[ "$fault_matrix" == "1" ]]; then
   # Two Fluxion workers sharing the same durable consumer have already handled
@@ -550,6 +574,71 @@ if [[ "$fault_matrix" == "1" ]]; then
   done
   [[ "$projected_version" == "$fault_final_version" ]] || exit 1
 
+  # Stop both workflow-facing processes with a command already dispatched.
+  # Recovery starts Record Hub first and Fluxion second; the durable command
+  # and result consumers must bridge the gap without a duplicate event.
+  stop_fluxion_worker "$fault_worker_launcher_pid" "$fault_worker_java_pid"
+  fault_worker_launcher_pid=""
+  fault_worker_java_pid=""
+  cross_annotation="p3-cross-restart-${project_id}"
+  cross_key="p3-cross-restart-${project_id}"
+  cross_payload="$(jq -cn --arg id "$cross_annotation" '{annotationId:$id,mode:"APPEND",text:"P3 cross restart"}')"
+  cross_http="$(submit "$cross_key" "$fault_final_version" "$cross_payload" "$runtime_root/cross-restart.json")"
+  [[ "$cross_http" == "202" ]] || { cat "$runtime_root/cross-restart.json" >&2; exit 1; }
+  cross_restart_operation="$(jq -er '.operationId' "$runtime_root/cross-restart.json")"
+  cross_status_before="$(curl --silent --show-error --fail -H "Authorization: Bearer $token" "$record_hub_url/api/v1/commands/${cross_restart_operation}?tenantId=$FLUXION_RECORD_HUB_TENANT_ID&workspaceId=$FLUXION_RECORD_HUB_WORKSPACE_ID" | jq -r '.status')"
+  [[ "$cross_status_before" == "DISPATCHED" || "$cross_status_before" == "ACCEPTED" ]] || exit 1
+  stop_record_hub
+  start_record_hub record-hub-cross-restart.log
+  cross_pids="$(start_fluxion_worker fluxion-worker-cross-restart.log)"
+  fault_worker_launcher_pid="${cross_pids%%|*}"
+  fault_worker_java_pid="${cross_pids#*|}"
+  cross_status=""
+  for _ in {1..300}; do
+    cross_status="$(curl --silent --show-error --fail -H "Authorization: Bearer $token" "$record_hub_url/api/v1/commands/${cross_restart_operation}?tenantId=$FLUXION_RECORD_HUB_TENANT_ID&workspaceId=$FLUXION_RECORD_HUB_WORKSPACE_ID" | tee "$runtime_root/cross-restart-result.json" | jq -r '.status')"
+    [[ "$cross_status" == "SUCCEEDED" || "$cross_status" == "REJECTED" || "$cross_status" == "FAILED" ]] && break
+    sleep 0.2
+  done
+  [[ "$cross_status" == "SUCCEEDED" ]] || { cat "$runtime_root/cross-restart-result.json" >&2; exit 1; }
+  cross_events="$(psql -At -d "$pg_db" -c "select count(*) from project_events where project_id='${project_id}' and payload_ref='record-hub-annotation:${cross_annotation}'")"
+  [[ "$cross_events" == "1" ]] || exit 1
+  fault_final_version="$((fault_final_version + 1))"
+  for _ in {1..180}; do
+    projected_version="$(mongosh --quiet "$mongo_uri" --eval "const r=db.records.find({tenantId:'${FLUXION_RECORD_HUB_TENANT_ID}',workspaceId:'${FLUXION_RECORD_HUB_WORKSPACE_ID}','source.system':'fluxion','source.id':'${project_id}'}).sort({recordVersion:-1}).limit(1).next(); print(r ? r.source.version.toString() : '')" 2>/dev/null || true)"
+    [[ "$projected_version" == "$fault_final_version" ]] && break
+    sleep 0.2
+  done
+  [[ "$projected_version" == "$fault_final_version" ]] || exit 1
+
+  # Run two Record Hub result consumers against the same durable. Their
+  # concurrent delivery must still leave one operation revision and one owner
+  # event. The secondary HTTP listener avoids port sharing while the NATS
+  # durable remains identical.
+  start_secondary_record_hub record-hub-secondary.log
+  competition_annotation="p3-result-competition-${project_id}"
+  competition_key="p3-result-competition-${project_id}"
+  competition_payload="$(jq -cn --arg id "$competition_annotation" '{annotationId:$id,mode:"APPEND",text:"P3 result competition"}')"
+  competition_http="$(submit "$competition_key" "$fault_final_version" "$competition_payload" "$runtime_root/result-competition.json")"
+  [[ "$competition_http" == "202" ]] || { cat "$runtime_root/result-competition.json" >&2; exit 1; }
+  result_competition_operation="$(jq -er '.operationId' "$runtime_root/result-competition.json")"
+  competition_status=""
+  for _ in {1..240}; do
+    competition_status="$(curl --silent --show-error --fail -H "Authorization: Bearer $token" "$record_hub_url/api/v1/commands/${result_competition_operation}?tenantId=$FLUXION_RECORD_HUB_TENANT_ID&workspaceId=$FLUXION_RECORD_HUB_WORKSPACE_ID" | tee "$runtime_root/result-competition-result.json" | jq -r '.status')"
+    [[ "$competition_status" == "SUCCEEDED" || "$competition_status" == "REJECTED" || "$competition_status" == "FAILED" ]] && break
+    sleep 0.2
+  done
+  [[ "$competition_status" == "SUCCEEDED" ]] || { cat "$runtime_root/result-competition-result.json" >&2; exit 1; }
+  competition_events="$(psql -At -d "$pg_db" -c "select count(*) from project_events where project_id='${project_id}' and payload_ref='record-hub-annotation:${competition_annotation}'")"
+  [[ "$competition_events" == "1" ]] || exit 1
+  stop_secondary_record_hub
+  fault_final_version="$((fault_final_version + 1))"
+  for _ in {1..180}; do
+    projected_version="$(mongosh --quiet "$mongo_uri" --eval "const r=db.records.find({tenantId:'${FLUXION_RECORD_HUB_TENANT_ID}',workspaceId:'${FLUXION_RECORD_HUB_WORKSPACE_ID}','source.system':'fluxion','source.id':'${project_id}'}).sort({recordVersion:-1}).limit(1).next(); print(r ? r.source.version.toString() : '')" 2>/dev/null || true)"
+    [[ "$projected_version" == "$fault_final_version" ]] && break
+    sleep 0.2
+  done
+  [[ "$projected_version" == "$fault_final_version" ]] || exit 1
+
   # Inject a malformed owner result. The Record Hub result pull runner must
   # exhaust its bounded delivery budget, publish only safe DLQ metadata, and
   # continue processing a valid result afterwards.
@@ -604,18 +693,18 @@ fi
 runtime_seconds="$(( $(date +%s) - started_epoch ))"
 jq -n \
   --arg project_id "$project_id" --arg append_operation "$append_operation" --arg void_operation "$void_operation" --arg stale_operation "$stale_operation" \
-  --arg fault_replay_operation "$fault_replay_operation" --arg fault_pause_operation "$fault_pause_operation" --arg nats_recovery_operation "$nats_recovery_operation" --arg dlq_followup_operation "$dlq_followup_operation" \
+  --arg fault_replay_operation "$fault_replay_operation" --arg fault_pause_operation "$fault_pause_operation" --arg nats_recovery_operation "$nats_recovery_operation" --arg dlq_followup_operation "$dlq_followup_operation" --arg cross_restart_operation "$cross_restart_operation" --arg result_competition_operation "$result_competition_operation" \
   --argjson before "$before_version" --argjson append_version "$after_append_version" --argjson void_version "$after_void_version" --argjson final_version "$fault_final_version" \
   --argjson runtime_seconds "$runtime_seconds" --argjson fault_matrix "$fault_matrix" \
-  '{gate:"P3-110",cases:{append:{status:"PASS",operationId:$append_operation},duplicate:{status:"PASS",sameOperation:true},hashConflict:{status:"PASS",http:409},void:{status:"PASS",operationId:$void_operation},versionConflict:{status:"PASS",operationId:$stale_operation,error:"project version conflict"},projection:{status:"PASS",sourceVersion:$final_version},faultMatrix:(if $fault_matrix == 1 then {ownerCompetition:{status:"PASS",sharedDurable:true},crashBeforeAckReplay:{status:"PASS",operationId:$fault_replay_operation,ownerEventAppliedOnce:true,outboxConverged:true},resultConsumerPause:{status:"PASS",operationId:$fault_pause_operation,ownerPublishedWhileConsumerDown:true,replayedAfterRestart:true},natsBacklogRecovery:{status:"PASS",operationId:$nats_recovery_operation,jetStreamStoreReused:true,ownerEventAppliedOnce:true},deadLetter:{status:"PASS",safeMetadata:true,poisonPayloadRedacted:true,normalFollowupOperationId:$dlq_followup_operation}} else null end)},projectId:$project_id,summaryVersion:{before:$before,afterAppend:$append_version,afterVoid:$void_version,final:$final_version},runtimeSeconds:$runtime_seconds}' \
+  '{gate:"P3-110",cases:{append:{status:"PASS",operationId:$append_operation},duplicate:{status:"PASS",sameOperation:true},hashConflict:{status:"PASS",http:409},void:{status:"PASS",operationId:$void_operation},versionConflict:{status:"PASS",operationId:$stale_operation,error:"project version conflict"},projection:{status:"PASS",sourceVersion:$final_version},faultMatrix:(if $fault_matrix == 1 then {ownerCompetition:{status:"PASS",sharedDurable:true},crashBeforeAckReplay:{status:"PASS",operationId:$fault_replay_operation,ownerEventAppliedOnce:true,outboxConverged:true},resultConsumerPause:{status:"PASS",operationId:$fault_pause_operation,ownerPublishedWhileConsumerDown:true,replayedAfterRestart:true},natsBacklogRecovery:{status:"PASS",operationId:$nats_recovery_operation,jetStreamStoreReused:true,ownerEventAppliedOnce:true},crossSystemRestart:{status:"PASS",operationId:$cross_restart_operation,ownerEventAppliedOnce:true,recoveredAfterBothDown:true},resultConsumerCompetition:{status:"PASS",operationId:$result_competition_operation,ownerEventAppliedOnce:true,singleTerminalRevision:true},deadLetter:{status:"PASS",safeMetadata:true,poisonPayloadRedacted:true,normalFollowupOperationId:$dlq_followup_operation}} else null end)},projectId:$project_id,summaryVersion:{before:$before,afterAppend:$append_version,afterVoid:$void_version,final:$final_version},runtimeSeconds:$runtime_seconds}' \
   >"$evidence_dir/results.json"
-jq -n --arg mongo_port "$mongo_port" --arg nats_port "$nats_port" --arg record_hub_port "$record_hub_port" --arg fluxion_port "$fluxion_port" --arg temporal_port "$temporal_port" --arg tenant "$FLUXION_RECORD_HUB_TENANT_ID" --arg workspace "$FLUXION_RECORD_HUB_WORKSPACE_ID" \
-  '{mongoPort:($mongo_port|tonumber),natsPort:($nats_port|tonumber),recordHubPort:($record_hub_port|tonumber),fluxionPort:($fluxion_port|tonumber),temporalPort:($temporal_port|tonumber),tenantId:$tenant,workspaceId:$workspace,issuer:"redacted",audience:"record-hub-api",scope:"recordhub.command.submit",database:"temporary"}' \
+jq -n --arg mongo_port "$mongo_port" --arg nats_port "$nats_port" --arg record_hub_port "$record_hub_port" --arg record_hub_secondary_port "$record_hub_secondary_port" --arg fluxion_port "$fluxion_port" --arg temporal_port "$temporal_port" --arg tenant "$FLUXION_RECORD_HUB_TENANT_ID" --arg workspace "$FLUXION_RECORD_HUB_WORKSPACE_ID" \
+  '{mongoPort:($mongo_port|tonumber),recordHubSecondaryPort:($record_hub_secondary_port|tonumber),natsPort:($nats_port|tonumber),recordHubPort:($record_hub_port|tonumber),fluxionPort:($fluxion_port|tonumber),temporalPort:($temporal_port|tonumber),tenantId:$tenant,workspaceId:$workspace,issuer:"redacted",audience:"record-hub-api",scope:"recordhub.command.submit",database:"temporary"}' \
   >"$evidence_dir/config-redacted.json"
 printf 'project_id=%s\nappend_operation=%s\nvoid_operation=%s\nversion_conflict_operation=%s\nsummary_version_before=%s\nsummary_version_after_void=%s\n' "$project_id" "$append_operation" "$void_operation" "$stale_operation" "$before_version" "$after_void_version" >"$evidence_dir/db-assertions/fluxion.txt"
 if [[ "$fault_matrix" == "1" ]]; then
-  printf 'fault_replay_operation=%s\nfault_replay_inbox=%s\nfault_replay_outbox=%s\nfault_pause_operation=%s\nfault_pause_inbox=%s\nfault_pause_outbox=%s\nnats_recovery_operation=%s\nnats_recovery_events=%s\ndlq_before=%s\ndlq_after=%s\ndlq_followup_operation=%s\ndlq_followup_events=%s\nsummary_version_final=%s\n' \
-    "$fault_replay_operation" "$replay_inbox_status" "$replay_outbox_status" "$fault_pause_operation" "$pause_inbox_status" "$pause_outbox_status" "$nats_recovery_operation" "$nats_events" "$dlq_before" "$dlq_after" "$dlq_followup_operation" "$dlq_followup_events" "$fault_final_version" \
+  printf 'fault_replay_operation=%s\nfault_replay_inbox=%s\nfault_replay_outbox=%s\nfault_pause_operation=%s\nfault_pause_inbox=%s\nfault_pause_outbox=%s\nnats_recovery_operation=%s\nnats_recovery_events=%s\ncross_restart_operation=%s\ncross_restart_events=%s\nresult_competition_operation=%s\nresult_competition_events=%s\ndlq_before=%s\ndlq_after=%s\ndlq_followup_operation=%s\ndlq_followup_events=%s\nsummary_version_final=%s\n' \
+    "$fault_replay_operation" "$replay_inbox_status" "$replay_outbox_status" "$fault_pause_operation" "$pause_inbox_status" "$pause_outbox_status" "$nats_recovery_operation" "$nats_events" "$cross_restart_operation" "$cross_events" "$result_competition_operation" "$competition_events" "$dlq_before" "$dlq_after" "$dlq_followup_operation" "$dlq_followup_events" "$fault_final_version" \
     >>"$evidence_dir/db-assertions/fluxion.txt"
 fi
 write_manifest PASS

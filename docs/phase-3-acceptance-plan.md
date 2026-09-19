@@ -109,7 +109,10 @@ Record Hub 与 Fluxion worker 进程共同运行；单测不能替代 Gate B。
 | C-011 | 非法 owner/action/tenant/workspace | fail closed；不泄露资源存在性 |
 | C-012 | slow/poison message | 有界重试后 DLQ；其他正常消息继续推进（live fault matrix 已覆盖） |
 | C-013 | 两个 owner worker 竞争 | unique/CAS 保证一条领域副作用（live fault matrix 已覆盖） |
-| C-014 | 两个 Record Hub result worker 竞争 | operation revision 单调，终态唯一 |
+| C-014 | 两个 Record Hub result worker 竞争 | operation revision 单调，终态唯一（live fault matrix 已覆盖） |
+
+跨系统同时重启也由 `make p3-fluxion-command-faults` 覆盖：command 已 dispatch 后同时停止 Record Hub
+与 Fluxion worker，再恢复 Record Hub、owner worker，验证 durable command/result consumer 不丢失且只产生一条领域副作用。
 
 每个 case 在结束时比较：Record Hub operation、JetStream consumer state、Fluxion Inbox、annotation、
 summary Outbox、result Outbox 和 projection version。只检查 HTTP 200/202 不算通过。
