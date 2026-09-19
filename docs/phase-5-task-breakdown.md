@@ -22,6 +22,8 @@ Batch 1 收口记录：[phase-5-batch1-closure](phase-5-batch1-closure.md)。静
 
 ## Batch 2：HA data/event 与灾备
 
+Batch 2 收口记录：[phase-5-batch2-closure](phase-5-batch2-closure.md)。四项静态 contract 已通过；HA/failover/restore/capacity/rollback live 仍需隔离生产-like topology。
+
 | ID | 范围 | 任务 | 验收 | 状态 |
 | --- | --- | --- | --- | --- |
 | P5-200 | Record Hub | Mongo replica set、index、retention、PITR | [closure](phase-5-batch2-p5-200.md)；HA/index/retention/PITR 静态 contract PASS，failover/restore live SKIPPED | PARTIAL |
