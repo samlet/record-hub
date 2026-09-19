@@ -31,3 +31,13 @@
 - 不以 fake Approver、内存 store、手工改库或直接 Temporal CLI 代替 live Gate。P3-212 的五类终态和 P3-213 的
   timeout/late/restart/reconciliation 必须在 published process + Dex/service principal + real Temporal/NATS
   拓扑准备好后重试；当前跳过不表示业务 E2E 已通过。
+
+## P3-214 — approval association safe projection
+
+- 当前状态：`DONE`（2026-09-19，bounded contract/projection gate）。Record Hub `727b1ba` 新增严格
+  `approver.dispatch-approval.summary-changed` v1 safe summary，使用独立 approval projection table/schema，
+  只保留 Application/Project/workflow stable refs、status、proposal hash、generation、decision version 和
+  freshness；unknown fields 及客户、候选、人员、地址、金额、文件字段均被拒绝。
+- 已验证：`go test ./...` 全量通过；summary handler、registry、projector 和 forbidden-field boundary tests 通过。
+- 说明：Approver/Fluxion 真实 approval summary producer 与四进程 live delivery 仍属于 P3-212/P3-213/P3-402
+  的 live gate；本条不将 bounded projection unit gate 误报为跨系统 E2E。

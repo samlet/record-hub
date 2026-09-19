@@ -66,9 +66,9 @@
 | P3-209 | Fluxion | integration-only result endpoint/Inbox | DONE | Fluxion `bbf37b2`；`/api/integrations/fluxion/approval-results` 仅 service token，tenant/workspace/resource/version/workflow/hash 校验，duplicate/late conflict fail closed |
 | P3-210 | Fluxion | result → Temporal update Outbox | DONE | Fluxion `5038d06`；Inbox 与 update Outbox 同事务，stable `(externalRequestId, decisionVersion)`，worker relay 异步 update、retry/dead/ACK-loss 单测 |
 | P3-211 | Fluxion | feature flag 与本地 human task fallback | DONE | Fluxion `1321285`；默认关闭；开启时低置信度不双写本地任务；旧 history 默认字段兼容，关闭不影响本地 fallback |
-| P3-212 | Approver/Fluxion | 五类终态 E2E | TODO | approved/rejected/withdrawn-or-cancelled/expired/failed 全通过 |
-| P3-213 | Approver/Fluxion | timeout、晚到、重启、reconciliation E2E | TODO | 旧 generation 不作用于新 Project；finding 可见可审计 |
-| P3-214 | Record Hub | 审批关联安全投影 | TODO | Application/Project ref、状态、freshness；无客户/候选档案 |
+| P3-212 | Approver/Fluxion | 五类终态 E2E | SKIPPED | 当前无可复现 published Approver process、Dex workload token 与真实隔离拓扑；见 [phase-3-live-skip-log.md](phase-3-live-skip-log.md) |
+| P3-213 | Approver/Fluxion | timeout、晚到、重启、reconciliation E2E | SKIPPED | 依赖 P3-212 live topology；不以 fake server、内存 store 或手工改库替代；见 [phase-3-live-skip-log.md](phase-3-live-skip-log.md) |
+| P3-214 | Record Hub | 审批关联安全投影 | DONE | Record Hub `727b1ba`；严格 approval summary v1、exact handler、独立投影 table/schema、Application/Project/workflow ref、status/decision version/freshness；敏感字段拒绝测试通过 |
 
 ## Batch 3：Approver 与 Bids Owner Adapter
 
