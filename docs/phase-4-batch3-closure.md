@@ -6,7 +6,7 @@
 
 Batch 3 已完成 Bids/Approver approval contract、Bids Inbox/Outbox、稳定 relay、result authority、Conductor completion retry 与 Record Hub Tender↔Application typed association。所有可在代码/单测中确定的检查为 PASS；需要跨服务故障注入、真实 PostgreSQL migration upgrade、Mongo/NATS/Conductor/Temporal 联调的项目保留 SKIPPED。
 
-本批提交：Approver `41ae520`；Bids `8a1ff5f`、`6fc875a`、`408441e`、`b5d2541`；Record Hub `27de3e6`、`073e1be`、`5b1d955`。
+本批提交：Approver `41ae520`；Bids `8a1ff5f`、`6fc875a`、`408441e`、`b5d2541`；Record Hub `27de3e6`、`073e1be`、`5b1d955`、`6542a91`、`d975eb5`。
 
 | task | static | live |
 | --- | --- | --- |
