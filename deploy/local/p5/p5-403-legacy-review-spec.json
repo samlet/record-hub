@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "phase": "5",
+  "task": "P5-403",
+  "liveRequired": true,
+  "inventory": [
+    "old-worker",
+    "old-schema-reader",
+    "fluxion-local-human-fallback",
+    "immutable-rollback-artifact"
+  ],
+  "decision": "KEEP",
+  "keepUntil": [
+    "P4-501-live-all-gates-pass",
+    "P5-G1-to-P5-G7-pass",
+    "single-tenant-observation-window-complete",
+    "risk-owner-signoff"
+  ],
+  "removalRequirements": [
+    "replacement-contract-parity",
+    "no-inflight-request",
+    "rollback-drill-success",
+    "retention-and-reconciliation-window",
+    "independent-owner-approval"
+  ],
+  "forbiddenActions": [
+    "delete-before-review",
+    "revoke-before-drain",
+    "remove-fallback-during-canary",
+    "discard-rollback-artifact"
+  ]
+}

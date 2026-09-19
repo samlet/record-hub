@@ -51,7 +51,7 @@ Batch 4 已开始；P5-400 的静态扫描验收门已加入，运行时 history
 | P5-400 | 四仓库 | security/PII/sealed-data supply-chain scan | [closure](phase-5-batch4-p5-400.md)；当前树、safe projection、redaction/evidence contract 静态 PASS，runtime export live SKIPPED | PARTIAL |
 | P5-401 | 四仓库 | single-tenant canary + full observation window | [closure](phase-5-batch4-p5-401.md)；scope、观察信号、停止/回滚 contract 静态 PASS，P4-501/live window SKIPPED | PARTIAL |
 | P5-402 | Record Hub | Production GA report | [closure](phase-5-batch4-p5-402.md)；受控模板、RC/prerequisite 和字段校验静态 PASS，正式 GA evidence/signoff SKIPPED | PARTIAL |
-| P5-403 | 四仓库 | fallback/legacy removal review | 独立决策，未批准继续保留 | TODO |
+| P5-403 | 四仓库 | fallback/legacy removal review | [closure](phase-5-batch4-p5-403.md)；KEEP 决策、drain/removal gate 和 destructive-action negative 静态 PASS，独立 live review SKIPPED | PARTIAL |
 
 ## Batch 5：GA release
 
