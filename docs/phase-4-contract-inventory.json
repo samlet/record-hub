@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "gate": "P4-002",
   "status": "PASS",
-  "generatedAt": "2026-09-19T18:10:28.522009Z",
+  "generatedAt": "2026-09-19T20:37:34.971524Z",
   "sharedMirrors": {
     "commands": "PASS",
     "approvals": "PASS"
@@ -11,7 +11,7 @@
     {
       "repository": "record-hub",
       "family": "summaries",
-      "commit": "46ee6ebdcca8365200be6c313867948a7adcde2f",
+      "commit": "073e1be0f8edb2748a06d765bfd0512b55072711",
       "rootKind": "summaries",
       "contracts": [
         {
@@ -90,7 +90,7 @@
     {
       "repository": "approver",
       "family": "summaries",
-      "commit": "83c1cb145a9a417a8a69262867bd108a6d308904",
+      "commit": "41ae52056405415fef14630ed11691d8958f144c",
       "rootKind": "summaries",
       "contracts": [
         {
@@ -121,7 +121,7 @@
     {
       "repository": "fluxion",
       "family": "summaries",
-      "commit": "9349638f1157d190752107bf54ede3691e253d87",
+      "commit": "bf538f641bf9b41ac399cbad4fb60d8ecf89dba9",
       "rootKind": "summaries",
       "contracts": [
         {
@@ -152,7 +152,7 @@
     {
       "repository": "bids",
       "family": "summaries",
-      "commit": "aae52703bdaf93d69fc136674ebb289cabef7867",
+      "commit": "408441e81e12b6454c9996a0976438753e3646c0",
       "rootKind": "contracts",
       "contracts": [
         {
@@ -160,9 +160,31 @@
           "schemaId": "urn:record-hub:summary:tender:v1",
           "schema": "tender-summary-v1.schema.json",
           "fixture": "testdata/valid/tender-summary-v1.json"
+        },
+        {
+          "kind": "bids-tender-publication-approval-request",
+          "schemaId": "urn:record-hub:bids-tender-publication-approval-request:v1",
+          "schema": "approvals/bids-tender-publication-approval-request-v1.schema.json",
+          "fixture": "approvals/testdata/valid/bids-tender-publication-approval-request-v1.json"
+        },
+        {
+          "kind": "bids-tender-publication-approval-result",
+          "schemaId": "urn:record-hub:bids-tender-publication-approval-result:v1",
+          "schema": "approvals/bids-tender-publication-approval-result-v1.schema.json",
+          "fixture": "approvals/testdata/valid/bids-tender-publication-approval-result-v1.json"
         }
       ],
       "files": [
+        {
+          "path": "approvals/bids-tender-publication-approval-request-v1.schema.json",
+          "sha256": "sha256:a1651cdd75ad16631cb6cc35a12e9770fecf920ad36ae6e561a3938ea5cc8f4c",
+          "bytes": 2075
+        },
+        {
+          "path": "approvals/bids-tender-publication-approval-result-v1.schema.json",
+          "sha256": "sha256:fe3fc3b88faa712f863b09d0aa9af17527b8230680486f8431d47cbb1f92bc96",
+          "bytes": 1519
+        },
         {
           "path": "approvals/dispatch-approval-request-v1.schema.json",
           "sha256": "sha256:2f87c58552b18cd144f0ee648840ff8c02833ead2247364b7d71e22cba973ddc",
@@ -184,6 +206,16 @@
           "bytes": 1021
         },
         {
+          "path": "approvals/testdata/invalid/bids-tender-publication-approval-request-v1-sensitive-field.json",
+          "sha256": "sha256:c1943e1e16ff49ca923ba6efe819900163ddccad5f28aaea4c231e8e9f7d8a87",
+          "bytes": 716
+        },
+        {
+          "path": "approvals/testdata/invalid/bids-tender-publication-approval-request-v1-unknown-field.json",
+          "sha256": "sha256:10dcfddb7c171c664c67f9532b6771174233abe908acc4106a15574d29e2cbe8",
+          "bytes": 715
+        },
+        {
           "path": "approvals/testdata/invalid/dispatch-approval-request-v1-unknown-field.json",
           "sha256": "sha256:633e2dbf4f0a17de671eb13b443d2bcd30441e3bf5b0e470487b6e7ad163716e",
           "bytes": 877
@@ -192,6 +224,16 @@
           "path": "approvals/testdata/invalid/dispatch-approval-result-v1-decision.json",
           "sha256": "sha256:9bf716ca7d99770063ddd7201a114c0df718fcd67e4ee85ee04d0e6776d22b99",
           "bytes": 621
+        },
+        {
+          "path": "approvals/testdata/valid/bids-tender-publication-approval-request-v1.json",
+          "sha256": "sha256:26f2af35c09c8041265bd9f29b3bc218b5e64f785e59ee3aaa85d6922454b702",
+          "bytes": 700
+        },
+        {
+          "path": "approvals/testdata/valid/bids-tender-publication-approval-result-v1.json",
+          "sha256": "sha256:93865ac4dda624b58e2c1de81c2279859fe0454e38ab1e0e5718230b1ff517b0",
+          "bytes": 501
         },
         {
           "path": "approvals/testdata/valid/dispatch-approval-request-v1.json",
@@ -245,8 +287,8 @@
         },
         {
           "path": "manifest.json",
-          "sha256": "sha256:eed7f0ee013ba9576f8d5dd4a8e8dd406735688de5f4eb2b2707e143eada4024",
-          "bytes": 347
+          "sha256": "sha256:630156586b921c6b50b45fcc863995cf69fa22535222b0442fc6fde9e89d670b",
+          "bytes": 1464
         },
         {
           "path": "tender-summary-v1.schema.json",

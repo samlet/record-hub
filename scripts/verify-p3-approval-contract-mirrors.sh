@@ -20,26 +20,32 @@ roots = [
     fluxion / "server/src/main/resources/record-hub/approvals",
     bids / "backend/internal/recordhub/contracts/approvals",
 ]
-assets = [
+base_assets = [
     "dispatch-approval-request-v1.schema.json",
     "dispatch-approval-result-v1.schema.json",
     "error-codes.json",
-    "manifest.json",
     "testdata/valid/dispatch-approval-request-v1.json",
     "testdata/valid/dispatch-approval-result-v1.json",
     "testdata/invalid/dispatch-approval-request-v1-unknown-field.json",
     "testdata/invalid/dispatch-approval-result-v1-decision.json",
 ]
+base_allowed_assets = base_assets + ["manifest.json"]
 
 for root in roots:
     if not root.is_dir():
         raise SystemExit(f"missing approval contract root: {root}")
     actual = {p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file()}
-    unknown = actual - set(assets)
+    allowed = set(base_allowed_assets)
+    # Batch 3 adds a Bids-specific approval family. It is intentionally
+    # mirrored only between the Bids owner and Approver; Fluxion and the
+    # Record Hub shared dispatch family must remain unchanged.
+    if root == approver / "approver-contract/src/main/resources/record-hub/approvals" or root == bids / "backend/internal/recordhub/contracts/approvals":
+        allowed |= {"bids-tender-publication-approval-request-v1.schema.json", "bids-tender-publication-approval-result-v1.schema.json", "testdata/valid/bids-tender-publication-approval-request-v1.json", "testdata/valid/bids-tender-publication-approval-result-v1.json", "testdata/invalid/bids-tender-publication-approval-request-v1-unknown-field.json", "testdata/invalid/bids-tender-publication-approval-request-v1-sensitive-field.json"}
+    unknown = actual - allowed
     if unknown:
         raise SystemExit(f"unknown approval contract assets in {root}: {sorted(unknown)}")
 
-for relative in assets:
+for relative in base_assets:
     contents = [(root / relative).read_bytes() for root in roots]
     if any(content != contents[0] for content in contents[1:]):
         raise SystemExit(f"byte mismatch across approval contract mirrors: {relative}")
@@ -64,5 +70,18 @@ if "APPROVAL_TRANSPORT_UNAVAILABLE" not in {item["code"] for item in error_codes
     raise SystemExit("approval error-code catalog is incomplete")
 if "sha256:" + hashlib.sha256(error_codes_path.read_bytes()).hexdigest() != manifest["errorCodesContentHash"]:
     raise SystemExit("approval error-code hash mismatch")
-print(f"P3 dispatch approval contract mirrors verified ({len(assets)} assets, {len(roots)} repositories)")
+
+# Bids v1 contracts are owner-specific but must be byte-identical between the
+# producer mirror and Approver's inbound/result contract resources.
+approver_bids = approver / "approver-contract/src/main/resources/record-hub/approvals"
+bids_bids = bids / "backend/internal/recordhub/contracts/approvals"
+for relative in [
+    "bids-tender-publication-approval-request-v1.schema.json",
+    "bids-tender-publication-approval-result-v1.schema.json",
+    "testdata/valid/bids-tender-publication-approval-request-v1.json",
+    "testdata/valid/bids-tender-publication-approval-result-v1.json",
+]:
+    if (approver_bids / relative).read_bytes() != (bids_bids / relative).read_bytes():
+        raise SystemExit(f"Bids approval contract mirror mismatch: {relative}")
+print(f"P3 dispatch approval contract mirrors verified ({len(base_assets)} shared assets, {len(roots)} repositories; Bids owner family included)")
 PY
