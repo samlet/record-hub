@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "phase": "5",
+  "task": "P5-001",
+  "purpose": "freeze the four-owner release-candidate baseline before production-like live gates",
+  "repositories": [
+    "record-hub",
+    "approver",
+    "fluxion",
+    "bids"
+  ],
+  "requiredArtifacts": [
+    "record-hub",
+    "approver-api.jar",
+    "approver-worker.jar",
+    "fluxion-server.jar",
+    "bids-api",
+    "bids-worker"
+  ],
+  "requiredDigests": [
+    "commit",
+    "sourceTreeSha256",
+    "contractMigrationConfigSha256",
+    "artifactSha256"
+  ],
+  "trackedOnly": true,
+  "untrackedPolicy": "list-and-exclude",
+  "failClosed": true,
+  "liveStatus": "NOT_APPLICABLE",
+  "notes": [
+    "The baseline freezes source and immutable build artifacts; it does not assert production readiness.",
+    "P4-501 and Phase 5 live gates remain independent prerequisites for GA."
+  ]
+}
