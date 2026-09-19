@@ -114,6 +114,24 @@ export type OperationsSnapshot = {
   generatedAt: string;
 };
 
+export type TenderApplicationAssociation = {
+  id: string;
+  tenantId: string;
+  workspaceId: string;
+  tenderRef: string;
+  applicationRef: string;
+  workflowId: string;
+  workflowRunId: string;
+  approvalStatus: string;
+  proposalHash: string;
+  approvalGeneration: number;
+  decisionVersion: number;
+  sourceVersion: number;
+  observedVersion: number;
+  projectionState: "CURRENT" | "GAP" | "CONFLICT";
+  updatedAt: string;
+};
+
 export class ApiError extends Error {
   readonly status: number;
   readonly code?: string;
@@ -404,6 +422,10 @@ export const api = {
   operations: (tenantId: string, workspaceId: string, consumer: string) =>
     request<OperationsSnapshot>(
       `/api/v1/operations/events?tenantId=${encodeURIComponent(tenantId)}&workspaceId=${encodeURIComponent(workspaceId)}&consumer=${encodeURIComponent(consumer)}&limit=50`,
+    ),
+  tenderApplicationAssociations: (tenantId: string, workspaceId: string) =>
+    request<{ items: TenderApplicationAssociation[] }>(
+      `/api/v1/associations/tender-applications?tenantId=${encodeURIComponent(tenantId)}&workspaceId=${encodeURIComponent(workspaceId)}&limit=100`,
     ),
   logout: () => request<void>("/auth/logout", { method: "POST" }),
 };

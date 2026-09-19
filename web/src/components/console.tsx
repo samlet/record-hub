@@ -10,6 +10,7 @@ import {
   SchemaCompatibilityReport,
   SchemaDefinition,
   SchemaSummary,
+  TenderApplicationAssociation,
   TableDefinition,
   ViewFilter,
   ViewDefinition,
@@ -22,7 +23,7 @@ import {
   writeSchemaFields,
 } from "../lib/schema-fields";
 
-type Tab = "records" | "schema" | "operations";
+type Tab = "records" | "schema" | "operations" | "approvals";
 const consumerOptions = [
   ["record-hub-approver-projection-v1", "Approver"],
   ["record-hub-fluxion-projection-v1", "Fluxion"],
@@ -106,6 +107,7 @@ export function Console() {
   const [tab, setTab] = useState<Tab>("records");
   const [consumer, setConsumer] = useState(consumerOptions[0][0]);
   const [operations, setOperations] = useState<OperationsSnapshot | null>(null);
+  const [associations, setAssociations] = useState<TenderApplicationAssociation[]>([]);
   const [schema, setSchema] = useState<SchemaDefinition | null>(null);
   const [schemas, setSchemas] = useState<SchemaSummary[]>([]);
   const [busy, setBusy] = useState(false);
@@ -304,6 +306,15 @@ export function Console() {
   }, [tab, authenticated, tenantId, workspaceId, consumer]);
 
   useEffect(() => {
+    if (tab !== "approvals" || authenticated !== true || !tenantId || !workspaceId) return;
+    void run(async () =>
+      setAssociations(
+        (await api.tenderApplicationAssociations(tenantId, workspaceId)).body.items ?? [],
+      ),
+    );
+  }, [tab, authenticated, tenantId, workspaceId]);
+
+  useEffect(() => {
     if (tab !== "schema" || authenticated !== true || !tenantId || !workspaceId)
       return;
     void run(refreshSchemas);
@@ -453,6 +464,12 @@ export function Console() {
               onClick={() => setTab("operations")}
             >
               投影运维
+            </button>
+            <button
+              className={tab === "approvals" ? "active" : ""}
+              onClick={() => setTab("approvals")}
+            >
+              审批关联
             </button>
           </nav>
           {tab === "records" && (
@@ -718,9 +735,62 @@ export function Console() {
               onRefresh={() => void refreshOperations()}
             />
           )}{" "}
+          {tab === "approvals" && (
+            <ApprovalAssociationsPanel associations={associations} />
+          )}{" "}
         </div>
       </section>
     </main>
+  );
+}
+
+function ApprovalAssociationsPanel({
+  associations,
+}: {
+  associations: TenderApplicationAssociation[];
+}) {
+  return (
+    <div className="panel">
+      <div className="panel-heading">
+        <div>
+          <h2>审批关联</h2>
+          <p className="muted">
+            只读查看 Tender 与 Approver Application 的安全关联投影；终态只能由业务系统和投影 worker 写入。
+          </p>
+        </div>
+        <span className="scope-chip">Viewer / Operator read-only</span>
+      </div>
+      {associations.length === 0 ? (
+        <p className="muted">当前工作区没有审批关联。</p>
+      ) : (
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Tender</th>
+                <th>Application</th>
+                <th>状态</th>
+                <th>版本</th>
+                <th>投影</th>
+                <th>更新时间</th>
+              </tr>
+            </thead>
+            <tbody>
+              {associations.map((association) => (
+                <tr key={association.id}>
+                  <td><code>{association.tenderRef}</code></td>
+                  <td><code>{association.applicationRef}</code></td>
+                  <td>{association.approvalStatus}</td>
+                  <td>g{association.approvalGeneration} / d{association.decisionVersion}</td>
+                  <td>{association.projectionState}</td>
+                  <td>{new Date(association.updatedAt).toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
   );
 }
 

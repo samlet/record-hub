@@ -64,6 +64,20 @@ func TestTenderApplicationAssociationAPIIsScopedAndSafe(t *testing.T) {
 	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), `"tenderRef":"bids:TENDER:`) || !strings.Contains(response.Body.String(), `"applicationRef":"approver:APPLICATION:`) {
 		t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
 	}
+	crossScope := httptest.NewRequest(http.MethodGet, "/api/v1/associations/tender-applications?tenantId=tenant-2&workspaceId=workspace-1", nil).WithContext(identity.WithPrincipal(context.Background(), principal))
+	crossResponse := httptest.NewRecorder()
+	handler.ServeHTTP(crossResponse, crossScope)
+	if crossResponse.Code != http.StatusForbidden || strings.Contains(crossResponse.Body.String(), "bids:TENDER:") {
+		t.Fatalf("cross-scope request leaked or was accepted: status=%d body=%s", crossResponse.Code, crossResponse.Body.String())
+	}
+	for _, method := range []string{http.MethodPost, http.MethodPatch, http.MethodDelete} {
+		request := httptest.NewRequest(method, "/api/v1/associations/tender-applications?tenantId=tenant-1&workspaceId=workspace-1", nil).WithContext(identity.WithPrincipal(context.Background(), principal))
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, request)
+		if response.Code != http.StatusMethodNotAllowed {
+			t.Fatalf("association %s unexpectedly mutates terminal projection: status=%d body=%s", method, response.Code, response.Body.String())
+		}
+	}
 }
 
 type tenderAssociationMembership struct{ membership identity.WorkspaceMembership }
