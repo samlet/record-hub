@@ -190,6 +190,9 @@ p4-batch5:
 p5-100:
 	./scripts/verify-p5-100-identity.sh
 
+p5-101:
+	./scripts/verify-p5-101-scope.sh
+
 p4-contract-inventory:
 	./scripts/verify-p4-contract-inventory.sh
 

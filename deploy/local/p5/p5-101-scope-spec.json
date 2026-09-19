@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "phase": "5",
+  "task": "P5-101",
+  "name": "tenant-organization-connector-policy-lifecycle",
+  "liveRequired": true,
+  "staticChecks": [
+    "membership authorization is active and tenant/workspace exact",
+    "machine binding/command policies reject wildcard and duplicate scope",
+    "catalog source/mapping tenant resolution is allowlisted",
+    "association and operations reads reject cross-scope requests"
+  ],
+  "livePrerequisites": [
+    "admin control-plane API or operator provisioning workflow",
+    "tenant-a/tenant-b and organization-a/organization-b fixtures",
+    "enable/disable/revoke audit and service-principal rotation evidence"
+  ]
+}
