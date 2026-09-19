@@ -1,7 +1,7 @@
 # Phase 3 真实业务系统接入任务分解
 
 - 日期：2026-09-18
-- 状态：Batch 4C（NATS outage/backlog/recovery）完成；P3-308、P3-404..409 仍待后续批次
+- 状态：Batch 4D（restart/ACK-loss matrix）完成；P3-308、P3-405..409 仍待后续批次
 - 方案：[phase-3-integration-design.md](phase-3-integration-design.md)
 - 需求：[phase-3-requirements.md](phase-3-requirements.md)
 - 验收：[phase-3-acceptance-plan.md](phase-3-acceptance-plan.md)
@@ -92,7 +92,7 @@
 | P3-401 | 四仓库 | 自动准备 schema、mapping、policy、tenant/org fixture | DONE | `scripts/bootstrap-p3-fixtures.sh`；topology/owner/policy/schema/binding-policy 生成到临时目录，重复运行幂等，6 个文件 manifest SHA 固定；同一 live evidence 的 fixture manifest 已验收 |
 | P3-402 | 四仓库 | 真实 Temporal + Conductor workflow E2E | DONE | `make p3-workflow-e2e` 在隔离四 owner 拓扑中通过 Fluxion command→Temporal snapshot、Bids approval→Conductor snapshot、Mongo binding_snapshots、Inbox/Result Outbox、history safe-marker 断言；见 [phase-3-batch4b-workflow-e2e.md](phase-3-batch4b-workflow-e2e.md) |
 | P3-403 | 四仓库 | NATS outage/backlog/recovery | DONE | `make p3-nats-outage-recovery`；真实 Fluxion Temporal project summary 在 NATS 停机时进入 owner outbox，恢复同一 JetStream store 后 outbox 全部 SENT、Mongo Inbox/APPLIED 与最高 source version 对齐；evidence `nats-outage-recovery.json` |
-| P3-404 | 四仓库 | 进程 restart/ACK-loss 矩阵 | TODO | 每个 commit/ACK 边界注入崩溃并恢复 |
+| P3-404 | 四仓库 | 进程 restart/ACK-loss 矩阵 | DONE | `make p3-process-restart-ack-loss`；真实 P3-110 fault matrix 验证 owner commit-before-ACK、result publish-before-SENT、consumer pause/restart、cross restart、durable consumer competition 和 safe DLQ follow-up；证据 `p3-404-restart-ack-loss.json` |
 | P3-405 | 四仓库 | workload/JWKS/secret rotation | TODO | overlap 不中断，旧 credential 过期 fail closed |
 | P3-406 | 四仓库 | Mongo/PostgreSQL/JetStream 备份恢复 | TODO | hash/count/index/cursor/receipt/Inbox/Outbox 校验通过 |
 | P3-407 | 四仓库 | 容量与 recovery baseline | TODO | 数据规模、事件率、p95/p99、backlog drain time 和硬件记录 |
