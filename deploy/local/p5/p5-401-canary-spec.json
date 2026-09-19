@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "phase": "5",
+  "task": "P5-401",
+  "liveRequired": true,
+  "prerequisite": "P4-501-live-all-gates-pass",
+  "canary": {
+    "scope": "one-low-sensitivity-tenant-workspace",
+    "newTrafficOnly": true,
+    "oldPathRetained": true,
+    "observationWindow": ["retry-backoff", "retention", "reconciliation"]
+  },
+  "signals": [
+    "terminal-outcome",
+    "materialization-lag",
+    "delivery-retry-and-dead",
+    "projection-backlog-and-dlq",
+    "reconciliation-finding-and-recovery",
+    "cross-scope-denial",
+    "safe-payload-scan",
+    "slo-and-error-budget"
+  ],
+  "stopConditions": [
+    "cross-tenant-access",
+    "duplicate-terminal-side-effect",
+    "sealed-data-leak",
+    "slo-breach",
+    "unbounded-dead-growth",
+    "reconciliation-mismatch"
+  ],
+  "liveEvidence": [
+    "tenant-workspace-allowlist",
+    "minute-observation-snapshots",
+    "retry-retention-reconciliation-window",
+    "stop-and-rollback-drill",
+    "owner-signoff"
+  ]
+}
