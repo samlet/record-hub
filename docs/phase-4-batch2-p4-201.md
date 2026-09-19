@@ -4,7 +4,8 @@
 - 状态：`PARTIAL`
 - owner：Approver / Fluxion
 - Approver commit：`dae0e15` (`feat(integration): preserve Fluxion approval terminal decisions`)
-- Fluxion commit：`b659f32` (`feat(approval): enforce terminal request state machine`)
+- Fluxion commits：`b659f32` (`feat(approval): enforce terminal request state machine`), `8696902`
+  (`fix(approval): guard duplicate result hashes`)
 - 前置：[P4-200 rollout/drain](phase-4-batch2-p4-200.md)
 
 ## 终态契约
