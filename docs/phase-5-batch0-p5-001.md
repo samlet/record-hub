@@ -1,6 +1,6 @@
 # Phase 5 Batch 0：P5-001 RC baseline
 
-P5-001 固定四仓库在 Phase 5 开始前的 release-candidate baseline：每个仓库的
+P5-001 已完成，固定四仓库在 Phase 5 开始前的 release-candidate baseline：每个仓库的
 commit、tracked source digest、contract/migration/config digest、工作树状态和未跟踪文件清单，
 以及 Record Hub、Approver API/worker、Fluxion server、Bids API/worker 六个 immutable artifact 的
 SHA-256 与字节数。

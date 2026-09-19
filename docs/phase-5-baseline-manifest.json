@@ -1,0 +1,193 @@
+{
+  "schemaVersion": 1,
+  "phase": "5",
+  "task": "P5-001",
+  "status": "PASS",
+  "generatedAt": "2026-09-19T22:50:18.968189Z",
+  "baselineKind": "phase5-production-ga-preflight",
+  "trackedOnly": true,
+  "untrackedPolicy": "list-and-exclude",
+  "source": {
+    "repositories": [
+      {
+        "name": "record-hub",
+        "workingDirectory": ".",
+        "commit": "3f009c5de328f6d834ab9c7b9388fda20aa2c6a1",
+        "sourceTreeSha256": "sha256:741b6fa74f6667d0710e65731ea0263ff0fdde4a75db8bb6b2022e1b8c3ce800",
+        "contractMigrationConfigSha256": "sha256:cfd1494110d00c16030fcb2e3a8bdb9b9622f217904265a8d1d167b5273acbb7",
+        "trackedWorktreeClean": true,
+        "untracked": [
+          "c123.db"
+        ],
+        "build": {
+          "testCommand": "go test ./...",
+          "buildCommand": "go build -trimpath -o build/p5-baseline-artifacts/record-hub ./server/cmd/record-hub"
+        }
+      },
+      {
+        "name": "approver",
+        "workingDirectory": ".",
+        "commit": "41ae52056405415fef14630ed11691d8958f144c",
+        "sourceTreeSha256": "sha256:0e3e23376b3d6f6759fcd9de1f3e16c6401cbb272ab0e31a6ee188cee2ec54ce",
+        "contractMigrationConfigSha256": "sha256:41aca0354126f543065642d43bedc605e936ac0862219ba0c074e7b71ff29042",
+        "trackedWorktreeClean": true,
+        "untracked": [],
+        "build": {
+          "testCommand": "mvn test",
+          "buildCommand": "mvn -DskipTests package"
+        }
+      },
+      {
+        "name": "fluxion",
+        "workingDirectory": "server",
+        "commit": "bf538f641bf9b41ac399cbad4fb60d8ecf89dba9",
+        "sourceTreeSha256": "sha256:1531de4db552378f638e33ba6b24682c60b81e38b8a7f3999b7ddefd05638834",
+        "contractMigrationConfigSha256": "sha256:c3192be5178ef23bf6436ad0678ff255f6e90e9759d98a67785693e3c31596af",
+        "trackedWorktreeClean": true,
+        "untracked": [],
+        "build": {
+          "testCommand": "./gradlew test",
+          "buildCommand": "./gradlew build"
+        }
+      },
+      {
+        "name": "bids",
+        "workingDirectory": "backend",
+        "commit": "b5d2541a50046011d21fae169b86f793a6b22158",
+        "sourceTreeSha256": "sha256:6f65dd06d36b8a4139f8ea3d0584f6c86a1d1330bbf34ca7db82361c1c2b1cca",
+        "contractMigrationConfigSha256": "sha256:0c9a98e6850568e7c9a95f9bcc26ee08b409fbb209763a49078b5b73a30a4da6",
+        "trackedWorktreeClean": true,
+        "untracked": [],
+        "build": {
+          "testCommand": "go test ./...",
+          "buildCommand": "go build ./..."
+        }
+      }
+    ]
+  },
+  "artifacts": {
+    "status": "PASS",
+    "immutableRoot": "build/p5-baseline-artifacts",
+    "entries": [
+      {
+        "name": "approver-api.jar",
+        "path": "build/p5-baseline-artifacts/approver-api.jar",
+        "sha256": "sha256:da5ced1b445f190913f1a9e0f94a8015f5b8e3f6fe0b6540521f578448ce634c",
+        "bytes": 114117253,
+        "immutable": true
+      },
+      {
+        "name": "approver-worker.jar",
+        "path": "build/p5-baseline-artifacts/approver-worker.jar",
+        "sha256": "sha256:947ea7a0455e90ac0be00256d9e2c8cd8e62f245fead1d3bc26c67f86050d339",
+        "bytes": 106583149,
+        "immutable": true
+      },
+      {
+        "name": "bids-api",
+        "path": "build/p5-baseline-artifacts/bids-api",
+        "sha256": "sha256:7d44233466c93ae102aabfb0f7afeac7da3a559341c96ac193815560cff575ad",
+        "bytes": 36270146,
+        "immutable": true
+      },
+      {
+        "name": "bids-worker",
+        "path": "build/p5-baseline-artifacts/bids-worker",
+        "sha256": "sha256:d08c39d25ae244164b88f47168755d22ff8f3cad5187e53f9fdc937ef3344056",
+        "bytes": 34557138,
+        "immutable": true
+      },
+      {
+        "name": "fluxion-server.jar",
+        "path": "build/p5-baseline-artifacts/fluxion-server.jar",
+        "sha256": "sha256:ec01c8838105cb402519c0dfa2f1e7051eb588e88dc6e663050ee98806a676c7",
+        "bytes": 1030292,
+        "immutable": true
+      },
+      {
+        "name": "record-hub",
+        "path": "build/p5-baseline-artifacts/record-hub",
+        "sha256": "sha256:593a935ab54ee08c7f679df9016e9733e1a01f98526da45ce3e6dac22073dc95",
+        "bytes": 19311522,
+        "immutable": true
+      }
+    ]
+  },
+  "contractMigrationConfig": {
+    "status": "PASS",
+    "repositories": [
+      {
+        "name": "record-hub",
+        "workingDirectory": ".",
+        "commit": "3f009c5de328f6d834ab9c7b9388fda20aa2c6a1",
+        "sourceTreeSha256": "sha256:741b6fa74f6667d0710e65731ea0263ff0fdde4a75db8bb6b2022e1b8c3ce800",
+        "contractMigrationConfigSha256": "sha256:cfd1494110d00c16030fcb2e3a8bdb9b9622f217904265a8d1d167b5273acbb7",
+        "trackedWorktreeClean": true,
+        "untracked": [
+          "c123.db"
+        ],
+        "build": {
+          "testCommand": "go test ./...",
+          "buildCommand": "go build -trimpath -o build/p5-baseline-artifacts/record-hub ./server/cmd/record-hub"
+        }
+      },
+      {
+        "name": "approver",
+        "workingDirectory": ".",
+        "commit": "41ae52056405415fef14630ed11691d8958f144c",
+        "sourceTreeSha256": "sha256:0e3e23376b3d6f6759fcd9de1f3e16c6401cbb272ab0e31a6ee188cee2ec54ce",
+        "contractMigrationConfigSha256": "sha256:41aca0354126f543065642d43bedc605e936ac0862219ba0c074e7b71ff29042",
+        "trackedWorktreeClean": true,
+        "untracked": [],
+        "build": {
+          "testCommand": "mvn test",
+          "buildCommand": "mvn -DskipTests package"
+        }
+      },
+      {
+        "name": "fluxion",
+        "workingDirectory": "server",
+        "commit": "bf538f641bf9b41ac399cbad4fb60d8ecf89dba9",
+        "sourceTreeSha256": "sha256:1531de4db552378f638e33ba6b24682c60b81e38b8a7f3999b7ddefd05638834",
+        "contractMigrationConfigSha256": "sha256:c3192be5178ef23bf6436ad0678ff255f6e90e9759d98a67785693e3c31596af",
+        "trackedWorktreeClean": true,
+        "untracked": [],
+        "build": {
+          "testCommand": "./gradlew test",
+          "buildCommand": "./gradlew build"
+        }
+      },
+      {
+        "name": "bids",
+        "workingDirectory": "backend",
+        "commit": "b5d2541a50046011d21fae169b86f793a6b22158",
+        "sourceTreeSha256": "sha256:6f65dd06d36b8a4139f8ea3d0584f6c86a1d1330bbf34ca7db82361c1c2b1cca",
+        "contractMigrationConfigSha256": "sha256:0c9a98e6850568e7c9a95f9bcc26ee08b409fbb209763a49078b5b73a30a4da6",
+        "trackedWorktreeClean": true,
+        "untracked": [],
+        "build": {
+          "testCommand": "go test ./...",
+          "buildCommand": "go build ./..."
+        }
+      }
+    ]
+  },
+  "compatibility": {
+    "ownerSystems": [
+      "approver",
+      "fluxion",
+      "bids"
+    ],
+    "recordHubBoundary": "command/result/projection contracts",
+    "matrixStatus": "FROZEN"
+  },
+  "prerequisites": {
+    "p4Baseline": "PASS",
+    "p4Live": "INDEPENDENT_GATE",
+    "phase5Live": "INDEPENDENT_GATES"
+  },
+  "notes": [
+    "This manifest freezes the RC baseline only; it does not declare P4-501, P5-G1..G7, or GA readiness.",
+    "Untracked files are listed per repository and excluded from source and contract digests."
+  ]
+}
