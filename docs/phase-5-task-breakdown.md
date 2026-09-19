@@ -1,0 +1,59 @@
+# Phase 5 任务分解：Production GA 与规模化
+
+Phase 5 依赖 Phase 4 P4-501 live gate；在 live gate 未完成前只能进行设计、静态 contract 和环境准备，不能进入 GA 流量。
+
+## Batch 0：入口与基线
+
+| ID | 范围 | 任务 | 验收 | 状态 |
+| --- | --- | --- | --- | --- |
+| P5-000 | Record Hub | 方案、需求、验收和风险边界冻结 | 文档互链、non-goal 和 dependency 一致 | TODO |
+| P5-001 | 四仓库 | RC/contract/migration/config baseline | commit、artifact、digest、owner 清单固定 | TODO |
+| P5-002 | 四仓库 | Phase 4 live gap re-audit | P4-G1～G5 无 SKIPPED/PARTIAL | BLOCKED_BY_P4 |
+
+## Batch 1：Production identity 与 control plane
+
+| ID | 范围 | 任务 | 验收 | 状态 |
+| --- | --- | --- | --- | --- |
+| P5-100 | Record Hub/Dex | production OIDC、workspace membership、service principal | issuer/audience/scope/rotation/审计 live PASS | TODO |
+| P5-101 | 四仓库 | tenant/org/connector policy lifecycle | cross-scope negative matrix 与禁用/撤销 PASS | TODO |
+| P5-102 | Record Hub | Viewer/Editor/Operator/Admin console/API parity | API/UI/worker 权限矩阵无绕过 | TODO |
+
+## Batch 2：HA data/event 与灾备
+
+| ID | 范围 | 任务 | 验收 | 状态 |
+| --- | --- | --- | --- | --- |
+| P5-200 | Record Hub | Mongo replica set、index、retention、PITR | failover、restore、count/hash/index/version/cursor PASS | TODO |
+| P5-201 | Record Hub/四 owner | JetStream stream/consumer HA | duplicate/ACK loss/restart/DLQ/replay PASS | TODO |
+| P5-202 | 四仓库 | capacity、SLO、RPO/RTO drill | 目标由实测 evidence 证明，不接受 UNVERIFIED | TODO |
+| P5-203 | 四仓库 | production rotation/rolling rollback | old/new overlap、drain、rollback/no-double-write PASS | TODO |
+
+## Batch 3：Connector platform 与 Settlement
+
+| ID | 范围 | 任务 | 验收 | 状态 |
+| --- | --- | --- | --- | --- |
+| P5-300 | Approver/Record Hub | connector registry、SDK semver、compatibility window | unknown connector fail closed、manifest/hash PASS | TODO |
+| P5-301 | Approver/Settlement | Settlement confirmation request/result/Apply contract | 双仓库 schema/fixture、scope/version/hash/idempotency PASS | TODO |
+| P5-302 | Record Hub | Settlement safe association/projection | 不含金额/银行/附件/密封数据，late result/finding PASS | TODO |
+| P5-303 | Fluxion/Bids | approval connector production hardening | owner-side effect、reconciliation、fallback、rollback PASS | TODO |
+
+## Batch 4：GA evidence 与治理
+
+| ID | 范围 | 任务 | 验收 | 状态 |
+| --- | --- | --- | --- | --- |
+| P5-400 | 四仓库 | security/PII/sealed-data supply-chain scan | Git/history/log/DLQ/metrics/evidence/artifact 无发现 | TODO |
+| P5-401 | 四仓库 | single-tenant canary + full observation window | retention/retry/reconciliation/SLO 全部可接受 | TODO |
+| P5-402 | Record Hub | Production GA report | commit/artifact/case/RPO/RTO/capacity/risk/rollback/signoff | TODO |
+| P5-403 | 四仓库 | fallback/legacy removal review | 独立决策，未批准继续保留 | TODO |
+
+## Batch 5：GA release
+
+| ID | 范围 | 任务 | 验收 | 状态 |
+| --- | --- | --- | --- | --- |
+| P5-500 | 四仓库 | GA candidate manifest | all mandatory gates PASS、无继承 SKIPPED | TODO |
+| P5-501 | 四仓库 | Production GA rollout | staged expansion、rollback window 和审计 PASS | TODO |
+
+## 执行规则
+
+- `BLOCKED_BY_P4` 只能通过 P4-501 live gate 清除，不得由静态检查替代。
+- 每个任务在涉及仓库独立提交；跨仓库 gate 只能引用实际 commit/artifact/evidence。
+- 任何 scope 泄漏、敏感数据泄漏、重复领域副作用或不可逆 migration 立即停止后续 batch。

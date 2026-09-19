@@ -65,6 +65,8 @@
 
 ## Phase 5：生产 GA 与规模化
 
+Phase 5 的方案、需求、任务和验收见 [Phase 5 技术方案](phase-5-design.md)、[需求基线](phase-5-requirements.md)、[任务分解](phase-5-task-breakdown.md) 和 [验收计划](phase-5-acceptance-plan.md)。
+
 - 正式 workload issuer、TLS、secret manager、HA 数据层和生产备份策略。
 - 集群级故障切换、容量扩展、长期 retention 和灾备演练。
 - connector 生命周期、兼容窗口、发布治理和自助接入规范。
