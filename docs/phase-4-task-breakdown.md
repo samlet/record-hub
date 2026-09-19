@@ -67,7 +67,7 @@ manifest 必须记录当次实际 commit 和 artifact checksum。
 
 | ID | 仓库 | 任务 | 依赖 | 状态 | 验收 |
 | --- | --- | --- | --- | --- | --- |
-| P4-500 | 四仓库 | release candidate manifest 与 immutable artifacts | Batch 0..4 | TODO | commit/checksum/migration/contract/config 摘要固定 |
+| P4-500 | 四仓库 | release candidate manifest 与 immutable artifacts | Batch 0..4 | DONE | [closure](phase-4-batch5-p4-500.md)；`make p4-release-candidate` 固定四仓库 commit、digest 和 6 个 artifact，静态 PASS |
 | P4-501 | 四仓库 | 完整 rotation + restore + mixed load + rolling rollback | P4-500 | TODO | P4-G1..G5 必选 live cases 全 PASS，无 SKIPPED/PARTIAL |
 | P4-502 | 四仓库 | 单 tenant Beta 灰度与观察窗口 | P4-501 | TODO | 至少一个完整 retention/retry window；SLO/告警/finding 可接受 |
 | P4-503 | Record Hub | Phase 4 Beta 验收报告 | P4-502 | TODO | commit/artifact、case、RPO/RTO、容量、风险 owner、rollback、签字完整 |

@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "phase": "4",
+  "gate": "P4-500",
+  "status": "PASS",
+  "generatedAt": "2026-09-19T21:14:50.767563Z",
+  "releaseCandidate": "rc-cbaa0a357110",
+  "source": {
+    "repositories": [
+      {
+        "repository": "record-hub",
+        "commit": "cbaa0a3571103d19e6580082fad559c3af0a33fa",
+        "trackedFileCount": 80,
+        "contractMigrationConfigSha256": "sha256:4b09b3b0a03e3289b481b27860723850e80e67248e9bd255589f87595b883c40",
+        "scope": {
+          "trackedOnly": true,
+          "untrackedExcluded": true
+        }
+      },
+      {
+        "repository": "approver",
+        "commit": "41ae52056405415fef14630ed11691d8958f144c",
+        "trackedFileCount": 58,
+        "contractMigrationConfigSha256": "sha256:6c504e56c2f3082473996592d2aef28a68df716c553e8a3a14ea31bdcac10253",
+        "scope": {
+          "trackedOnly": true,
+          "untrackedExcluded": true
+        }
+      },
+      {
+        "repository": "fluxion",
+        "commit": "bf538f641bf9b41ac399cbad4fb60d8ecf89dba9",
+        "trackedFileCount": 31,
+        "contractMigrationConfigSha256": "sha256:5c0bc0b50c1524d05f68480401aed47591edf05c4e3b47d20fe56c535349db10",
+        "scope": {
+          "trackedOnly": true,
+          "untrackedExcluded": true
+        }
+      },
+      {
+        "repository": "bids",
+        "commit": "b5d2541a50046011d21fae169b86f793a6b22158",
+        "trackedFileCount": 59,
+        "contractMigrationConfigSha256": "sha256:4b8b5d575b32a495d25b12474fb2c1d6773068a66fafb9d944e4271b8c673d9a",
+        "scope": {
+          "trackedOnly": true,
+          "untrackedExcluded": true
+        }
+      }
+    ],
+    "untrackedPolicy": "excluded-from-digest-listed-by-baseline"
+  },
+  "artifacts": {
+    "status": "PASS",
+    "immutableRoot": "build/p4-release-candidate/rc-cbaa0a357110",
+    "entries": [
+      {
+        "name": "approver-api.jar",
+        "path": "build/p4-release-candidate/rc-cbaa0a357110/approver-api.jar",
+        "sha256": "sha256:da5ced1b445f190913f1a9e0f94a8015f5b8e3f6fe0b6540521f578448ce634c",
+        "bytes": 114117253
+      },
+      {
+        "name": "approver-worker.jar",
+        "path": "build/p4-release-candidate/rc-cbaa0a357110/approver-worker.jar",
+        "sha256": "sha256:947ea7a0455e90ac0be00256d9e2c8cd8e62f245fead1d3bc26c67f86050d339",
+        "bytes": 106583149
+      },
+      {
+        "name": "bids-api",
+        "path": "build/p4-release-candidate/rc-cbaa0a357110/bids-api",
+        "sha256": "sha256:7d44233466c93ae102aabfb0f7afeac7da3a559341c96ac193815560cff575ad",
+        "bytes": 36270146
+      },
+      {
+        "name": "bids-worker",
+        "path": "build/p4-release-candidate/rc-cbaa0a357110/bids-worker",
+        "sha256": "sha256:d08c39d25ae244164b88f47168755d22ff8f3cad5187e53f9fdc937ef3344056",
+        "bytes": 34557138
+      },
+      {
+        "name": "fluxion-server.jar",
+        "path": "build/p4-release-candidate/rc-cbaa0a357110/fluxion-server.jar",
+        "sha256": "sha256:ec01c8838105cb402519c0dfa2f1e7051eb588e88dc6e663050ee98806a676c7",
+        "bytes": 1030292
+      },
+      {
+        "name": "record-hub",
+        "path": "build/p4-release-candidate/rc-cbaa0a357110/record-hub",
+        "sha256": "sha256:d0a1dcf61af2b6df7a22ba32ca20648833762e20591228338389e9e22d6fa742",
+        "bytes": 19259410
+      }
+    ]
+  },
+  "gates": {
+    "baseline": "PASS",
+    "contractInventory": "PASS",
+    "evidenceContract": "PASS",
+    "batch4": "PARTIAL_STATIC_PASS_LIVE_SKIPPED"
+  },
+  "migrationContractConfig": {
+    "status": "PASS",
+    "repositories": [
+      {
+        "repository": "record-hub",
+        "commit": "cbaa0a3571103d19e6580082fad559c3af0a33fa",
+        "trackedFileCount": 80,
+        "contractMigrationConfigSha256": "sha256:4b09b3b0a03e3289b481b27860723850e80e67248e9bd255589f87595b883c40",
+        "scope": {
+          "trackedOnly": true,
+          "untrackedExcluded": true
+        }
+      },
+      {
+        "repository": "approver",
+        "commit": "41ae52056405415fef14630ed11691d8958f144c",
+        "trackedFileCount": 58,
+        "contractMigrationConfigSha256": "sha256:6c504e56c2f3082473996592d2aef28a68df716c553e8a3a14ea31bdcac10253",
+        "scope": {
+          "trackedOnly": true,
+          "untrackedExcluded": true
+        }
+      },
+      {
+        "repository": "fluxion",
+        "commit": "bf538f641bf9b41ac399cbad4fb60d8ecf89dba9",
+        "trackedFileCount": 31,
+        "contractMigrationConfigSha256": "sha256:5c0bc0b50c1524d05f68480401aed47591edf05c4e3b47d20fe56c535349db10",
+        "scope": {
+          "trackedOnly": true,
+          "untrackedExcluded": true
+        }
+      },
+      {
+        "repository": "bids",
+        "commit": "b5d2541a50046011d21fae169b86f793a6b22158",
+        "trackedFileCount": 59,
+        "contractMigrationConfigSha256": "sha256:4b8b5d575b32a495d25b12474fb2c1d6773068a66fafb9d944e4271b8c673d9a",
+        "scope": {
+          "trackedOnly": true,
+          "untrackedExcluded": true
+        }
+      }
+    ]
+  },
+  "live": {
+    "status": "SKIPPED",
+    "reason": "P4-501 requires isolated four-owner topology and explicit rotation/restore/load/rollback evidence"
+  },
+  "next": "P4-501 is blocked until all required live cases can be executed without SKIPPED/PARTIAL."
+}
