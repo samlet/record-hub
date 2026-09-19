@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "phase": "5",
+  "task": "P5-402",
+  "status": "PENDING",
+  "releaseCandidate": "PENDING",
+  "rcManifest": "docs/phase-4-release-candidate-manifest.json",
+  "prerequisites": {
+    "p4-501": "SKIPPED",
+    "p5-gates": "PENDING",
+    "canary": "SKIPPED"
+  },
+  "gates": [
+    {"id": "P5-G1", "name": "Identity", "status": "PENDING"},
+    {"id": "P5-G2", "name": "Isolation", "status": "PENDING"},
+    {"id": "P5-G3", "name": "Data/Event HA", "status": "PENDING"},
+    {"id": "P5-G4", "name": "Recovery/SLO", "status": "PENDING"},
+    {"id": "P5-G5", "name": "Connector", "status": "PENDING"},
+    {"id": "P5-G6", "name": "Security", "status": "PENDING"},
+    {"id": "P5-G7", "name": "Release", "status": "PENDING"}
+  ],
+  "topology": {"status": "UNVERIFIED", "evidence": null},
+  "capacity": {"status": "UNVERIFIED", "evidence": null},
+  "recovery": {"rpo": "UNVERIFIED", "rto": "UNVERIFIED", "evidence": null},
+  "retention": {"status": "PENDING", "policy": null},
+  "risks": [],
+  "rollback": {"status": "PENDING", "plan": "retain-old-worker-fallback-and-rollback-artifact"},
+  "signoff": [
+    {"role": "Platform owner", "status": "PENDING"},
+    {"role": "Approver owner", "status": "PENDING"},
+    {"role": "Fluxion owner", "status": "PENDING"},
+    {"role": "Bids owner", "status": "PENDING"},
+    {"role": "Security/Operations", "status": "PENDING"}
+  ],
+  "decision": "DO_NOT_START_PRODUCTION_GA"
+}
