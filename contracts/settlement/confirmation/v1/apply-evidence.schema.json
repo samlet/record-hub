@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:record-hub:settlement:apply-evidence:v1",
+  "title": "Settlement confirmation Apply evidence",
+  "description": "Safe bounded evidence that the Settlement owner handled confirmation. This is not a payment instruction and contains no amount, bank, invoice attachment, or sealed data.",
+  "type": "object",
+  "required": ["settlementId", "expectedVersion", "snapshotHash", "action"],
+  "properties": {
+    "settlementId": {"type": "string", "minLength": 1, "maxLength": 64},
+    "expectedVersion": {"type": "integer", "minimum": 1},
+    "snapshotHash": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$", "maxLength": 64},
+    "action": {
+      "type": "object",
+      "required": ["key", "outcome"],
+      "properties": {
+        "key": {"const": "settlement.confirm@v1"},
+        "outcome": {"enum": ["SUCCEEDED", "NOT_EXECUTED", "UNKNOWN"]},
+        "status": {"type": ["string", "null"], "enum": ["CONFIRMED", "PAID", null]},
+        "version": {"type": ["integer", "null"], "minimum": 1},
+        "accountingEventId": {"type": ["string", "null"], "maxLength": 64}
+      },
+      "additionalProperties": false,
+      "maxProperties": 4
+    }
+  },
+  "additionalProperties": false,
+  "maxProperties": 4
+}

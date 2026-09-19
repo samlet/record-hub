@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "eventType": "settlement.confirmation.requested@v1",
+  "externalRequestId": "10000000-0000-4000-8000-000000000001",
+  "organizationId": "30000000-0000-4000-8000-000000000001",
+  "requesterIssuerAlias": "settlement-user-directory",
+  "requesterSubject": "settlement-user-00000001",
+  "resource": {
+    "type": "SETTLEMENT",
+    "id": "20000000-0000-4000-8000-000000000001",
+    "version": 3
+  },
+  "snapshot": {
+    "settlementNo": "SET-2026090001",
+    "status": "PROPOSED",
+    "direction": "payable",
+    "relationship": {
+      "id": "40000000-0000-4000-8000-000000000001",
+      "code": "REL-BUYER-SELLER",
+      "buyerOrganization": {
+        "id": "30000000-0000-4000-8000-000000000001",
+        "code": "BUYER-A"
+      },
+      "sellerOrganization": {
+        "id": "30000000-0000-4000-8000-000000000002",
+        "code": "SELLER-B"
+      }
+    },
+    "counterpartyOrganization": {
+      "id": "30000000-0000-4000-8000-000000000002",
+      "code": "SELLER-B"
+    },
+    "period": {
+      "start": "2026-09-01",
+      "end": "2026-09-30"
+    },
+    "currency": "CNY",
+    "grossAmount": "1000.0000",
+    "adjustmentAmount": "-100.0000",
+    "cashOffsetAmount": "-200.0000",
+    "netAmount": "700.0000",
+    "functionalCurrency": "CNY",
+    "functionalGrossAmount": "1000.0000",
+    "functionalAdjustmentAmount": "-100.0000",
+    "functionalCashOffsetAmount": "-200.0000",
+    "functionalNetAmount": "700.0000",
+    "activeDisputeCount": 0,
+    "itemSummary": {
+      "totalCount": 3,
+      "countsByType": {
+        "invoice": 1,
+        "adjustment": 1,
+        "payment": 1
+      },
+      "itemSetHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "displayItems": [
+      {
+        "itemType": "invoice",
+        "reference": "INV-2026-0901",
+        "signedAmount": "1000.0000",
+        "sourceType": "invoice"
+      },
+      {
+        "itemType": "adjustment",
+        "reference": "ADJ-2026-0001",
+        "signedAmount": "-100.0000",
+        "sourceType": "adjustment"
+      },
+      {
+        "itemType": "payment",
+        "reference": "PAY-2026-0001",
+        "signedAmount": "-200.0000",
+        "sourceType": "payment"
+      }
+    ],
+    "displayItemsTruncated": false
+  },
+  "snapshotHash": "29d1e00f1c6afb12aef71f201a57805966ddeb7acfea1257d74c06903734afb5",
+  "requestedAt": "2026-09-10T10:00:00Z"
+}

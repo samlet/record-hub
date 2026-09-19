@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "phase": "5",
+  "task": "P5-301",
+  "owner": "approver-settlement-owner",
+  "liveRequired": true,
+  "requestEvent": "settlement.confirmation.requested@v1",
+  "resultEvent": "settlement.confirmation.result@v1",
+  "applyAction": "settlement.confirm@v1",
+  "schemaVersion": 1,
+  "requiredInvariants": [
+    "request-result-event-and-version-match",
+    "snapshot-hash-is-stable",
+    "decision-version-is-monotonic",
+    "apply-requires-owner-idempotency-and-expected-version",
+    "late-result-is-reconciled-not-applied",
+    "no-money-bank-invoice-attachment-or-sealed-data-in-record-hub"
+  ],
+  "liveEvidence": [
+    "two-repository-schema-fixture-hash",
+    "scope-and-version-negative-matrix",
+    "settlement-owner-apply-idempotency",
+    "late-result-and-reconciliation",
+    "rollback-and-retry"
+  ]
+}

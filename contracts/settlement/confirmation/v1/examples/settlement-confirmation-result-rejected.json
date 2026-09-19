@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "eventType": "settlement.confirmation.result@v1",
+  "externalRequestId": "10000000-0000-4000-8000-000000000002",
+  "organizationId": "30000000-0000-4000-8000-000000000001",
+  "applicationId": "11000000-0000-4000-8000-000000000002",
+  "processInstanceId": "12000000-0000-4000-8000-000000000002",
+  "decisionVersion": 1,
+  "decision": "REJECTED",
+  "reasonCode": "APPROVAL_REJECTED",
+  "reason": "The confirmation request was rejected by the approval policy.",
+  "resource": {
+    "type": "SETTLEMENT",
+    "id": "20000000-0000-4000-8000-000000000002",
+    "status": "PROPOSED",
+    "version": 3
+  },
+  "snapshotHash": "2222222222222222222222222222222222222222222222222222222222222222",
+  "action": {
+    "key": "settlement.confirm@v1",
+    "outcome": "NOT_EXECUTED",
+    "status": null,
+    "version": null,
+    "accountingEventId": null
+  },
+  "decidedAt": "2026-09-10T10:06:00Z"
+}

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "eventType": "settlement.confirmation.result@v1",
+  "externalRequestId": "10000000-0000-4000-8000-000000000001",
+  "organizationId": "30000000-0000-4000-8000-000000000001",
+  "applicationId": "11000000-0000-4000-8000-000000000001",
+  "processInstanceId": "12000000-0000-4000-8000-000000000001",
+  "decisionVersion": 1,
+  "decision": "APPROVED",
+  "reasonCode": null,
+  "reason": null,
+  "resource": {
+    "type": "SETTLEMENT",
+    "id": "20000000-0000-4000-8000-000000000001",
+    "status": "CONFIRMED",
+    "version": 4
+  },
+  "snapshotHash": "29d1e00f1c6afb12aef71f201a57805966ddeb7acfea1257d74c06903734afb5",
+  "action": {
+    "key": "settlement.confirm@v1",
+    "outcome": "SUCCEEDED",
+    "status": "CONFIRMED",
+    "version": 4,
+    "accountingEventId": "13000000-0000-4000-8000-000000000001"
+  },
+  "decidedAt": "2026-09-10T10:05:00Z"
+}

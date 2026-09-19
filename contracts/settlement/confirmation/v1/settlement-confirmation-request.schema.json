@@ -1,0 +1,308 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:scs:settlement:confirmation-request:v1",
+  "title": "Settlement confirmation approval request",
+  "description": "Versioned Settlement-to-Approver request containing a bounded, immutable proposed Settlement snapshot. Unknown optional properties are forward-compatible; the receiver persists only its allowlisted projection.",
+  "type": "object",
+  "x-contract-version": 1,
+  "x-forward-compatible": true,
+  "required": [
+    "schemaVersion",
+    "eventType",
+    "externalRequestId",
+    "organizationId",
+    "requesterIssuerAlias",
+    "requesterSubject",
+    "resource",
+    "snapshot",
+    "snapshotHash",
+    "requestedAt"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "eventType": {
+      "const": "settlement.confirmation.requested@v1"
+    },
+    "externalRequestId": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+      "maxLength": 36
+    },
+    "organizationId": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+      "maxLength": 36
+    },
+    "requesterIssuerAlias": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._-]{1,64}$",
+      "maxLength": 64
+    },
+    "requesterSubject": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "resource": {
+      "type": "object",
+      "required": ["type", "id", "version"],
+      "properties": {
+        "type": {
+          "const": "SETTLEMENT"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+          "maxLength": 36
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": true,
+      "maxProperties": 8
+    },
+    "snapshot": {
+      "type": "object",
+      "required": [
+        "settlementNo",
+        "status",
+        "direction",
+        "relationship",
+        "counterpartyOrganization",
+        "period",
+        "currency",
+        "grossAmount",
+        "adjustmentAmount",
+        "cashOffsetAmount",
+        "netAmount",
+        "functionalCurrency",
+        "functionalGrossAmount",
+        "functionalAdjustmentAmount",
+        "functionalCashOffsetAmount",
+        "functionalNetAmount",
+        "activeDisputeCount",
+        "itemSummary",
+        "displayItems",
+        "displayItemsTruncated"
+      ],
+      "properties": {
+        "settlementNo": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "status": {
+          "const": "PROPOSED"
+        },
+        "direction": {
+          "enum": ["payable", "receivable"]
+        },
+        "relationship": {
+          "type": "object",
+          "required": ["id", "code", "buyerOrganization", "sellerOrganization"],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+              "maxLength": 36
+            },
+            "code": {
+              "type": "string",
+              "pattern": "^[A-Z0-9][A-Z0-9._-]{0,63}$",
+              "maxLength": 64
+            },
+            "buyerOrganization": {
+              "$ref": "#/$defs/organization"
+            },
+            "sellerOrganization": {
+              "$ref": "#/$defs/organization"
+            }
+          },
+          "additionalProperties": true,
+          "maxProperties": 8
+        },
+        "counterpartyOrganization": {
+          "$ref": "#/$defs/organization"
+        },
+        "period": {
+          "type": "object",
+          "required": ["start", "end"],
+          "properties": {
+            "start": {
+              "type": "string",
+              "format": "date"
+            },
+            "end": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          "additionalProperties": true,
+          "maxProperties": 6
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$",
+          "maxLength": 3
+        },
+        "grossAmount": {
+          "$ref": "#/$defs/decimal"
+        },
+        "adjustmentAmount": {
+          "$ref": "#/$defs/decimal"
+        },
+        "cashOffsetAmount": {
+          "$ref": "#/$defs/decimal"
+        },
+        "netAmount": {
+          "$ref": "#/$defs/decimal"
+        },
+        "functionalCurrency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$",
+          "maxLength": 3
+        },
+        "functionalGrossAmount": {
+          "$ref": "#/$defs/decimal"
+        },
+        "functionalAdjustmentAmount": {
+          "$ref": "#/$defs/decimal"
+        },
+        "functionalCashOffsetAmount": {
+          "$ref": "#/$defs/decimal"
+        },
+        "functionalNetAmount": {
+          "$ref": "#/$defs/decimal"
+        },
+        "activeDisputeCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "itemSummary": {
+          "type": "object",
+          "required": ["totalCount", "countsByType", "itemSetHash"],
+          "properties": {
+            "totalCount": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10000
+            },
+            "countsByType": {
+              "type": "object",
+              "properties": {
+                "invoice": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10000
+                },
+                "service_accrual": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10000
+                },
+                "adjustment": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10000
+                },
+                "payment": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10000
+                },
+                "receipt": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10000
+                }
+              },
+              "additionalProperties": true,
+              "maxProperties": 8
+            },
+            "itemSetHash": {
+              "$ref": "#/$defs/sha256"
+            }
+          },
+          "additionalProperties": true,
+          "maxProperties": 8
+        },
+        "displayItems": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "required": ["itemType", "reference", "signedAmount", "sourceType"],
+            "properties": {
+              "itemType": {
+                "enum": ["invoice", "service_accrual", "adjustment", "payment", "receipt"]
+              },
+              "reference": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,63}$",
+                "maxLength": 64
+              },
+              "signedAmount": {
+                "$ref": "#/$defs/decimal"
+              },
+              "sourceType": {
+                "enum": ["invoice", "service_accrual", "adjustment", "payment", "receipt"]
+              }
+            },
+            "additionalProperties": true,
+            "maxProperties": 8
+          }
+        },
+        "displayItemsTruncated": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true,
+      "maxProperties": 32
+    },
+    "snapshotHash": {
+      "$ref": "#/$defs/sha256"
+    },
+    "requestedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "$defs": {
+    "decimal": {
+      "type": "string",
+      "pattern": "^-?(0|[1-9][0-9]{0,15})(\\.[0-9]{1,4})?$",
+      "maxLength": 22,
+      "description": "Canonical decimal string: no exponent, plus sign, or leading zero; at most four fractional digits. Negative zero is not valid after semantic normalization."
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{64}$",
+      "maxLength": 64
+    },
+    "organization": {
+      "type": "object",
+      "required": ["id", "code"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+          "maxLength": 36
+        },
+        "code": {
+          "type": "string",
+          "pattern": "^[A-Z0-9][A-Z0-9._-]{0,63}$",
+          "maxLength": 64
+        }
+      },
+      "additionalProperties": true,
+      "maxProperties": 8
+    }
+  },
+  "additionalProperties": true,
+  "maxProperties": 20
+}

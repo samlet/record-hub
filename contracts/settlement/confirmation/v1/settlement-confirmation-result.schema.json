@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:scs:settlement:confirmation-result:v1",
+  "title": "Settlement confirmation approval result",
+  "description": "Versioned Approver-to-Settlement terminal result. Settlement applies an APPROVED result only after the integration-specific idempotent Apply command has succeeded.",
+  "type": "object",
+  "x-contract-version": 1,
+  "x-forward-compatible": true,
+  "required": [
+    "schemaVersion",
+    "eventType",
+    "externalRequestId",
+    "organizationId",
+    "applicationId",
+    "processInstanceId",
+    "decisionVersion",
+    "decision",
+    "reasonCode",
+    "reason",
+    "resource",
+    "snapshotHash",
+    "action",
+    "decidedAt"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "eventType": {
+      "const": "settlement.confirmation.result@v1"
+    },
+    "externalRequestId": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+      "maxLength": 36
+    },
+    "organizationId": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+      "maxLength": 36
+    },
+    "applicationId": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+      "maxLength": 36
+    },
+    "processInstanceId": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+      "maxLength": 36
+    },
+    "decisionVersion": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "decision": {
+      "enum": ["APPROVED", "REJECTED", "CANCELLED", "FAILED"]
+    },
+    "reasonCode": {
+      "type": ["string", "null"],
+      "pattern": "^[A-Z][A-Z0-9_]{1,63}$",
+      "maxLength": 64
+    },
+    "reason": {
+      "type": ["string", "null"],
+      "maxLength": 500
+    },
+    "resource": {
+      "type": "object",
+      "required": ["type", "id", "status", "version"],
+      "properties": {
+        "type": {
+          "const": "SETTLEMENT"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+          "maxLength": 36
+        },
+        "status": {
+          "enum": ["PROPOSED", "CONFIRMED", "PAID", "UNKNOWN"]
+        },
+        "version": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        }
+      },
+      "additionalProperties": true,
+      "maxProperties": 8
+    },
+    "snapshotHash": {
+      "$ref": "#/$defs/sha256"
+    },
+    "action": {
+      "type": "object",
+      "required": ["key", "outcome"],
+      "properties": {
+        "key": {
+          "const": "settlement.confirm@v1"
+        },
+        "outcome": {
+          "enum": ["SUCCEEDED", "NOT_EXECUTED", "UNKNOWN"]
+        },
+        "status": {
+          "type": ["string", "null"],
+          "enum": ["CONFIRMED", "PAID", null]
+        },
+        "version": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        },
+        "accountingEventId": {
+          "type": ["string", "null"],
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+          "maxLength": 36
+        }
+      },
+      "additionalProperties": true,
+      "maxProperties": 8
+    },
+    "decidedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{64}$",
+      "maxLength": 64
+    }
+  },
+  "additionalProperties": true,
+  "maxProperties": 20
+}

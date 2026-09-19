@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "contractFamily": "settlement-confirmation",
+  "sourceRepository": "approver",
+  "sourceCommit": "41ae52056405415fef14630ed11691d8958f144c",
+  "entries": [
+    {
+      "kind": "request",
+      "eventType": "settlement.confirmation.requested@v1",
+      "schemaVersion": 1,
+      "schemaFile": "confirmation/v1/settlement-confirmation-request.schema.json",
+      "fixtureFile": "confirmation/v1/examples/settlement-confirmation-request.json",
+      "schemaSha256": "a1c4cf881df92770c97fcf9eb69dda01732d508abeba98e9d826990fcf75edae",
+      "fixtureSha256": "68830ba9db7f16d4059ef7eaaba645a40eaac6d68f0bb9504cb6e23cf432e65a",
+      "sensitiveFieldsExcluded": true
+    },
+    {
+      "kind": "result",
+      "eventType": "settlement.confirmation.result@v1",
+      "schemaVersion": 1,
+      "schemaFile": "confirmation/v1/settlement-confirmation-result.schema.json",
+      "fixtureFile": "confirmation/v1/examples/settlement-confirmation-result-approved.json",
+      "schemaSha256": "70f2b6b7e2bdd8bb18d28b778d0412c1f4495c22203f932ad22384983a44e33c",
+      "fixtureSha256": "4835aeee8f368af9f1909494157b0fb0c6e7faa28eb257f7baa7b8a5cf755b64",
+      "sensitiveFieldsExcluded": true
+    },
+    {
+      "kind": "apply-evidence",
+      "eventType": "settlement.confirm@v1",
+      "schemaVersion": 1,
+      "schemaFile": "confirmation/v1/apply-evidence.schema.json",
+      "schemaSha256": "pending-after-freeze",
+      "fixtureFile": null,
+      "sensitiveFieldsExcluded": true,
+      "ownerOnly": true
+    }
+  ],
+  "forbiddenProjectionFields": [
+    "grossAmount",
+    "netAmount",
+    "bankAccount",
+    "invoiceAttachment",
+    "sealedData"
+  ]
+}
