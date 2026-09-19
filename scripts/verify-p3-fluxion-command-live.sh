@@ -9,7 +9,7 @@ record_hub_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 fluxion_root="${FLUXION_ROOT:-/Users/xiaofeiwu/portals/fluxion}"
 cd "$record_hub_root"
 
-for command in curl createdb dropdb go jq lsof mongod mongosh nats-server nc openssl psql temporal uuidgen; do
+for command in curl createdb dropdb go jq lsof mongod mongosh nats nats-server nc openssl psql temporal uuidgen; do
   command -v "$command" >/dev/null || { echo "$command is required for P3-110" >&2; exit 2; }
 done
 [[ -x "$fluxion_root/server/gradlew" ]] || { echo "Fluxion Gradle wrapper is missing: $fluxion_root/server/gradlew" >&2; exit 2; }
@@ -402,6 +402,7 @@ done
 fault_replay_operation=""
 fault_pause_operation=""
 nats_recovery_operation=""
+dlq_followup_operation=""
 fault_final_version="$after_void_version"
 if [[ "$fault_matrix" == "1" ]]; then
   # Two Fluxion workers sharing the same durable consumer have already handled
@@ -548,23 +549,73 @@ if [[ "$fault_matrix" == "1" ]]; then
     sleep 0.2
   done
   [[ "$projected_version" == "$fault_final_version" ]] || exit 1
+
+  # Inject a malformed owner result. The Record Hub result pull runner must
+  # exhaust its bounded delivery budget, publish only safe DLQ metadata, and
+  # continue processing a valid result afterwards.
+  dlq_subject="results.fluxion.project.annotate.v1"
+  dlq_consumer="record-hub-command-results-v1"
+  dlq_marker="p3-poison-${project_id}"
+  dlq_message_id="p3-dlq-${project_id}"
+  dlq_before="$(nats --server "$nats_url" stream info --json DEAD_LETTERS | jq -r '.state.messages // .state.Msgs // 0')"
+  [[ "$dlq_before" =~ ^[0-9]+$ ]] || { echo "unable to read DEAD_LETTERS count" >&2; exit 1; }
+  nats --server "$nats_url" pub -H "Nats-Msg-Id: $dlq_message_id" "$dlq_subject" "{\"poison\":\"$dlq_marker\"}" >/dev/null
+  dlq_after="$dlq_before"
+  for _ in {1..300}; do
+    dlq_after="$(nats --server "$nats_url" stream info --json DEAD_LETTERS | jq -r '.state.messages // .state.Msgs // 0' 2>/dev/null || true)"
+    if [[ "$dlq_after" =~ ^[0-9]+$ && "$dlq_after" -gt "$dlq_before" ]]; then break; fi
+    sleep 0.2
+  done
+  [[ "$dlq_after" =~ ^[0-9]+$ && "$dlq_after" -gt "$dlq_before" ]] || {
+    echo "invalid command result did not reach DEAD_LETTERS" >&2
+    exit 1
+  }
+  nats --server "$nats_url" stream view --raw DEAD_LETTERS 20 >"$runtime_root/dead-letters.txt"
+  grep -q "$dlq_consumer" "$runtime_root/dead-letters.txt" || exit 1
+  ! grep -q "$dlq_marker" "$runtime_root/dead-letters.txt" || {
+    echo "DLQ exposed the poison result payload" >&2
+    exit 1
+  }
+
+  dlq_followup_annotation="p3-dlq-followup-${project_id}"
+  dlq_followup_key="p3-dlq-followup-${project_id}"
+  dlq_followup_payload="$(jq -cn --arg id "$dlq_followup_annotation" '{annotationId:$id,mode:"APPEND",text:"P3 DLQ followup"}')"
+  dlq_followup_http="$(submit "$dlq_followup_key" "$fault_final_version" "$dlq_followup_payload" "$runtime_root/dlq-followup.json")"
+  [[ "$dlq_followup_http" == "202" ]] || { cat "$runtime_root/dlq-followup.json" >&2; exit 1; }
+  dlq_followup_operation="$(jq -er '.operationId' "$runtime_root/dlq-followup.json")"
+  dlq_followup_status=""
+  for _ in {1..240}; do
+    dlq_followup_status="$(curl --silent --show-error --fail -H "Authorization: Bearer $token" "$record_hub_url/api/v1/commands/${dlq_followup_operation}?tenantId=$FLUXION_RECORD_HUB_TENANT_ID&workspaceId=$FLUXION_RECORD_HUB_WORKSPACE_ID" | tee "$runtime_root/dlq-followup-result.json" | jq -r '.status')"
+    [[ "$dlq_followup_status" == "SUCCEEDED" || "$dlq_followup_status" == "REJECTED" || "$dlq_followup_status" == "FAILED" ]] && break
+    sleep 0.2
+  done
+  [[ "$dlq_followup_status" == "SUCCEEDED" ]] || { cat "$runtime_root/dlq-followup-result.json" >&2; exit 1; }
+  dlq_followup_events="$(psql -At -d "$pg_db" -c "select count(*) from project_events where project_id='${project_id}' and payload_ref='record-hub-annotation:${dlq_followup_annotation}'")"
+  [[ "$dlq_followup_events" == "1" ]] || exit 1
+  fault_final_version="$((fault_final_version + 1))"
+  for _ in {1..180}; do
+    projected_version="$(mongosh --quiet "$mongo_uri" --eval "const r=db.records.find({tenantId:'${FLUXION_RECORD_HUB_TENANT_ID}',workspaceId:'${FLUXION_RECORD_HUB_WORKSPACE_ID}','source.system':'fluxion','source.id':'${project_id}'}).sort({recordVersion:-1}).limit(1).next(); print(r ? r.source.version.toString() : '')" 2>/dev/null || true)"
+    [[ "$projected_version" == "$fault_final_version" ]] && break
+    sleep 0.2
+  done
+  [[ "$projected_version" == "$fault_final_version" ]] || exit 1
 fi
 
 runtime_seconds="$(( $(date +%s) - started_epoch ))"
 jq -n \
   --arg project_id "$project_id" --arg append_operation "$append_operation" --arg void_operation "$void_operation" --arg stale_operation "$stale_operation" \
-  --arg fault_replay_operation "$fault_replay_operation" --arg fault_pause_operation "$fault_pause_operation" --arg nats_recovery_operation "$nats_recovery_operation" \
+  --arg fault_replay_operation "$fault_replay_operation" --arg fault_pause_operation "$fault_pause_operation" --arg nats_recovery_operation "$nats_recovery_operation" --arg dlq_followup_operation "$dlq_followup_operation" \
   --argjson before "$before_version" --argjson append_version "$after_append_version" --argjson void_version "$after_void_version" --argjson final_version "$fault_final_version" \
   --argjson runtime_seconds "$runtime_seconds" --argjson fault_matrix "$fault_matrix" \
-  '{gate:"P3-110",cases:{append:{status:"PASS",operationId:$append_operation},duplicate:{status:"PASS",sameOperation:true},hashConflict:{status:"PASS",http:409},void:{status:"PASS",operationId:$void_operation},versionConflict:{status:"PASS",operationId:$stale_operation,error:"project version conflict"},projection:{status:"PASS",sourceVersion:$final_version},faultMatrix:(if $fault_matrix == 1 then {ownerCompetition:{status:"PASS",sharedDurable:true},crashBeforeAckReplay:{status:"PASS",operationId:$fault_replay_operation,ownerEventAppliedOnce:true,outboxConverged:true},resultConsumerPause:{status:"PASS",operationId:$fault_pause_operation,ownerPublishedWhileConsumerDown:true,replayedAfterRestart:true},natsBacklogRecovery:{status:"PASS",operationId:$nats_recovery_operation,jetStreamStoreReused:true,ownerEventAppliedOnce:true}} else null end)},projectId:$project_id,summaryVersion:{before:$before,afterAppend:$append_version,afterVoid:$void_version,final:$final_version},runtimeSeconds:$runtime_seconds}' \
+  '{gate:"P3-110",cases:{append:{status:"PASS",operationId:$append_operation},duplicate:{status:"PASS",sameOperation:true},hashConflict:{status:"PASS",http:409},void:{status:"PASS",operationId:$void_operation},versionConflict:{status:"PASS",operationId:$stale_operation,error:"project version conflict"},projection:{status:"PASS",sourceVersion:$final_version},faultMatrix:(if $fault_matrix == 1 then {ownerCompetition:{status:"PASS",sharedDurable:true},crashBeforeAckReplay:{status:"PASS",operationId:$fault_replay_operation,ownerEventAppliedOnce:true,outboxConverged:true},resultConsumerPause:{status:"PASS",operationId:$fault_pause_operation,ownerPublishedWhileConsumerDown:true,replayedAfterRestart:true},natsBacklogRecovery:{status:"PASS",operationId:$nats_recovery_operation,jetStreamStoreReused:true,ownerEventAppliedOnce:true},deadLetter:{status:"PASS",safeMetadata:true,poisonPayloadRedacted:true,normalFollowupOperationId:$dlq_followup_operation}} else null end)},projectId:$project_id,summaryVersion:{before:$before,afterAppend:$append_version,afterVoid:$void_version,final:$final_version},runtimeSeconds:$runtime_seconds}' \
   >"$evidence_dir/results.json"
 jq -n --arg mongo_port "$mongo_port" --arg nats_port "$nats_port" --arg record_hub_port "$record_hub_port" --arg fluxion_port "$fluxion_port" --arg temporal_port "$temporal_port" --arg tenant "$FLUXION_RECORD_HUB_TENANT_ID" --arg workspace "$FLUXION_RECORD_HUB_WORKSPACE_ID" \
   '{mongoPort:($mongo_port|tonumber),natsPort:($nats_port|tonumber),recordHubPort:($record_hub_port|tonumber),fluxionPort:($fluxion_port|tonumber),temporalPort:($temporal_port|tonumber),tenantId:$tenant,workspaceId:$workspace,issuer:"redacted",audience:"record-hub-api",scope:"recordhub.command.submit",database:"temporary"}' \
   >"$evidence_dir/config-redacted.json"
 printf 'project_id=%s\nappend_operation=%s\nvoid_operation=%s\nversion_conflict_operation=%s\nsummary_version_before=%s\nsummary_version_after_void=%s\n' "$project_id" "$append_operation" "$void_operation" "$stale_operation" "$before_version" "$after_void_version" >"$evidence_dir/db-assertions/fluxion.txt"
 if [[ "$fault_matrix" == "1" ]]; then
-  printf 'fault_replay_operation=%s\nfault_replay_inbox=%s\nfault_replay_outbox=%s\nfault_pause_operation=%s\nfault_pause_inbox=%s\nfault_pause_outbox=%s\nnats_recovery_operation=%s\nnats_recovery_events=%s\nsummary_version_final=%s\n' \
-    "$fault_replay_operation" "$replay_inbox_status" "$replay_outbox_status" "$fault_pause_operation" "$pause_inbox_status" "$pause_outbox_status" "$nats_recovery_operation" "$nats_events" "$fault_final_version" \
+  printf 'fault_replay_operation=%s\nfault_replay_inbox=%s\nfault_replay_outbox=%s\nfault_pause_operation=%s\nfault_pause_inbox=%s\nfault_pause_outbox=%s\nnats_recovery_operation=%s\nnats_recovery_events=%s\ndlq_before=%s\ndlq_after=%s\ndlq_followup_operation=%s\ndlq_followup_events=%s\nsummary_version_final=%s\n' \
+    "$fault_replay_operation" "$replay_inbox_status" "$replay_outbox_status" "$fault_pause_operation" "$pause_inbox_status" "$pause_outbox_status" "$nats_recovery_operation" "$nats_events" "$dlq_before" "$dlq_after" "$dlq_followup_operation" "$dlq_followup_events" "$fault_final_version" \
     >>"$evidence_dir/db-assertions/fluxion.txt"
 fi
 write_manifest PASS

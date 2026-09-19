@@ -107,7 +107,7 @@ Record Hub 与 Fluxion worker 进程共同运行；单测不能替代 Gate B。
 | C-009 | Record Hub result consumer 停止 | owner result Outbox/JetStream 可见；恢复后 receipt 收敛（live fault matrix 已覆盖） |
 | C-010 | NATS outage | owner/Record Hub 本地事实保留；恢复后 backlog 清空（live fault matrix 已覆盖） |
 | C-011 | 非法 owner/action/tenant/workspace | fail closed；不泄露资源存在性 |
-| C-012 | slow/poison message | 有界重试后 DLQ；其他正常消息继续推进 |
+| C-012 | slow/poison message | 有界重试后 DLQ；其他正常消息继续推进（live fault matrix 已覆盖） |
 | C-013 | 两个 owner worker 竞争 | unique/CAS 保证一条领域副作用（live fault matrix 已覆盖） |
 | C-014 | 两个 Record Hub result worker 竞争 | operation revision 单调，终态唯一 |
 
