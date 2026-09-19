@@ -19,3 +19,15 @@
 - 后续重试条件：在本 gate 基础上加入故障注入与重启控制，继续使用
   `deploy/local/p3/fluxion-project-annotate-policy.json` 和 tenant/workspace 精确映射，保存同一格式的
   evidence directory。
+
+## P3-212/P3-213 — Fluxion ↔ Approver approval pilot E2E
+
+- 当前状态：`SKIPPED`（2026-09-19）。本批次已完成 request/result contract、Fluxion request/outbox/Inbox、Approver
+  `FLUXION` handler/materializer/connector/result delivery、Fluxion result Inbox/Temporal update Outbox 和默认关闭
+  fallback，但本机尚未准备一套可复现的 published Approver process、tenant/org/requester mapping、Dex workload
+  token、真实 Temporal child workflow 与 API/worker 四进程隔离拓扑。
+- 已验证：Fluxion Gradle 全量测试通过；Approver Maven 全量测试通过；Fluxion V1→V10 临时 PostgreSQL migration
+  和 Approver V31 静态迁移构建通过；`make p3-contract-gate` 通过；所有代码提交已推送，见 task breakdown 的 SHA。
+- 不以 fake Approver、内存 store、手工改库或直接 Temporal CLI 代替 live Gate。P3-212 的五类终态和 P3-213 的
+  timeout/late/restart/reconciliation 必须在 published process + Dex/service principal + real Temporal/NATS
+  拓扑准备好后重试；当前跳过不表示业务 E2E 已通过。

@@ -53,19 +53,19 @@
 
 | ID | 仓库 | 任务 | 状态 | 验收 |
 | --- | --- | --- | --- | --- |
-| P3-200 | 四仓库 | 冻结 dispatch approval request/result v1 contract | TODO | schema/fixture/error/manifest mirror 通过 |
-| P3-201 | Fluxion | 增 external approval request/outbox/result Inbox migration | TODO | single-active generation、decision version unique、tenant index |
-| P3-202 | Fluxion | 低置信度 Activity 写稳定 request + Outbox | TODO | Temporal history 只有 ID/hash；Activity retry 不创建第二申请 |
-| P3-203 | Fluxion | Approver HTTP client/sender | TODO | 独立 workload credential、timeout、typed error、receipt recovery |
-| P3-204 | Approver | 增 `FLUXION` request contract handler | TODO | registry 精确匹配，unknown/duplicate fail closed |
-| P3-205 | Approver | 配置 tenant/org/process/requester mapping | TODO | wire body 不能覆盖服务端 mapping；跨租户拒绝 |
-| P3-206 | Approver | materialize immutable Application/process fixture | TODO | stable application/business key；bounded safe snapshot |
-| P3-207 | Approver | 增 Fluxion connector Action | TODO | proposal hash/generation 重验；错误分类与 retry policy 正确 |
-| P3-208 | Approver | 增 result contract/delivery/reconciliation handler | TODO | 复用 generic dispatcher，无第二套扫描器 |
-| P3-208a | Approver | 扩展 `WITHDRAWN/EXPIRED` 终态 | TODO | enum/schema/旧 connector/reconciliation 向后兼容回归通过 |
-| P3-209 | Fluxion | integration-only result endpoint/Inbox | TODO | service principal、decision version/hash、晚到结果保护 |
-| P3-210 | Fluxion | result → Temporal update Outbox | TODO | transaction 后异步 update；重复 delivery 不重复推进 |
-| P3-211 | Fluxion | feature flag 与本地 human task fallback | TODO | 默认关闭；单 generation 不双写；关闭不遗弃在途申请 |
+| P3-200 | 四仓库 | 冻结 dispatch approval request/result v1 contract | DONE | 四仓库 schema/fixture/error/manifest byte-identical；`make p3-contract-gate`；Approver `ef010af`、Fluxion `91df9e9`、Bids `60fd395`、Record Hub `4d7658c` |
+| P3-201 | Fluxion | 增 external approval request/outbox/result Inbox migration | DONE | Fluxion `104edac`；V9 在临时 PostgreSQL 从 V1 全量应用；single-active generation、decision version unique、tenant/workspace index；V10 update outbox 随后加入 |
+| P3-202 | Fluxion | 低置信度 Activity 写稳定 request + Outbox | PARTIAL | `104edac` Activity stable `apr-...` ID、proposal/snapshot hash、retry 幂等单测通过；Temporal live history/真实 Approver 回路留 P3-212/213 |
+| P3-203 | Fluxion | Approver HTTP client/sender | DONE | Fluxion `1e1db27`；独立 headers、Idempotency-Key、timeout、2xx/4xx/5xx typed error、lease/retry relay 测试通过 |
+| P3-204 | Approver | 增 `FLUXION` request contract handler | DONE | Approver `848f785`；registry 精确匹配、严格 unknown-field/hash/generation/resource 校验，未映射请求 fail closed |
+| P3-205 | Approver | 配置 tenant/org/process/requester mapping | DONE | Approver `d5f1e64`；`scripts/bootstrap-fluxion-approval-mapping.sql` 幂等配置 connection/mapping/binding，wire body 不覆盖 server mapping，requester 未映射直接失败 |
+| P3-206 | Approver | materialize immutable Application/process fixture | DONE | Approver `888ecb2`；bounded snapshot projector 增加 workflow/generation/proposal 字段，通用 materializer 继续使用稳定 business key；真实 published process fixture 留 live gate |
+| P3-207 | Approver | 增 Fluxion connector Action | DONE | Approver `be7f74e`；`fluxion.dispatch.apply@v1` 严格重验 proposal hash/generation/resource，stable action key 与错误分类单测通过 |
+| P3-208 | Approver | 增 result contract/delivery/reconciliation handler | DONE | Approver `888ecb2`；Fluxion result contract + generic result dispatcher handler，复用现有 outbox/reconciliation，不新增扫描器 |
+| P3-208a | Approver | 扩展 `WITHDRAWN/EXPIRED` 终态 | DONE | Approver `888ecb2`；V31 decision constraint、enum、Fluxion handler 支持扩展终态，旧 handler 测试回归通过 |
+| P3-209 | Fluxion | integration-only result endpoint/Inbox | DONE | Fluxion `bbf37b2`；`/api/integrations/fluxion/approval-results` 仅 service token，tenant/workspace/resource/version/workflow/hash 校验，duplicate/late conflict fail closed |
+| P3-210 | Fluxion | result → Temporal update Outbox | DONE | Fluxion `5038d06`；Inbox 与 update Outbox 同事务，stable `(externalRequestId, decisionVersion)`，worker relay 异步 update、retry/dead/ACK-loss 单测 |
+| P3-211 | Fluxion | feature flag 与本地 human task fallback | DONE | Fluxion `1321285`；默认关闭；开启时低置信度不双写本地任务；旧 history 默认字段兼容，关闭不影响本地 fallback |
 | P3-212 | Approver/Fluxion | 五类终态 E2E | TODO | approved/rejected/withdrawn-or-cancelled/expired/failed 全通过 |
 | P3-213 | Approver/Fluxion | timeout、晚到、重启、reconciliation E2E | TODO | 旧 generation 不作用于新 Project；finding 可见可审计 |
 | P3-214 | Record Hub | 审批关联安全投影 | TODO | Application/Project ref、状态、freshness；无客户/候选档案 |
