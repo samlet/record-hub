@@ -178,6 +178,9 @@ p3-phase3-report:
 p4-baseline:
 	RECORD_HUB_P4_BASELINE_BUILD=1 ./scripts/bootstrap-p4-baseline.sh
 
+p4-batch4:
+	./scripts/verify-p4-batch4.sh
+
 p4-contract-inventory:
 	./scripts/verify-p4-contract-inventory.sh
 

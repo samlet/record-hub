@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "phase": "4",
+  "batch": "4",
+  "name": "operations-security",
+  "liveRequired": true,
+  "cases": [
+    {"id": "P4-400", "name": "tenant-organization-identity-acl-negative-matrix", "owners": ["record-hub", "approver", "fluxion", "bids"]},
+    {"id": "P4-401", "name": "bounded-metrics-and-slo-snapshot", "owners": ["record-hub", "approver", "fluxion", "bids"]},
+    {"id": "P4-402", "name": "approval-association-operator-console", "owners": ["record-hub"]},
+    {"id": "P4-403", "name": "secret-pii-sealed-data-evidence-scan", "owners": ["record-hub", "approver", "fluxion", "bids"]},
+    {"id": "P4-404", "name": "rotation-recovery-reconciliation-runbook", "owners": ["record-hub", "approver", "fluxion", "bids"]}
+  ],
+  "livePrerequisites": [
+    "isolated tenant-a/tenant-b and organization-a/organization-b identities",
+    "running Record Hub, Fluxion, Bids, Approver, MongoDB, PostgreSQL, NATS JetStream, Conductor, and Temporal",
+    "operator credentials for Viewer, Editor, and Operator roles",
+    "dedicated load/fault/evidence capture workspace"
+  ]
+}

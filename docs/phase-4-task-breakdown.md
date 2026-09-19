@@ -57,7 +57,7 @@ manifest 必须记录当次实际 commit 和 artifact checksum。
 
 | ID | 仓库 | 任务 | 依赖 | 状态 | 验收 |
 | --- | --- | --- | --- | --- | --- |
-| P4-400 | 四仓库 | tenant/organization/identity/ACL negative matrix | P4-205,305 | TODO | cross-scope 全拒绝且不泄露资源存在性 |
+| P4-400 | 四仓库 | tenant/organization/identity/ACL negative matrix | P4-205,305 | PARTIAL | [closure](phase-4-batch4-p4-400.md)；四 owner 静态拒绝边界 PASS，隔离身份 live SKIPPED |
 | P4-401 | 四仓库 | 指标、SLO snapshot 与有限基数检查 | P4-103,205,305 | TODO | terminal/materialization/delivery/lag/backlog/dead/finding/recovery 可测 |
 | P4-402 | Record Hub | approval association/operator/reconciliation UI | P4-204,304,401 | TODO | Viewer/Editor/Operator 权限分离；无直接改终态入口 |
 | P4-403 | 四仓库 | secret/PII/Bids sealed-data evidence scan | P4-400 | TODO | Git、log、history、DLQ、metrics、evidence 扫描无发现 |
