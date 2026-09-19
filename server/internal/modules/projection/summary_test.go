@@ -65,6 +65,24 @@ func TestSummaryHandlersAcceptOnlyTheirV1SafePayloads(t *testing.T) {
 				"version":           4,
 			},
 		},
+		{
+			name:         "approval",
+			kind:         SummaryApproval,
+			sourceSystem: "approver",
+			eventType:    "approver.dispatch-approval.summary-changed",
+			payload: map[string]any{
+				"applicationRef":     "approver:APPLICATION:apr-p3-fluxion-0001",
+				"projectRef":         "fluxion:PROJECT:11111111-1111-1111-1111-111111111111",
+				"status":             "APPROVED",
+				"workflowRef":        map[string]any{"workflowId": "project-11111111", "runId": "run-p3-0001"},
+				"proposalHash":       "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+				"dispatchGeneration": 3,
+				"decisionVersion":    1,
+				"freshness":          map[string]any{"sourceEventId": "apr-result-p3-fluxion-0001", "sourceVersion": 1, "observedAt": "2026-09-19T00:00:00Z"},
+				"updatedAt":          "2026-09-19T00:00:00Z",
+				"version":            1,
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -191,6 +209,7 @@ func TestM7SummaryFieldBoundaryRejectsSensitiveFieldsForEveryProducer(t *testing
 		{kind: SummaryApplication, sourceSystem: "approver", eventType: "approver.application.summary-changed"},
 		{kind: SummaryProject, sourceSystem: "fluxion", eventType: "fluxion.project.summary-changed"},
 		{kind: SummaryTender, sourceSystem: "bids", eventType: "bids.tender.summary-changed"},
+		{kind: SummaryApproval, sourceSystem: "approver", eventType: "approver.dispatch-approval.summary-changed"},
 	}
 	for _, test := range tests {
 		t.Run(string(test.kind), func(t *testing.T) {
@@ -280,6 +299,7 @@ func TestSummarySchemaContentHashesMatchManifest(t *testing.T) {
 		summaries.Application: "sha256:77b957960d1fd71a75d8659febb42c1e941a120ba71212a01562d60f17b0b0bf",
 		summaries.Project:     "sha256:07a245eb4c472cef26dd0e7ce32ec15d3278a4f6f633221157d97372659d17b4",
 		summaries.Tender:      "sha256:b4b314d9f83d5ce4ab7d2a882ea677b2765adca2dfc29798930e61567bbf79a3",
+		summaries.Approval:    "sha256:6a242039a4cb5afc413167c6e9d685b207e8ba02176535c2ee3757cc89752c5d",
 	}
 	for kind, want := range expected {
 		raw, err := summaries.Schema(kind)

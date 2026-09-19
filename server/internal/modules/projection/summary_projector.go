@@ -200,8 +200,8 @@ func (projector *SummaryProjector) Handle(ctx context.Context, subject string, r
 			return DeterministicError(errors.New("summary payload version is invalid"), "summary payload version rejected")
 		}
 		recordVersion = payload.Version
-		tableID = projectionTableID(envelope.SourceSystem)
-		schemaID = summarySchemaID(envelope.SourceSystem)
+		tableID = projectionTableIDForEvent(envelope.SourceSystem, envelope.EventType)
+		schemaID = summarySchemaIDForEvent(envelope.SourceSystem, envelope.EventType)
 	}
 	consumer := consumerForSource(envelope.SourceSystem)
 	if consumer == "" {
@@ -258,6 +258,13 @@ func consumerForSource(source string) string {
 
 func projectionTableID(source string) string { return "projection-" + source + "-summary" }
 
+func projectionTableIDForEvent(source, eventType string) string {
+	if source == "approver" && eventType == "approver.dispatch-approval.summary-changed" {
+		return "projection-approver-approval-summary"
+	}
+	return projectionTableID(source)
+}
+
 func projectionRecordID(tenantID, workspaceID, sourceSystem, aggregateType, aggregateID string) string {
 	digest := sha256.Sum256([]byte(strings.Join([]string{tenantID, workspaceID, sourceSystem, aggregateType, aggregateID}, "\x00")))
 	return "projection-" + hex.EncodeToString(digest[:])[:40]
@@ -279,6 +286,13 @@ func summarySchemaID(source string) string {
 	default:
 		return "urn:record-hub:summary:unknown:v1"
 	}
+}
+
+func summarySchemaIDForEvent(source, eventType string) string {
+	if source == "approver" && eventType == "approver.dispatch-approval.summary-changed" {
+		return summaries.ApprovalSchemaID
+	}
+	return summarySchemaID(source)
 }
 
 func (envelope summaryEventEnvelope) String() string {

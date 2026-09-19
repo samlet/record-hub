@@ -21,6 +21,13 @@
       "schemaFile": "tender-summary-v1.schema.json",
       "fixtureFile": "testdata/valid/tender-summary-v1.json",
       "schemaContentHash": "sha256:024524fa5b60f8a8deac700bf19745c121f450439532ba22d7ab0f882cad1fff"
+    },
+    {
+      "kind": "approval",
+      "schemaId": "urn:record-hub:summary:approval:v1",
+      "schemaFile": "approval-summary-v1.schema.json",
+      "fixtureFile": "testdata/valid/approval-summary-v1.json",
+      "schemaContentHash": "sha256:89a735be5cacc2a09ff24c88f4b76965096507faeb30a9cd9d3106622d250b5b"
     }
   ]
 }

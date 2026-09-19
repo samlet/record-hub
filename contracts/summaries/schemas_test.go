@@ -6,7 +6,7 @@ import (
 )
 
 func TestSummaryContractAssetsAreAvailableAndSafe(t *testing.T) {
-	for _, kind := range []Kind{Application, Project, Tender} {
+	for _, kind := range []Kind{Application, Project, Tender, Approval} {
 		t.Run(string(kind), func(t *testing.T) {
 			rawSchema, err := Schema(kind)
 			if err != nil {

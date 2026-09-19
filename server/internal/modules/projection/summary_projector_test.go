@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type projectorInbox struct{ event InboxEvent }
@@ -57,6 +59,58 @@ func TestSummaryProjectorBuildsScopedProjectionApply(t *testing.T) {
 	}
 	if apply.Record.ID == "app-1" || apply.Audit.ResourceID != apply.Record.ID {
 		t.Fatalf("projection record identity = %q audit=%q", apply.Record.ID, apply.Audit.ResourceID)
+	}
+}
+
+func TestSummaryProjectorBuildsSafeApprovalAssociationProjection(t *testing.T) {
+	registry := NewHandlerRegistry()
+	if err := RegisterSummaryHandlers(registry); err != nil {
+		t.Fatal(err)
+	}
+	repository := &projectorRepository{}
+	projector, err := NewSummaryProjector(registry, &projectorInbox{}, repository, "workspace-approval")
+	if err != nil {
+		t.Fatal(err)
+	}
+	projector.now = func() time.Time { return time.Date(2026, time.September, 19, 1, 0, 0, 0, time.UTC) }
+	payload := map[string]any{
+		"applicationRef":     "approver:APPLICATION:apr-p3-fluxion-0001",
+		"projectRef":         "fluxion:PROJECT:11111111-1111-1111-1111-111111111111",
+		"status":             "APPROVED",
+		"workflowRef":        map[string]any{"workflowId": "project-11111111", "runId": "run-p3-0001"},
+		"proposalHash":       "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		"dispatchGeneration": 3,
+		"decisionVersion":    1,
+		"freshness":          map[string]any{"sourceEventId": "apr-result-p3-fluxion-0001", "sourceVersion": 1, "observedAt": "2026-09-19T00:00:00Z"},
+		"updatedAt":          "2026-09-19T00:00:00Z",
+		"version":            1,
+	}
+	raw, err := json.Marshal(map[string]any{
+		"eventId": "018f47a5-8b77-7c5a-9c56-38db8aa4b181", "kind": "event", "eventType": "approver.dispatch-approval.summary-changed", "schemaVersion": 1,
+		"sourceSystem": "approver", "tenantId": "tenant-1", "aggregateType": "Approval", "aggregateId": "apr-p3-fluxion-0001", "aggregateVersion": 1,
+		"occurredAt": "2026-09-19T00:00:00Z", "payload": payload,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := projector.Handle(context.Background(), "events.approver.dispatch-approval.summary-changed.v1", raw); err != nil {
+		t.Fatalf("Handle() error = %v", err)
+	}
+	apply := repository.applied
+	if apply.Record.TableID != "projection-approver-approval-summary" || apply.Record.SchemaID != "urn:record-hub:summary:approval:v1" {
+		t.Fatalf("approval projection target = table %q schema %q", apply.Record.TableID, apply.Record.SchemaID)
+	}
+	if apply.Record.Source == nil || apply.Record.Source.ID != "apr-p3-fluxion-0001" || apply.Record.Source.Type != "approval" {
+		t.Fatalf("approval projection source = %+v", apply.Record.Source)
+	}
+	var document map[string]any
+	if err := bson.Unmarshal(apply.Record.Data, &document); err != nil {
+		t.Fatal(err)
+	}
+	for _, forbidden := range []string{"customer", "candidate", "workerRef", "address", "phone", "bidAmount", "fileUrl"} {
+		if _, present := document[forbidden]; present {
+			t.Fatalf("approval projection contains forbidden field %q: %#v", forbidden, document)
+		}
 	}
 }
 

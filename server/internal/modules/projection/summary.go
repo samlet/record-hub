@@ -18,6 +18,7 @@ const (
 	SummaryApplication SummaryKind = "application"
 	SummaryProject     SummaryKind = "project"
 	SummaryTender      SummaryKind = "tender"
+	SummaryApproval    SummaryKind = "approval"
 )
 
 var (
@@ -120,6 +121,7 @@ func RegisterSummaryHandlers(registry *HandlerRegistry) error {
 		{SummaryApplication, "approver", "approver.application.summary-changed"},
 		{SummaryProject, "fluxion", "fluxion.project.summary-changed"},
 		{SummaryTender, "bids", "bids.tender.summary-changed"},
+		{SummaryApproval, "approver", "approver.dispatch-approval.summary-changed"},
 	}
 	for _, entry := range entries {
 		handler, err := NewSummaryHandler(entry.kind)
@@ -147,6 +149,8 @@ func summarySpecFor(kind SummaryKind) (summarySpec, error) {
 		sourceSystem, eventType = "fluxion", "fluxion.project.summary-changed"
 	case SummaryTender:
 		sourceSystem, eventType = "bids", "bids.tender.summary-changed"
+	case SummaryApproval:
+		sourceSystem, eventType = "approver", "approver.dispatch-approval.summary-changed"
 	default:
 		return summarySpec{}, ErrSummaryKindUnknown
 	}

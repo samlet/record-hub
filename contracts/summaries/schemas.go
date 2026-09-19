@@ -13,12 +13,14 @@ const (
 	Application Kind = "application"
 	Project     Kind = "project"
 	Tender      Kind = "tender"
+	Approval    Kind = "approval"
 )
 
 const (
 	ApplicationSchemaID = "urn:record-hub:summary:application:v1"
 	ProjectSchemaID     = "urn:record-hub:summary:project:v1"
 	TenderSchemaID      = "urn:record-hub:summary:tender:v1"
+	ApprovalSchemaID    = "urn:record-hub:summary:approval:v1"
 )
 
 var ErrUnknownKind = errors.New("unknown summary kind")
@@ -36,6 +38,8 @@ func Schema(kind Kind) ([]byte, error) {
 		filename = "project-summary-v1.schema.json"
 	case Tender:
 		filename = "tender-summary-v1.schema.json"
+	case Approval:
+		filename = "approval-summary-v1.schema.json"
 	default:
 		return nil, ErrUnknownKind
 	}
@@ -55,6 +59,8 @@ func SchemaID(kind Kind) (string, error) {
 		return ProjectSchemaID, nil
 	case Tender:
 		return TenderSchemaID, nil
+	case Approval:
+		return ApprovalSchemaID, nil
 	default:
 		return "", ErrUnknownKind
 	}
@@ -70,6 +76,8 @@ func Fixture(kind Kind) ([]byte, error) {
 		filename = "testdata/valid/project-summary-v1.json"
 	case Tender:
 		filename = "testdata/valid/tender-summary-v1.json"
+	case Approval:
+		filename = "testdata/valid/approval-summary-v1.json"
 	default:
 		return nil, ErrUnknownKind
 	}
