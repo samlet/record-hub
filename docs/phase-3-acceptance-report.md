@@ -62,3 +62,5 @@ schema reader 或 Fluxion 本地审批 fallback。
 在 P3-405、P3-406、P3-408 仍为 `SKIPPED` 且 P3-407 为 `PARTIAL` 的情况下，下一阶段应继续
 以 Beta-preparation 处理，不应关闭兼容 fallback 或宣称生产容量。完成表中重试条件并重新提交
 对应 gate 后，才可重新评估完整 Beta readiness。
+
+后续收口、真实审批切片和 Beta 发布门见 [Phase 4 Integration Beta 技术方案](phase-4-design.md)。

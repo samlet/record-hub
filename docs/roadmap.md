@@ -2,8 +2,8 @@
 
 本文件描述按能力递进的长期路线，不等同于发布版本号。MVP 已在完成 Phase 0-2 核心能力后
 有条件收口；下一发布周期的取舍、需求和批次见[下一期方案评估](phase-2-evaluation.md)与
-[下一期需求设计](phase-2-requirements.md)。该周期会先补齐生产准入基线，再以一个低风险
-动作试点 Phase 3，并为 Phase 4 的审批集成建立独立服务 connector。
+[下一期需求设计](phase-2-requirements.md)。Phase 3 已完成首批真实系统接入和审批试点；Phase 4
+将收口其 live 缺口，并把独立服务 connector 提升为受限租户可运行的 Integration Beta。
 
 ## Phase 0：契约与本地基线
 
@@ -51,17 +51,19 @@
 - 将一个低风险操作从表格路由回 owner system。
 - 禁止直接编辑外部状态字段。
 
-## Phase 4：审批集成
+## Phase 4：Integration Beta
 
-- Record Hub 作为审批上下文投影，不取代 Approver Application snapshot。
-- Fluxion/Bids 审批 request/result 通过既有 Approver connector 基座。
-- 表格提供审批关联和状态速查，但审批动作只在 Approver 执行。
+详细边界和发布门见 [Phase 4 技术方案](phase-4-design.md)。
 
-## Phase 5：生产准入
+- 收口 Phase 3 的 credential rotation、备份恢复、混合容量和升级回滚 live gate。
+- 将 Fluxion → Approver 试点提升为可灰度、可对账、可降级的 Beta 集成。
+- 为 Bids 增加一条不含密封投标、报价、合同或付款正文的低风险 Approver 审批切片。
+- Record Hub 提供审批关联、状态速查和 SLO 读模型，但不取代 Approver Application snapshot。
+- 完成多租户负向矩阵、真实 RPO/RTO、rolling rollback 和 Beta 验收报告。
 
-- 多租户、行列字段授权和 Bids 密封数据负向测试。
-- JetStream 集群故障、重放、积压和容量测试。
-- MongoDB transaction、备份恢复和索引容量测试。
-- Dex issuer、JWKS、client rotation 和上游 IdP 故障测试。
-- Outbox/Inbox、重复、乱序、gap、响应丢失和跨进程重启测试。
-- Runbook、指标、告警、RPO/RTO 和审计签字。
+## Phase 5：生产 GA 与规模化
+
+- 正式 workload issuer、TLS、secret manager、HA 数据层和生产备份策略。
+- 集群级故障切换、容量扩展、长期 retention 和灾备演练。
+- connector 生命周期、兼容窗口、发布治理和自助接入规范。
+- 正式安全/合规/运维签字；依据实际需求评估多地域，而不预先承诺。

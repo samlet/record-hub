@@ -57,6 +57,8 @@ HTTP 契约以 [`api/openapi.yaml`](api/openapi.yaml) 为准。`make generate-cl
 - [Phase 3 真实业务系统接入需求](docs/phase-3-requirements.md)
 - [Phase 3 任务分解](docs/phase-3-task-breakdown.md)
 - [Phase 3 验收计划](docs/phase-3-acceptance-plan.md)
+- [Phase 3 验收报告](docs/phase-3-acceptance-report.md)
+- [Phase 4 Integration Beta 技术方案](docs/phase-4-design.md)
 - [原生隔离验收拓扑](deploy/local/isolated/README.md)
 - [参考资料](docs/references.md)
 - [ADR-0001：独立仓库与事实所有权](docs/adr/0001-independent-service-and-data-ownership.md)
