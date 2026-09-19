@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "gate": "P4-002",
   "status": "PASS",
-  "generatedAt": "2026-09-19T18:06:53.201973Z",
+  "generatedAt": "2026-09-19T18:10:28.522009Z",
   "sharedMirrors": {
     "commands": "PASS",
     "approvals": "PASS"
@@ -11,7 +11,7 @@
     {
       "repository": "record-hub",
       "family": "summaries",
-      "commit": "0e86f71e2373e281391bd60e5c771374f8814f19",
+      "commit": "46ee6ebdcca8365200be6c313867948a7adcde2f",
       "rootKind": "summaries",
       "contracts": [
         {
