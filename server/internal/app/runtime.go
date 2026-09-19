@@ -153,6 +153,8 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 	operationsService := projection.NewOperationsService(projection.NewMongoProjectionRepository(database), authorizer).WithMetrics(metrics).WithSLOThresholds(projection.ProjectionSLOThresholds{BacklogWarning: cfg.ProjectionSLO.BacklogWarning, LagWarning: cfg.ProjectionSLO.LagWarning, FailureBudget: cfg.ProjectionSLO.FailureBudget})
 	associationRepository := projection.NewMongoAssociationRepository(database)
 	associationService := projection.NewAssociationService(associationRepository, authorizer)
+	tenderAssociationRepository := projection.NewMongoTenderApplicationAssociationRepository(database)
+	tenderAssociationService := projection.NewTenderApplicationAssociationService(tenderAssociationRepository, authorizer)
 	generations := projection.NewMappingGenerationRegistry()
 	generationBuilder := projection.NewMappingGenerationBuilder(catalogRepo, schemaRepo)
 	rebuildService := projection.NewProjectionRebuildService(rebuildRepo, generationBuilder, generations, authorizer, rebuildReceipts, auditWriter).WithReplayDependencies(eventArchive, readPointers)
@@ -163,7 +165,7 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 	deps.commands = commands.NewHTTPHandler(commandService)
 	deps.commandOps = commands.NewOperationsHTTPHandler(commandOperationsService)
 	deps.operations = projection.NewOperationsHTTPHandler(operationsService)
-	deps.associations = projection.NewAssociationHTTPHandler(associationService)
+	deps.associations = projection.NewCombinedAssociationHTTPHandler(associationService, tenderAssociationService)
 	deps.rebuild = projection.NewProjectionRebuildHTTPHandler(rebuildService)
 	deps.feed = records.NewFeedHTTPHandler(feed, authorizer, records.FeedHTTPOptions{})
 
@@ -256,6 +258,9 @@ func ensureMongoIndexes(database *mongo.Database) error {
 		return err
 	}
 	if err := projection.NewMongoAssociationRepository(database).EnsureIndexes(ctx); err != nil {
+		return err
+	}
+	if err := projection.NewMongoTenderApplicationAssociationRepository(database).EnsureIndexes(ctx); err != nil {
 		return err
 	}
 	if err := commands.NewMongoStore(database).EnsureIndexes(ctx); err != nil {

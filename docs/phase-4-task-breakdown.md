@@ -1,7 +1,7 @@
 # Phase 4 Integration Beta 任务分解
 
 - 日期：2026-09-20
-- 状态：Batch 0 已完成；Batch 1 静态收口完成；Batch 2 静态收口完成，live 验收待隔离环境
+- 状态：Batch 0 已完成；Batch 1/2 静态收口完成；Batch 3 静态收口完成，live 验收待隔离环境
 - 方案：[phase-4-design.md](phase-4-design.md)
 - 需求：[phase-4-requirements.md](phase-4-requirements.md)
 - 验收：[phase-4-acceptance-plan.md](phase-4-acceptance-plan.md)
@@ -46,12 +46,12 @@ manifest 必须记录当次实际 commit 和 artifact checksum。
 
 | ID | 仓库 | 任务 | 依赖 | 状态 | 验收 |
 | --- | --- | --- | --- | --- | --- |
-| P4-300 | Approver/Bids | 招标准备发布 approval contract 与 allowlist fixture | P4-002 | TODO | strict schema；高敏字段/unknown/oversize fixtures 全拒绝 |
-| P4-301 | Bids | request/result Inbox/Outbox migration 与 repository | P4-300 | TODO | PostgreSQL 空库/升级库、unique/scope/version/lease/index PASS |
-| P4-302 | Bids/Approver | request relay、materializer 与 result dispatcher | P4-301 | TODO | stable ID/hash、response-loss recovery、terminal replay PASS |
-| P4-303 | Bids | result apply、单一审批 authority 与 Conductor task-completion Outbox | P4-302 | TODO | Inbox/domain/task Outbox 同事务；external/local 按 generation 二选一；task retry 复用 request ID |
-| P4-304 | Record Hub | Tender↔Application association projection/API | P4-204,302 | TODO | 只读安全摘要、org/tenant auth、gap/conflict/finding PASS |
-| P4-305 | 四仓库 | Bids approval live/fault/security matrix | P4-300..304 | TODO | duplicate/restart/timeout/version/cross-org/sealed-data cases 全 PASS |
+| P4-300 | Approver/Bids | 招标准备发布 approval contract 与 allowlist fixture | P4-002 | PARTIAL | [closure](phase-4-batch3-p4-300.md)；静态 PASS，live SKIPPED |
+| P4-301 | Bids | request/result Inbox/Outbox migration 与 repository | P4-300 | PARTIAL | [closure](phase-4-batch3-p4-301.md)；静态 PASS，live SKIPPED |
+| P4-302 | Bids/Approver | request relay、materializer 与 result dispatcher | P4-301 | PARTIAL | [closure](phase-4-batch3-p4-302.md)；静态 PASS，live SKIPPED |
+| P4-303 | Bids | result apply、单一审批 authority 与 Conductor task-completion Outbox | P4-302 | PARTIAL | [closure](phase-4-batch3-p4-303.md)；静态 PASS，live SKIPPED |
+| P4-304 | Record Hub | Tender↔Application association projection/API | P4-204,302 | PARTIAL | [closure](phase-4-batch3-p4-304.md)；静态 PASS，live SKIPPED |
+| P4-305 | 四仓库 | Bids approval live/fault/security matrix | P4-300..304 | PARTIAL | [closure](phase-4-batch3-p4-305.md)；静态 PASS，live SKIPPED |
 
 ## Batch 4：运维与安全
 

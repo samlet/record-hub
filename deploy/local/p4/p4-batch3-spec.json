@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "phase": "4",
+  "batch": "3",
+  "name": "Bids Approval Pilot",
+  "liveRequired": true,
+  "cases": [
+    {"id":"contract-allowlist","owner":"approver,bids","liveRequired":true},
+    {"id":"migration-inbox-outbox","owner":"bids","liveRequired":true},
+    {"id":"relay-materializer","owner":"bids,approver","liveRequired":true},
+    {"id":"result-authority","owner":"bids","liveRequired":true},
+    {"id":"tender-application-association","owner":"record-hub","liveRequired":true},
+    {"id":"fault-security-matrix","owner":"four-repositories","liveRequired":true}
+  ]
+}
