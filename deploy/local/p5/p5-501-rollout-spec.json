@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "phase": "5",
+  "task": "P5-501",
+  "liveRequired": true,
+  "prerequisite": "P5-500-candidate-pass",
+  "rollout": {
+    "strategy": "staged-expansion",
+    "initialScope": "one-approved-tenant-workspace",
+    "observationWindow": "complete-retry-retention-reconciliation-cycle",
+    "rollbackWindow": "explicit-and-audited",
+    "audit": "operator-action-and-artifact-digest"
+  },
+  "stopConditions": [
+    "any-gate-not-pass",
+    "cross-scope-success",
+    "duplicate-terminal-side-effect",
+    "sealed-data-leak",
+    "slo-or-rpo-rto-breach",
+    "rollback-drill-failure"
+  ],
+  "forbidden": [
+    "rollout-without-candidate",
+    "all-tenant-first-deploy",
+    "unbounded-expansion",
+    "un-audited-rollback"
+  ],
+  "currentDecision": "DO_NOT_ROLLOUT"
+}
