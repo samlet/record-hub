@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "phase": "5",
+  "task": "P5-202",
+  "owner": "four-workflow-platform-owners",
+  "liveRequired": true,
+  "capacityBaseline": {
+    "commandOperations": 10000,
+    "inFlightOperations": 1000,
+    "perOwnerInboxHistory": 10000,
+    "steadyMessagesPerSecond": 50,
+    "burstMessagesPerSecond": 200,
+    "concurrentApprovals": 100,
+    "consumerPauseMinutes": 10
+  },
+  "sloSignals": [
+    "terminal-latency-p50-p95-p99",
+    "projection-backlog",
+    "projection-lag-age",
+    "delivery-retry-and-dead",
+    "reconciliation-findings",
+    "availability",
+    "error-budget"
+  ],
+  "recovery": {
+    "rpo": "measure-from-backup-and-jetstream-evidence",
+    "rto": "measure-from-fault-injection-and-restart-evidence",
+    "noUnverifiedClaim": true
+  },
+  "requiredEvidence": [
+    "load-profile",
+    "latency-percentiles",
+    "backlog-drain-time",
+    "resource-growth",
+    "rpo-rto-measurement",
+    "owner-signoff"
+  ]
+}
