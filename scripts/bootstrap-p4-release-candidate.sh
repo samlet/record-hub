@@ -41,7 +41,8 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 
-record_hub, approver, fluxion, bids, baseline_path, inventory_path, output, artifact_root = map(pathlib.Path, sys.argv[1:])
+record_hub, approver, fluxion, bids, baseline_path, inventory_path, output_path, artifact_root = map(pathlib.Path, sys.argv[1:])
+output = str(output_path)
 baseline = json.loads(baseline_path.read_text())
 inventory = json.loads(inventory_path.read_text())
 
@@ -103,7 +104,7 @@ result = {
     "live": {"status": "SKIPPED", "reason": "P4-501 requires isolated four-owner topology and explicit rotation/restore/load/rollback evidence"},
     "next": "P4-501 is blocked until all required live cases can be executed without SKIPPED/PARTIAL.",
 }
-pathlib.Path(output).write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+output_path.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n")
 print(json.dumps({"gate": "P4-500", "status": result["status"], "output": output, "artifactCount": len(artifact_entries)}, ensure_ascii=False))
 if result["status"] != "PASS":
     raise SystemExit(1)
