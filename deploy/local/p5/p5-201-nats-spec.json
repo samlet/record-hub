@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "phase": "5",
+  "task": "P5-201",
+  "owner": "record-hub-platform",
+  "liveRequired": true,
+  "productionTopology": {
+    "jetstream": true,
+    "storage": "file",
+    "streamReplicas": 3,
+    "consumerReplicas": 3,
+    "streams": [
+      "DOMAIN_EVENTS",
+      "APPROVAL_COMMANDS",
+      "OWNER_COMMANDS",
+      "COMMAND_RESULTS",
+      "DEAD_LETTERS"
+    ],
+    "consumers": [
+      "record-hub-approver-projection-v1",
+      "record-hub-fluxion-projection-v1",
+      "record-hub-bids-projection-v1",
+      "record-hub-command-results-v1",
+      "approver-command-inbox-v1",
+      "fluxion-command-inbox-v1",
+      "bids-command-inbox-v1"
+    ],
+    "ackPolicy": "explicit",
+    "delivery": "pull",
+    "maxDeliver": true,
+    "dlq": "dlq.record-hub.>"
+  },
+  "localTopology": {
+    "streamReplicas": 1,
+    "consumerReplicas": 1,
+    "notProductionEvidence": true
+  },
+  "recoveryAssertions": [
+    "duplicate-message-id-is-deduplicated",
+    "ack-loss-is-replayed-without-duplicate-side-effect",
+    "consumer-restart-resumes-durable-cursor",
+    "bounded-max-deliver-emits-safe-dlq",
+    "operator-replay-is-explicit-and-audited"
+  ]
+}
