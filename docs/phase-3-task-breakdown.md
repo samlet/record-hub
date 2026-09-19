@@ -80,8 +80,8 @@
 | P3-303 | Bids | command Inbox/result Outbox migration | DONE | Bids `c39e07f`；PostgreSQL migration V27 与 SQLite AutoMigrate 对齐，状态/unique/lease/index 约束已验收 |
 | P3-304 | Bids | `tender.annotate` handler | DONE | Bids `c39e07f`；tenant/org/tender/version/annotation 校验；不读写报价/投标/文件/定标/合同/付款字段 |
 | P3-305 | Bids | command durable + result relay | DONE | Bids `c39e07f`；`bids-command-inbox-v1` explicit ACK、NAK/terminal poison、result Outbox lease relay；重启/ACK-loss live matrix 留 P3-308 |
-| P3-306 | 三 owner | 共享行为 fixture | DONE | Record Hub `待提交`；Approver/Bids/Fluxion 均覆盖 duplicate/hash/version、strict payload、note-only APPEND/VOID 和 commit-before-ACK 代码路径 |
-| P3-307 | Record Hub | 三条 exact command policy 与 receipt 运维视图 | DONE | Record Hub `待提交`；三份默认关闭的 exact policy fixture，`/api/v1/operations/commands` 仅返回 scope/status/backlog 汇总，不返回 payload、ID 或 secret |
+| P3-306 | 三 owner | 共享行为 fixture | DONE | Record Hub `0fb5750`；Approver/Bids/Fluxion 均覆盖 duplicate/hash/version、strict payload、note-only APPEND/VOID 和 commit-before-ACK 代码路径 |
+| P3-307 | Record Hub | 三条 exact command policy 与 receipt 运维视图 | DONE | Record Hub `0fb5750`；三份默认关闭的 exact policy fixture，`/api/v1/operations/commands` 仅返回 scope/status/backlog 汇总，不返回 payload、ID 或 secret |
 | P3-308 | 四仓库 | 三 owner live matrix | SKIPPED | 当前缺少可复现的四应用隔离拓扑、Dex workload token、Approver/Fluxion/Bids 同时运行环境；见 [phase-3-live-skip-log.md](phase-3-live-skip-log.md) |
 
 ## Batch 4：隔离全拓扑与 Beta 准入
