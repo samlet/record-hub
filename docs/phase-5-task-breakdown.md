@@ -44,9 +44,11 @@ Batch 3 收口记录：[phase-5-batch3-closure](phase-5-batch3-closure.md)。四
 
 ## Batch 4：GA evidence 与治理
 
+Batch 4 已开始；P5-400 的静态扫描验收门已加入，运行时 history/log/metrics/DLQ/evidence scan 仍需隔离 topology。
+
 | ID | 范围 | 任务 | 验收 | 状态 |
 | --- | --- | --- | --- | --- |
-| P5-400 | 四仓库 | security/PII/sealed-data supply-chain scan | Git/history/log/DLQ/metrics/evidence/artifact 无发现 | TODO |
+| P5-400 | 四仓库 | security/PII/sealed-data supply-chain scan | [closure](phase-5-batch4-p5-400.md)；当前树、safe projection、redaction/evidence contract 静态 PASS，runtime export live SKIPPED | PARTIAL |
 | P5-401 | 四仓库 | single-tenant canary + full observation window | retention/retry/reconciliation/SLO 全部可接受 | TODO |
 | P5-402 | Record Hub | Production GA report | commit/artifact/case/RPO/RTO/capacity/risk/rollback/signoff | TODO |
 | P5-403 | 四仓库 | fallback/legacy removal review | 独立决策，未批准继续保留 | TODO |

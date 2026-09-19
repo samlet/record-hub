@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "phase": "5",
+  "task": "P5-400",
+  "liveRequired": true,
+  "repositories": ["record-hub", "approver", "fluxion", "bids"],
+  "scanClasses": {
+    "gitTree": [
+      "private-key-marker",
+      "cloud-access-key",
+      "personal-access-token",
+      "chat-token",
+      "literal-bearer-token"
+    ],
+    "safeProjection": [
+      "money",
+      "bank-account",
+      "invoice-attachment",
+      "sealed-bid",
+      "raw-workflow-snapshot"
+    ],
+    "supplyChain": [
+      "gitleaks-configured",
+      "go-module-integrity",
+      "immutable-evidence-manifest"
+    ],
+    "runtimeArtifacts": [
+      "temporal-history",
+      "conductor-history",
+      "logs",
+      "metrics",
+      "dead-letter",
+      "evidence"
+    ]
+  },
+  "excludedFromStaticTree": [".git", "build", "target", "node_modules", "c123.db", "*.sum", "*.lock"],
+  "liveEvidence": [
+    "redacted-temporal-and-conductor-history",
+    "log-metrics-dlq-export-scan",
+    "sealed-data-negative-fixtures",
+    "artifact-and-evidence-hash-scan",
+    "four-owner-signoff"
+  ]
+}
