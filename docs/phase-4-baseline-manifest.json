@@ -1,0 +1,148 @@
+{
+  "schemaVersion": 1,
+  "phase": "4",
+  "baselineKind": "phase4-integration-beta",
+  "status": "PASS",
+  "generatedAt": "2026-09-19T18:07:40Z",
+  "buildMode": "build",
+  "source": {
+    "trackedWorktreesClean": true
+  },
+  "repositories": [
+    {
+      "name": "record-hub",
+      "workingDirectory": ".",
+      "commit": "be4f216d66105d911c4277f12f31523c7def6120",
+      "sourceTreeSha256": "sha256:1e07d3f8b5c33f3a74bf210c1fda915180b0a932a5e588dffa401d3ae9c533ba",
+      "trackedWorktreeClean": true,
+      "untracked": [
+        "c123.db",
+        "docs/phase-4-baseline-manifest.json"
+      ],
+      "build": {
+        "testCommand": "go test ./...",
+        "buildCommand": "go build -trimpath -o build/record-hub ./server/cmd/record-hub"
+      },
+      "runtime": {
+        "language": "go",
+        "version": "go version go1.27.1 darwin/arm64"
+      }
+    },
+    {
+      "name": "approver",
+      "workingDirectory": ".",
+      "commit": "83c1cb145a9a417a8a69262867bd108a6d308904",
+      "sourceTreeSha256": "sha256:672e446fe034a0aed76fb77aaabe97c2cfa7243d125927887cd6df9288bac523",
+      "trackedWorktreeClean": true,
+      "untracked": [],
+      "build": {
+        "testCommand": "mvn test",
+        "buildCommand": "mvn -DskipTests package"
+      },
+      "runtime": {
+        "language": "java",
+        "version": "java version \"21.0.2\" 2024-01-16 LTS"
+      }
+    },
+    {
+      "name": "fluxion",
+      "workingDirectory": "server",
+      "commit": "9349638f1157d190752107bf54ede3691e253d87",
+      "sourceTreeSha256": "sha256:4ae313fde3687ef42985ea5c74425daf7a8135369995dca836b07a85f6355b3d",
+      "trackedWorktreeClean": true,
+      "untracked": [],
+      "build": {
+        "testCommand": "./gradlew test",
+        "buildCommand": "./gradlew build"
+      },
+      "runtime": {
+        "language": "kotlin-jvm",
+        "version": "java version \"21.0.2\" 2024-01-16 LTS"
+      }
+    },
+    {
+      "name": "bids",
+      "workingDirectory": "backend",
+      "commit": "aae52703bdaf93d69fc136674ebb289cabef7867",
+      "sourceTreeSha256": "sha256:9116cf1e92af01bf592b6ea422e6139788520cdc0714b1a0f4d07152c479b40f",
+      "trackedWorktreeClean": true,
+      "untracked": [],
+      "build": {
+        "testCommand": "go test ./...",
+        "buildCommand": "go build ./..."
+      },
+      "runtime": {
+        "language": "go",
+        "version": "go version go1.27.1 darwin/arm64"
+      }
+    }
+  ],
+  "artifacts": {
+    "status": "PASS",
+    "entries": [
+      {
+        "name": "record-hub",
+        "repository": "record-hub",
+        "path": "build/p4-baseline-artifacts/record-hub",
+        "sha256": "sha256:3ad835e4aa54c74ed8eb8e2f0818103448f9ff8d6a4ca73a630e0a80dae3acbc",
+        "bytes": 19203842,
+        "buildCommand": "go build -trimpath -o build/p4-baseline-artifacts/record-hub ./server/cmd/record-hub",
+        "status": "PASS"
+      },
+      {
+        "name": "approver-api",
+        "repository": "approver",
+        "path": "build/p4-baseline-artifacts/approver-api.jar",
+        "sha256": "sha256:5214eb9638fe9f19405a575528ebaefb74d4a30e6301932c305cf3ada68099de",
+        "bytes": 114099446,
+        "buildCommand": "mvn -DskipTests package",
+        "status": "PASS"
+      },
+      {
+        "name": "approver-worker",
+        "repository": "approver",
+        "path": "build/p4-baseline-artifacts/approver-worker.jar",
+        "sha256": "sha256:a066f2988c4528b64d529a7732d590abf89a5729bdc24f9911f6e5e7597568d9",
+        "bytes": 106574043,
+        "buildCommand": "mvn -DskipTests package",
+        "status": "PASS"
+      },
+      {
+        "name": "fluxion-server",
+        "repository": "fluxion",
+        "path": "build/p4-baseline-artifacts/fluxion-server.jar",
+        "sha256": "sha256:b9b7a2ae1b0191ed5c35bb1a1cbc53890dadcdc55f6c0cc7472e574813f8f898",
+        "bytes": 1010447,
+        "buildCommand": "./gradlew build",
+        "status": "PASS"
+      },
+      {
+        "name": "bids-api",
+        "repository": "bids",
+        "path": "build/p4-baseline-artifacts/bids-api",
+        "sha256": "sha256:e83e4cd3fbb2b5bd01b788119d7b167e43c8e887a534d3a1cbe96435fa483728",
+        "bytes": 36235090,
+        "buildCommand": "go build -trimpath -o build/p4-baseline-artifacts/bids-api ./cmd/api",
+        "status": "PASS"
+      },
+      {
+        "name": "bids-worker",
+        "repository": "bids",
+        "path": "build/p4-baseline-artifacts/bids-worker",
+        "sha256": "sha256:79cf0e0a33eb9d7a47b744f69a8f412fdb4eb0dd190a448fa1f56284991965b9",
+        "bytes": 34471698,
+        "buildCommand": "go build -trimpath -o build/p4-baseline-artifacts/bids-worker ./cmd/worker",
+        "status": "PASS"
+      }
+    ]
+  },
+  "contractGate": {
+    "commands": "make p3-contract-gate",
+    "evidenceContract": "make p4-evidence-contract",
+    "inventory": "make p4-contract-inventory"
+  },
+  "notes": [
+    "Untracked files are listed per repository but excluded from sourceTreeSha256.",
+    "Artifact paths are under the ignored build/p4-baseline-artifacts directory."
+  ]
+}
