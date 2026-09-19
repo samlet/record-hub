@@ -3,7 +3,7 @@
   "phase": "4",
   "baselineKind": "phase4-integration-beta",
   "status": "PASS",
-  "generatedAt": "2026-09-19T18:07:40Z",
+  "generatedAt": "2026-09-19T18:10:11Z",
   "buildMode": "build",
   "source": {
     "trackedWorktreesClean": true
@@ -12,12 +12,11 @@
     {
       "name": "record-hub",
       "workingDirectory": ".",
-      "commit": "be4f216d66105d911c4277f12f31523c7def6120",
-      "sourceTreeSha256": "sha256:1e07d3f8b5c33f3a74bf210c1fda915180b0a932a5e588dffa401d3ae9c533ba",
+      "commit": "9697447b7bf120238e07bc965ab09bfa34c8822f",
+      "sourceTreeSha256": "sha256:1f5ead38d66b583267bd5dd71ea365bebea61decf182ddfa75e581a47d0f7f86",
       "trackedWorktreeClean": true,
       "untracked": [
-        "c123.db",
-        "docs/phase-4-baseline-manifest.json"
+        "c123.db"
       ],
       "build": {
         "testCommand": "go test ./...",
@@ -84,7 +83,7 @@
         "name": "record-hub",
         "repository": "record-hub",
         "path": "build/p4-baseline-artifacts/record-hub",
-        "sha256": "sha256:3ad835e4aa54c74ed8eb8e2f0818103448f9ff8d6a4ca73a630e0a80dae3acbc",
+        "sha256": "sha256:587a6c5766def8764bb02073787fa06b98a3b806d989623d19b31e5d2b5c5b59",
         "bytes": 19203842,
         "buildCommand": "go build -trimpath -o build/p4-baseline-artifacts/record-hub ./server/cmd/record-hub",
         "status": "PASS"
