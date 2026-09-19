@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "policies": [
+    {
+      "policyId": "tender.annotate",
+      "issuer": "http://127.0.0.1:15557/workload",
+      "subject": "bids",
+      "audience": "record-hub-api",
+      "scope": "recordhub.command.submit",
+      "tenantId": "tenant-p3-bids",
+      "workspaceId": "workspace-p3-bids",
+      "purpose": "tender-annotation",
+      "ownerSystem": "bids",
+      "resourceType": "TENDER",
+      "action": "tender.annotate",
+      "expectedVersionRequired": true,
+      "maxPayloadBytes": 262144
+    }
+  ]
+}

@@ -34,6 +34,7 @@ type runtimeDependencies struct {
 	catalog     http.Handler
 	binding     http.Handler
 	commands    http.Handler
+	commandOps  http.Handler
 	operations  http.Handler
 	rebuild     http.Handler
 	feed        http.Handler
@@ -144,7 +145,9 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 	if err != nil {
 		return nil, fmt.Errorf("configure command policies: %w", err)
 	}
-	commandService := commands.NewService(commandRegistry, commands.NewMongoStore(database), commandMachineAuthorizer, auditWriter)
+	commandStore := commands.NewMongoStore(database)
+	commandService := commands.NewService(commandRegistry, commandStore, commandMachineAuthorizer, auditWriter)
+	commandOperationsService := commands.NewOperationsService(commandStore, authorizer)
 	bindingService := binding.NewService(binding.NewMongoRecordReader(recordRepo), snapshotStore, authorizer, bindingMachineAuthorizer)
 	operationsService := projection.NewOperationsService(projection.NewMongoProjectionRepository(database), authorizer).WithMetrics(metrics).WithSLOThresholds(projection.ProjectionSLOThresholds{BacklogWarning: cfg.ProjectionSLO.BacklogWarning, LagWarning: cfg.ProjectionSLO.LagWarning, FailureBudget: cfg.ProjectionSLO.FailureBudget})
 	generations := projection.NewMappingGenerationRegistry()
@@ -155,6 +158,7 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 	deps.catalog = projection.NewCatalogHTTPHandler(catalogService)
 	deps.binding = binding.NewHTTPHandler(bindingService)
 	deps.commands = commands.NewHTTPHandler(commandService)
+	deps.commandOps = commands.NewOperationsHTTPHandler(commandOperationsService)
 	deps.operations = projection.NewOperationsHTTPHandler(operationsService)
 	deps.rebuild = projection.NewProjectionRebuildHTTPHandler(rebuildService)
 	deps.feed = records.NewFeedHTTPHandler(feed, authorizer, records.FeedHTTPOptions{})

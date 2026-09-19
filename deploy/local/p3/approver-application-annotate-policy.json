@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "policies": [
+    {
+      "policyId": "application.annotate",
+      "issuer": "http://127.0.0.1:15557/workload",
+      "subject": "approver",
+      "audience": "record-hub-api",
+      "scope": "recordhub.command.submit",
+      "tenantId": "tenant-p3-approver",
+      "workspaceId": "workspace-p3-approver",
+      "purpose": "application-annotation",
+      "ownerSystem": "approver",
+      "resourceType": "APPLICATION",
+      "action": "application.annotate",
+      "expectedVersionRequired": true,
+      "maxPayloadBytes": 262144
+    }
+  ]
+}

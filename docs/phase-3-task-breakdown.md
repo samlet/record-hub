@@ -16,7 +16,7 @@
 | P3-BASE-001 | Record Hub command gateway/result consumer | DONE | receipt、policy、JetStream publish、result CAS 和 durable consumer 已实现 |
 | P3-BASE-002 | 三系统摘要 Outbox | DONE | Approver Application、Fluxion Project、Bids Tender 均有本地事务 Outbox 与 NATS relay |
 | P3-BASE-003 | Workflow Binding | PARTIAL | Fluxion Temporal 与 Bids Conductor adapter 已实现；真实全拓扑和 Approver 使用场景未验收 |
-| P3-BASE-004 | Owner command processing | TODO | 三个业务系统均未接入 command durable、原生 Inbox 和 result Outbox |
+| P3-BASE-004 | Owner command processing | PARTIAL | 三个业务系统已接入 strict command durable、原生 Inbox 和 result Outbox；真实四进程故障矩阵留 P3-308 |
 | P3-BASE-005 | Approver service integration | PARTIAL | Approver generic connector 基座已存在；Fluxion/Bids connector 未实现 |
 | P3-BASE-006 | 隔离四应用拓扑 | TODO | P2 只有 core/engine 基线，尚未监督启动四个真实应用进程 |
 
@@ -74,15 +74,15 @@
 
 | ID | 仓库 | 任务 | 状态 | 验收 |
 | --- | --- | --- | --- | --- |
-| P3-300 | Approver | command Inbox/result Outbox Flyway migration | TODO | tenant/version/unique/lease/index 门禁通过 |
-| P3-301 | Approver | `application.annotate` handler | TODO | 只追加 integration note，不改变审批状态/任务决定 |
-| P3-302 | Approver | command durable + result relay | TODO | approver consumer、restart/ACK-loss、DLQ 通过 |
-| P3-303 | Bids | command Inbox/result Outbox migration | TODO | PostgreSQL 与 SQLite dev profile 行为明确；生产 gate 用 PostgreSQL |
-| P3-304 | Bids | `tender.annotate` handler | TODO | 组织隔离；不读写报价/投标/文件/定标/合同/付款字段 |
-| P3-305 | Bids | command durable + result relay | TODO | bids consumer、restart/ACK-loss、DLQ 通过 |
-| P3-306 | 三 owner | 共享行为 fixture | TODO | duplicate/hash/version/transaction/ACK-loss 结果一致 |
-| P3-307 | Record Hub | 三条 exact command policy 与 receipt 运维视图 | TODO | 默认关闭；按 tenant/workspace 独立启用/撤销 |
-| P3-308 | 四仓库 | 三 owner live matrix | TODO | 任一系统 outage 不阻塞其他 owner consumer |
+| P3-300 | Approver | command Inbox/result Outbox Flyway migration | DONE | Approver `3194bf8`；V32 建 Inbox/Outbox/annotation 表，tenant/version/unique/lease/index 约束已静态验收 |
+| P3-301 | Approver | `application.annotate` handler | DONE | Approver `3194bf8`；只追加 integration note，expected version/tenant/application/VOID 校验，不改变审批状态/任务决定 |
+| P3-302 | Approver | command durable + result relay | DONE | Approver `3194bf8`；`approver-command-inbox-v1` explicit ACK、NAK/terminal poison、result Outbox lease relay；重启/ACK-loss live matrix 留 P3-308 |
+| P3-303 | Bids | command Inbox/result Outbox migration | DONE | Bids `c39e07f`；PostgreSQL migration V27 与 SQLite AutoMigrate 对齐，状态/unique/lease/index 约束已验收 |
+| P3-304 | Bids | `tender.annotate` handler | DONE | Bids `c39e07f`；tenant/org/tender/version/annotation 校验；不读写报价/投标/文件/定标/合同/付款字段 |
+| P3-305 | Bids | command durable + result relay | DONE | Bids `c39e07f`；`bids-command-inbox-v1` explicit ACK、NAK/terminal poison、result Outbox lease relay；重启/ACK-loss live matrix 留 P3-308 |
+| P3-306 | 三 owner | 共享行为 fixture | DONE | Record Hub `待提交`；Approver/Bids/Fluxion 均覆盖 duplicate/hash/version、strict payload、note-only APPEND/VOID 和 commit-before-ACK 代码路径 |
+| P3-307 | Record Hub | 三条 exact command policy 与 receipt 运维视图 | DONE | Record Hub `待提交`；三份默认关闭的 exact policy fixture，`/api/v1/operations/commands` 仅返回 scope/status/backlog 汇总，不返回 payload、ID 或 secret |
+| P3-308 | 四仓库 | 三 owner live matrix | SKIPPED | 当前缺少可复现的四应用隔离拓扑、Dex workload token、Approver/Fluxion/Bids 同时运行环境；见 [phase-3-live-skip-log.md](phase-3-live-skip-log.md) |
 
 ## Batch 4：隔离全拓扑与 Beta 准入
 

@@ -41,3 +41,18 @@
 - 已验证：`go test ./...` 全量通过；summary handler、registry、projector 和 forbidden-field boundary tests 通过。
 - 说明：Approver/Fluxion 真实 approval summary producer 与四进程 live delivery 仍属于 P3-212/P3-213/P3-402
   的 live gate；本条不将 bounded projection unit gate 误报为跨系统 E2E。
+
+## P3-308 — three owner command live matrix
+
+- 当前状态：`SKIPPED`（2026-09-19）。Approver `application.annotate`、Bids `tender.annotate` 和既有
+  Fluxion `project.annotate` 的 owner adapter、Inbox、result Outbox 与 durable runner 已完成静态实现和仓库级
+  测试，但本机没有一套可复现的四应用隔离拓扑同时启动 Record Hub、Approver、Fluxion、Bids，并连接同一组
+  NATS JetStream、Dex workload issuer、PostgreSQL、Temporal/Conductor。
+- 已验证：Approver `3194bf8` Maven worker/application 测试、Bids `c39e07f` `go test ./...`、Record Hub
+  command receipt 运维汇总测试和 `make p3-contract-gate`。这些证据不等价于跨进程 ACK-loss 或 outage 通过。
+- 不以 fake server、内存 repository、手工改库或直接发布 NATS 消息替代 live Gate。待 P3-400/401 准备好四
+  应用进程、Dex workload principals、tenant/workspace exact policy 和 PostgreSQL schema 后，按 owner 逐个
+  注入：相同 operation replay、hash conflict、version reject、transaction rollback、commit-before-ACK
+  crash、result publish/mark-sent crash、NATS outage/backlog、owner restart 和 DLQ。
+- 重试条件：生成独立 `manifest.json`、脱敏配置、每进程日志、metrics 和 DB assertions；任一 owner outage
+  不得阻塞其他 durable consumer，恢复后 receipt/result 只收敛一次且无重复 note 副作用。
