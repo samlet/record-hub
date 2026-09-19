@@ -1,7 +1,7 @@
 # Phase 4 Integration Beta 任务分解
 
 - 日期：2026-09-20
-- 状态：Batch 0 已完成；Batch 1/2/3/4 静态收口完成；P4-500 RC 静态冻结完成，P4-501 live gate 待隔离环境
+- 状态：Batch 0 已完成；Batch 1/2/3/4 静态收口完成；Batch 5 RC 静态冻结完成，P4-501 live gate 待隔离环境
 - 方案：[phase-4-design.md](phase-4-design.md)
 - 需求：[phase-4-requirements.md](phase-4-requirements.md)
 - 验收：[phase-4-acceptance-plan.md](phase-4-acceptance-plan.md)
