@@ -72,6 +72,7 @@ HTTP 契约以 [`api/openapi.yaml`](api/openapi.yaml) 为准。`make generate-cl
 - [Phase 4 Batch 2 P4-203 closure](docs/phase-4-batch2-p4-203.md)
 - [Phase 4 Batch 2 P4-204 closure](docs/phase-4-batch2-p4-204.md)
 - [Phase 4 Batch 2 P4-205 closure](docs/phase-4-batch2-p4-205.md)
+- [Phase 4 Batch 2 closure](docs/phase-4-batch2-closure.md)
 - [原生隔离验收拓扑](deploy/local/isolated/README.md)
 - [参考资料](docs/references.md)
 - [ADR-0001：独立仓库与事实所有权](docs/adr/0001-independent-service-and-data-ownership.md)

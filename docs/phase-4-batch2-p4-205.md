@@ -4,7 +4,7 @@
 - 状态：`PARTIAL`
 - owner：四仓库
 - 前置：P4-200..P4-204
-- Record Hub commit：待本次提交（含 `scripts/verify-p4-batch2.sh`）
+- Record Hub commit：`bc82419`（`test(phase4): add batch2 fault matrix gate`）
 - 规范：[p4-batch2-spec.json](../deploy/local/p4/p4-batch2-spec.json)
 
 ## 矩阵入口
