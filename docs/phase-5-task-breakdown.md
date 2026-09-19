@@ -33,6 +33,8 @@ Batch 2 收口记录：[phase-5-batch2-closure](phase-5-batch2-closure.md)。四
 
 ## Batch 3：Connector platform 与 Settlement
 
+Batch 3 收口记录：[phase-5-batch3-closure](phase-5-batch3-closure.md)。四项静态 contract 已通过；connector owner side-effect、Settlement relay/projection、故障注入、fallback/drain 和 rollback live 仍为 `SKIPPED`。
+
 | ID | 范围 | 任务 | 验收 | 状态 |
 | --- | --- | --- | --- | --- |
 | P5-300 | Approver/Record Hub | connector registry、SDK semver、compatibility window | [closure](phase-5-batch3-p5-300.md)；exact registry/semver/fail-closed 静态 PASS，owner lifecycle live SKIPPED | PARTIAL |
