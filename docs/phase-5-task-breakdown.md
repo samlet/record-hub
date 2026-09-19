@@ -12,6 +12,8 @@ Phase 5 依赖 Phase 4 P4-501 live gate；在 live gate 未完成前只能进行
 
 ## Batch 1：Production identity 与 control plane
 
+Batch 1 收口记录：[phase-5-batch1-closure](phase-5-batch1-closure.md)。静态边界已完成；production live gate 仍按任务分别标记为 `SKIPPED`。
+
 | ID | 范围 | 任务 | 验收 | 状态 |
 | --- | --- | --- | --- | --- |
 | P5-100 | Record Hub/Dex | production OIDC、workspace membership、service principal | [closure](phase-5-batch1-p5-100.md)；静态身份边界 PASS，production rotation/revocation live SKIPPED | PARTIAL |
