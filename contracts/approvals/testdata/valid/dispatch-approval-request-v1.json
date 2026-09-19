@@ -1,0 +1,16 @@
+{
+  "eventType": "fluxion.dispatch-approval.requested",
+  "schemaVersion": 1,
+  "externalRequestId": "apr-p3-fluxion-0001",
+  "tenantId": "tenant-p3-fluxion",
+  "workspaceId": "workspace-p3-fluxion",
+  "externalScope": { "type": "ORGANIZATION", "id": "org-p3-fluxion" },
+  "resourceRef": "fluxion:PROJECT:11111111-1111-1111-1111-111111111111",
+  "resourceVersion": 12,
+  "dispatchGeneration": 3,
+  "proposalHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "snapshotHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "workflow": { "workflowId": "project-11111111", "runId": "run-p3-0001" },
+  "requester": { "issuerAlias": "fluxion", "subject": "fluxion-dispatch" },
+  "proposal": { "workerRef": "worker-p3-001", "skill": "保洁", "scheduledDate": "2099-01-01" }
+}

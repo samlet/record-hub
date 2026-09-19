@@ -137,6 +137,7 @@ p2-command-result:
 
 p3-contract-gate:
 	./scripts/verify-p3-contract-mirrors.sh
+	./scripts/verify-p3-approval-contract-mirrors.sh
 
 p3-fluxion-command-live:
 	./scripts/verify-p3-fluxion-command-live.sh

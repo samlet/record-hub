@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:record-hub:dispatch-approval-result:v1",
+  "title": "Fluxion dispatch approval result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "eventType",
+    "schemaVersion",
+    "eventId",
+    "externalRequestId",
+    "tenantId",
+    "workspaceId",
+    "resourceRef",
+    "resourceVersion",
+    "dispatchGeneration",
+    "proposalHash",
+    "workflow",
+    "decision",
+    "decisionVersion",
+    "decidedAt"
+  ],
+  "properties": {
+    "eventType": { "const": "fluxion.dispatch-approval.result" },
+    "schemaVersion": { "const": 1 },
+    "eventId": { "type": "string", "pattern": "^apr-result-[a-z0-9-]{8,128}$" },
+    "externalRequestId": { "type": "string", "pattern": "^apr-[a-z0-9-]{8,128}$" },
+    "tenantId": { "type": "string", "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,127}$" },
+    "workspaceId": { "type": "string", "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,127}$" },
+    "resourceRef": { "type": "string", "pattern": "^fluxion:PROJECT:[0-9a-fA-F-]{36}$" },
+    "resourceVersion": { "type": "integer", "minimum": 1 },
+    "dispatchGeneration": { "type": "integer", "minimum": 1 },
+    "proposalHash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "workflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workflowId", "runId"],
+      "properties": {
+        "workflowId": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "runId": { "type": "string", "minLength": 1, "maxLength": 128 }
+      }
+    },
+    "decision": { "enum": ["APPROVED", "REJECTED", "WITHDRAWN", "CANCELLED", "EXPIRED", "FAILED"] },
+    "decisionVersion": { "type": "integer", "minimum": 1 },
+    "reasonCode": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{0,63}$" },
+    "safeReason": { "type": "string", "maxLength": 512 },
+    "decidedAt": { "type": "string", "format": "date-time" }
+  }
+}

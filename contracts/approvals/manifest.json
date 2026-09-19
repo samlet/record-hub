@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "contractFamily": "record-hub-dispatch-approval",
+  "errorCodesFile": "error-codes.json",
+  "errorCodesContentHash": "sha256:3b55ad8f12f72fada8be8141bae5e29bddfa5b13a79bfc25b3a3501148594983",
+  "contracts": [
+    {
+      "kind": "dispatch-approval-request",
+      "schemaFile": "dispatch-approval-request-v1.schema.json",
+      "schemaContentHash": "sha256:2f87c58552b18cd144f0ee648840ff8c02833ead2247364b7d71e22cba973ddc",
+      "validFixtureFile": "testdata/valid/dispatch-approval-request-v1.json",
+      "invalidFixtureFiles": ["testdata/invalid/dispatch-approval-request-v1-unknown-field.json"]
+    },
+    {
+      "kind": "dispatch-approval-result",
+      "schemaFile": "dispatch-approval-result-v1.schema.json",
+      "schemaContentHash": "sha256:cbc624b1b2e786cd70e5e3005f3a084a36aaf98ca9abd0d5cbba0d60a6e2dcab",
+      "validFixtureFile": "testdata/valid/dispatch-approval-result-v1.json",
+      "invalidFixtureFiles": ["testdata/invalid/dispatch-approval-result-v1-decision.json"]
+    }
+  ]
+}

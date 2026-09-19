@@ -1,0 +1,18 @@
+{
+  "eventType": "fluxion.dispatch-approval.result",
+  "schemaVersion": 1,
+  "eventId": "apr-result-p3-fluxion-0001",
+  "externalRequestId": "apr-p3-fluxion-0001",
+  "tenantId": "tenant-p3-fluxion",
+  "workspaceId": "workspace-p3-fluxion",
+  "resourceRef": "fluxion:PROJECT:11111111-1111-1111-1111-111111111111",
+  "resourceVersion": 12,
+  "dispatchGeneration": 3,
+  "proposalHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "workflow": { "workflowId": "project-11111111", "runId": "run-p3-0001" },
+  "decision": "APPROVED",
+  "decisionVersion": 1,
+  "reasonCode": "LOW_CONFIDENCE_APPROVED",
+  "safeReason": "Approved by the configured dispatch approver",
+  "decidedAt": "2099-01-01T00:00:00Z"
+}

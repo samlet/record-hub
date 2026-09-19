@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "contractFamily": "record-hub-dispatch-approval",
+  "codes": [
+    { "code": "APPROVAL_REQUEST_INVALID", "retryable": false },
+    { "code": "APPROVAL_SCOPE_MISMATCH", "retryable": false },
+    { "code": "APPROVAL_REQUEST_DUPLICATE", "retryable": false },
+    { "code": "APPROVAL_GENERATION_CONFLICT", "retryable": false },
+    { "code": "APPROVAL_PROPOSAL_CONFLICT", "retryable": false },
+    { "code": "APPROVAL_REQUEST_NOT_FOUND", "retryable": false },
+    { "code": "APPROVAL_EXPIRED", "retryable": false },
+    { "code": "APPROVAL_TRANSPORT_UNAVAILABLE", "retryable": true },
+    { "code": "APPROVAL_PROCESSING_FAILED", "retryable": true },
+    { "code": "APPROVAL_RESULT_CONFLICT", "retryable": false }
+  ]
+}
