@@ -155,6 +155,8 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 	associationService := projection.NewAssociationService(associationRepository, authorizer)
 	tenderAssociationRepository := projection.NewMongoTenderApplicationAssociationRepository(database)
 	tenderAssociationService := projection.NewTenderApplicationAssociationService(tenderAssociationRepository, authorizer)
+	settlementAssociationRepository := projection.NewMongoSettlementAssociationRepository(database)
+	settlementAssociationService := projection.NewSettlementAssociationService(settlementAssociationRepository, authorizer)
 	generations := projection.NewMappingGenerationRegistry()
 	generationBuilder := projection.NewMappingGenerationBuilder(catalogRepo, schemaRepo)
 	rebuildService := projection.NewProjectionRebuildService(rebuildRepo, generationBuilder, generations, authorizer, rebuildReceipts, auditWriter).WithReplayDependencies(eventArchive, readPointers)
@@ -165,7 +167,7 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 	deps.commands = commands.NewHTTPHandler(commandService)
 	deps.commandOps = commands.NewOperationsHTTPHandler(commandOperationsService)
 	deps.operations = projection.NewOperationsHTTPHandler(operationsService)
-	deps.associations = projection.NewCombinedAssociationHTTPHandler(associationService, tenderAssociationService)
+	deps.associations = projection.NewCombinedAssociationHTTPHandler(associationService, tenderAssociationService, settlementAssociationService)
 	deps.rebuild = projection.NewProjectionRebuildHTTPHandler(rebuildService)
 	deps.feed = records.NewFeedHTTPHandler(feed, authorizer, records.FeedHTTPOptions{})
 
@@ -261,6 +263,9 @@ func ensureMongoIndexes(database *mongo.Database) error {
 		return err
 	}
 	if err := projection.NewMongoTenderApplicationAssociationRepository(database).EnsureIndexes(ctx); err != nil {
+		return err
+	}
+	if err := projection.NewMongoSettlementAssociationRepository(database).EnsureIndexes(ctx); err != nil {
 		return err
 	}
 	if err := commands.NewMongoStore(database).EnsureIndexes(ctx); err != nil {

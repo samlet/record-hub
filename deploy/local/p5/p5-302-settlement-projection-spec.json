@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "phase": "5",
+  "task": "P5-302",
+  "owner": "record-hub",
+  "liveRequired": true,
+  "readModel": "settlement_associations",
+  "allowedProjection": [
+    "tenantId",
+    "workspaceId",
+    "settlementRef",
+    "approvalRef",
+    "organizationRef",
+    "approvalStatus",
+    "settlementStatus",
+    "actionOutcome",
+    "snapshotHash",
+    "decisionVersion",
+    "sourceVersion",
+    "projectionState",
+    "lastEventId",
+    "updatedAt"
+  ],
+  "forbiddenProjection": [
+    "grossAmount",
+    "netAmount",
+    "bankAccount",
+    "invoiceAttachment",
+    "sealedData",
+    "rawSnapshot"
+  ],
+  "invariants": [
+    "tenant-workspace-scoped-query",
+    "exact-reference-and-status-validation",
+    "duplicate-event-is-idempotent",
+    "gap-and-conflict-are-visible",
+    "late-result-does-not-overwrite-newer-version",
+    "read-only-http-association-endpoint"
+  ],
+  "liveEvidence": [
+    "safe-settlement-event-projection",
+    "late-result-finding",
+    "cross-scope-negative-matrix",
+    "mongo-index-and-rebuild",
+    "operator-read-only-console"
+  ]
+}

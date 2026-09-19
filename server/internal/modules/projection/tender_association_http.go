@@ -16,10 +16,11 @@ type TenderApplicationAssociationHTTPHandler struct {
 	service TenderApplicationAssociationHTTPService
 }
 
-func NewCombinedAssociationHTTPHandler(project AssociationHTTPService, tender TenderApplicationAssociationHTTPService) http.Handler {
+func NewCombinedAssociationHTTPHandler(project AssociationHTTPService, tender TenderApplicationAssociationHTTPService, settlement SettlementAssociationHTTPService) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("/api/v1/associations/project-applications", NewAssociationHTTPHandler(project))
 	mux.Handle("/api/v1/associations/tender-applications", NewTenderApplicationAssociationHTTPHandler(tender))
+	mux.Handle("/api/v1/associations/settlements", NewSettlementAssociationHTTPHandler(settlement))
 	return mux
 }
 func NewTenderApplicationAssociationHTTPHandler(service TenderApplicationAssociationHTTPService) http.Handler {
