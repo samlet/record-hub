@@ -14,9 +14,10 @@ var (
 type Role string
 
 const (
-	RoleOwner  Role = "OWNER"
-	RoleEditor Role = "EDITOR"
-	RoleViewer Role = "VIEWER"
+	RoleOwner    Role = "OWNER"
+	RoleEditor   Role = "EDITOR"
+	RoleViewer   Role = "VIEWER"
+	RoleOperator Role = "OPERATOR"
 )
 
 type MembershipStatus string
@@ -40,6 +41,8 @@ const (
 	ActionRecordWrite      Action = "record.write"
 	ActionViewRead         Action = "view.read"
 	ActionViewWrite        Action = "view.write"
+	ActionOperationsRead   Action = "operations.read"
+	ActionProjectionManage Action = "projection.manage"
 	// Projection writes are reserved for the event projector and are never
 	// granted by a human workspace role.
 	ActionProjectionWrite Action = "projection.write"
@@ -91,6 +94,11 @@ func roleAllows(role Role, action Action) bool {
 	switch role {
 	case RoleOwner:
 		return action != ActionProjectionWrite && knownAction(action)
+	case RoleOperator:
+		switch action {
+		case ActionWorkspaceRead, ActionSchemaRead, ActionRecordRead, ActionViewRead, ActionOperationsRead, ActionProjectionManage:
+			return true
+		}
 	case RoleEditor:
 		switch action {
 		case ActionWorkspaceRead, ActionSchemaRead, ActionRecordRead, ActionRecordWrite, ActionViewRead, ActionViewWrite:
@@ -108,7 +116,7 @@ func roleAllows(role Role, action Action) bool {
 func knownAction(action Action) bool {
 	switch action {
 	case ActionWorkspaceRead, ActionWorkspaceManage, ActionMembershipManage, ActionSchemaRead, ActionSchemaManage,
-		ActionRecordRead, ActionRecordWrite, ActionViewRead, ActionViewWrite, ActionProjectionWrite:
+		ActionRecordRead, ActionRecordWrite, ActionViewRead, ActionViewWrite, ActionOperationsRead, ActionProjectionManage, ActionProjectionWrite:
 		return true
 	default:
 		return false

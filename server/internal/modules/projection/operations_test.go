@@ -59,7 +59,7 @@ func validOperationsSnapshot() OperationsSnapshot {
 
 func TestOperationsServiceAuthorizesScopedReadAndReturnsSafeSnapshot(t *testing.T) {
 	reader := &memoryOperationsReader{snapshot: validOperationsSnapshot()}
-	service, principal := operationsService(t, reader, identity.RoleViewer)
+	service, principal := operationsService(t, reader, identity.RoleOperator)
 	snapshot, err := service.Snapshot(context.Background(), principal, OperationsQuery{TenantID: " tenant-1 ", WorkspaceID: "workspace-1", Consumer: "record-hub-approver-v1", Limit: 1})
 	if err != nil {
 		t.Fatal(err)
@@ -84,7 +84,7 @@ func TestOperationsServiceAuthorizesScopedReadAndReturnsSafeSnapshot(t *testing.
 
 func TestOperationsServiceUpdatesBoundedBacklogMetrics(t *testing.T) {
 	reader := &memoryOperationsReader{snapshot: validOperationsSnapshot()}
-	service, principal := operationsService(t, reader, identity.RoleViewer)
+	service, principal := operationsService(t, reader, identity.RoleOperator)
 	metrics := observability.NewRegistry()
 	service.WithMetrics(metrics).WithSLOThresholds(ProjectionSLOThresholds{BacklogWarning: 1, LagWarning: time.Hour, FailureBudget: 10})
 	if _, err := service.Snapshot(context.Background(), principal, OperationsQuery{TenantID: "tenant-1", WorkspaceID: "workspace-1", Consumer: "record-hub-approver-v1"}); err != nil {
@@ -112,7 +112,7 @@ func TestOperationsServiceRejectsUnboundedQueryAndReaderErrors(t *testing.T) {
 
 func TestOperationsServiceRejectsUnknownConsumerAndReaderScopeMismatch(t *testing.T) {
 	reader := &memoryOperationsReader{snapshot: validOperationsSnapshot()}
-	service, principal := operationsService(t, reader, identity.RoleViewer)
+	service, principal := operationsService(t, reader, identity.RoleOperator)
 	if _, err := service.Snapshot(context.Background(), principal, OperationsQuery{TenantID: "tenant-1", WorkspaceID: "workspace-1", Consumer: "events.anything.>"}); !errors.Is(err, ErrOperationsQueryInvalid) {
 		t.Fatalf("unknown consumer error = %v", err)
 	}
@@ -130,7 +130,7 @@ func TestOperationsServiceRejectsUnknownConsumerAndReaderScopeMismatch(t *testin
 
 func TestOperationsHTTPReturnsSafeMetadataOnly(t *testing.T) {
 	reader := &memoryOperationsReader{snapshot: validOperationsSnapshot()}
-	service, principal := operationsService(t, reader, identity.RoleViewer)
+	service, principal := operationsService(t, reader, identity.RoleOperator)
 	handler := NewOperationsHTTPHandler(service)
 
 	if response := doOperationsRequest(handler, nil, http.MethodGet, "/api/v1/operations/events?tenantId=tenant-1&workspaceId=workspace-1&consumer=record-hub-approver-v1", ""); response.Code != http.StatusUnauthorized {
@@ -157,7 +157,7 @@ func TestOperationsHTTPReturnsSafeMetadataOnly(t *testing.T) {
 
 func TestOperationsPageIsAuthenticatedAndPayloadFree(t *testing.T) {
 	reader := &memoryOperationsReader{snapshot: validOperationsSnapshot()}
-	service, principal := operationsService(t, reader, identity.RoleViewer)
+	service, principal := operationsService(t, reader, identity.RoleOperator)
 	handler := NewOperationsHTTPHandler(service)
 	if response := doOperationsRequest(handler, nil, http.MethodGet, "/operations/events", ""); response.Code != http.StatusUnauthorized {
 		t.Fatalf("unauthenticated page status = %d", response.Code)

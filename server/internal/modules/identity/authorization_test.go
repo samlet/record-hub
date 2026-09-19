@@ -16,6 +16,7 @@ func TestRoleAllowDenyMatrix(t *testing.T) {
 	readActions := []Action{ActionWorkspaceRead, ActionSchemaRead, ActionRecordRead, ActionViewRead}
 	editorWriteActions := []Action{ActionRecordWrite, ActionViewWrite}
 	ownerActions := []Action{ActionWorkspaceManage, ActionMembershipManage, ActionSchemaManage}
+	operatorActions := []Action{ActionOperationsRead, ActionProjectionManage}
 
 	tests := []struct {
 		role    Role
@@ -69,7 +70,31 @@ func TestRoleAllowDenyMatrix(t *testing.T) {
 			}{RoleViewer, action, false},
 		)
 	}
-	for _, role := range []Role{RoleOwner, RoleEditor, RoleViewer} {
+	for _, action := range operatorActions {
+		tests = append(tests,
+			struct {
+				role    Role
+				action  Action
+				allowed bool
+			}{RoleOwner, action, true},
+			struct {
+				role    Role
+				action  Action
+				allowed bool
+			}{RoleOperator, action, true},
+			struct {
+				role    Role
+				action  Action
+				allowed bool
+			}{RoleEditor, action, false},
+			struct {
+				role    Role
+				action  Action
+				allowed bool
+			}{RoleViewer, action, false},
+		)
+	}
+	for _, role := range []Role{RoleOwner, RoleOperator, RoleEditor, RoleViewer} {
 		tests = append(tests, struct {
 			role    Role
 			action  Action

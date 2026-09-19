@@ -23,7 +23,7 @@ func (reader *memoryOperationsReader) Snapshot(_ context.Context, _ OperationsQu
 type operationsMembershipReader struct{}
 
 func (operationsMembershipReader) FindMembership(_ context.Context, principal identity.IdentityKey, tenantID, workspaceID string) (identity.WorkspaceMembership, error) {
-	return identity.WorkspaceMembership{TenantID: tenantID, WorkspaceID: workspaceID, Identity: principal, Role: identity.RoleViewer, Status: identity.MembershipActive}, nil
+	return identity.WorkspaceMembership{TenantID: tenantID, WorkspaceID: workspaceID, Identity: principal, Role: identity.RoleOperator, Status: identity.MembershipActive}, nil
 }
 
 func commandOperationsPrincipal() identity.Principal {

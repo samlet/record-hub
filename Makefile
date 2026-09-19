@@ -193,6 +193,9 @@ p5-100:
 p5-101:
 	./scripts/verify-p5-101-scope.sh
 
+p5-102:
+	./scripts/verify-p5-102-rbac.sh
+
 p4-contract-inventory:
 	./scripts/verify-p4-contract-inventory.sh
 

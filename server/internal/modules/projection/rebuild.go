@@ -178,7 +178,7 @@ func (service *ProjectionRebuildService) Start(ctx context.Context, principal id
 	if err := validateRebuildHeaders(input.TenantID, input.WorkspaceID, input.RequestID, input.IdempotencyKey); err != nil {
 		return ProjectionRebuildOperation{}, false, err
 	}
-	if err := service.authorize(ctx, principal, input.TenantID, input.WorkspaceID, identity.ActionSchemaManage); err != nil {
+	if err := service.authorize(ctx, principal, input.TenantID, input.WorkspaceID, identity.ActionProjectionManage); err != nil {
 		return ProjectionRebuildOperation{}, false, err
 	}
 	tenantID, workspaceID := strings.TrimSpace(input.TenantID), strings.TrimSpace(input.WorkspaceID)
@@ -217,7 +217,7 @@ func (service *ProjectionRebuildService) Get(ctx context.Context, principal iden
 	if strings.TrimSpace(tenantID) == "" || strings.TrimSpace(workspaceID) == "" || strings.TrimSpace(operationID) == "" {
 		return ProjectionRebuildOperation{}, ErrRebuildInvalid
 	}
-	if err := service.authorize(ctx, principal, tenantID, workspaceID, identity.ActionSchemaRead); err != nil {
+	if err := service.authorize(ctx, principal, tenantID, workspaceID, identity.ActionOperationsRead); err != nil {
 		return ProjectionRebuildOperation{}, err
 	}
 	return service.operations.Find(ctx, strings.TrimSpace(tenantID), strings.TrimSpace(workspaceID), strings.TrimSpace(operationID))
@@ -233,7 +233,7 @@ func (service *ProjectionRebuildService) Cancel(ctx context.Context, principal i
 		}
 		return ProjectionRebuildOperation{}, false, ErrRebuildInvalid
 	}
-	if err := service.authorize(ctx, principal, input.TenantID, input.WorkspaceID, identity.ActionSchemaManage); err != nil {
+	if err := service.authorize(ctx, principal, input.TenantID, input.WorkspaceID, identity.ActionProjectionManage); err != nil {
 		return ProjectionRebuildOperation{}, false, err
 	}
 	tenantID, workspaceID, operationID := strings.TrimSpace(input.TenantID), strings.TrimSpace(input.WorkspaceID), strings.TrimSpace(input.OperationID)

@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "phase": "5",
+  "task": "P5-102",
+  "name": "viewer-editor-operator-admin-parity",
+  "liveRequired": true,
+  "roles": ["VIEWER", "EDITOR", "OPERATOR", "OWNER"],
+  "staticChecks": [
+    "operator has dedicated operations.read and projection.manage actions",
+    "viewer/editor cannot use operator-only operations or rebuild actions",
+    "projection writes remain worker-only",
+    "console approval association is read-only"
+  ],
+  "livePrerequisites": ["role-bound Dex identities", "API/UI/operator browser matrix", "audit export"]
+}

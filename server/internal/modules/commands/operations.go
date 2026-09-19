@@ -81,7 +81,7 @@ func (service *OperationsService) Snapshot(ctx context.Context, principal identi
 	if service == nil || service.reader == nil || service.authorizer == nil || service.clock == nil {
 		return OperationsSummary{}, ErrCommandOperationsUnavailable
 	}
-	if _, err := service.authorizer.Authorize(ctx, principal, query.TenantID, query.WorkspaceID, identity.ActionWorkspaceRead); err != nil {
+	if _, err := service.authorizer.Authorize(ctx, principal, query.TenantID, query.WorkspaceID, identity.ActionOperationsRead); err != nil {
 		return OperationsSummary{}, err
 	}
 	summary, err := service.reader.Snapshot(ctx, query)
