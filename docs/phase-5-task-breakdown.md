@@ -38,7 +38,7 @@ Batch 2 收口记录：[phase-5-batch2-closure](phase-5-batch2-closure.md)。四
 | P5-300 | Approver/Record Hub | connector registry、SDK semver、compatibility window | [closure](phase-5-batch3-p5-300.md)；exact registry/semver/fail-closed 静态 PASS，owner lifecycle live SKIPPED | PARTIAL |
 | P5-301 | Approver/Settlement | Settlement confirmation request/result/Apply contract | [closure](phase-5-batch3-p5-301.md)；schema/fixture/hash 与 safe Apply 静态 PASS，owner Apply live SKIPPED | PARTIAL |
 | P5-302 | Record Hub | Settlement safe association/projection | [closure](phase-5-batch3-p5-302.md)；safe model、版本/gap/conflict、scope/只读静态 PASS，live SKIPPED | PARTIAL |
-| P5-303 | Fluxion/Bids | approval connector production hardening | owner-side effect、reconciliation、fallback、rollback PASS | TODO |
+| P5-303 | Fluxion/Bids | approval connector production hardening | [closure](phase-5-batch3-p5-303.md)；owner-side effect、reconciliation、fallback、rollback 静态 PASS，isolated owner fault/rollback live SKIPPED | PARTIAL |
 
 ## Batch 4：GA evidence 与治理
 

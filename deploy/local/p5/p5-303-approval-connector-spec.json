@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "phase": "5",
+  "task": "P5-303",
+  "owners": ["fluxion", "bids"],
+  "liveRequired": true,
+  "connectorKeys": ["fluxion.approval", "bids.approval"],
+  "boundaries": {
+    "requestIdentity": [
+      "externalRequestId",
+      "resourceVersion",
+      "approvalGeneration",
+      "proposalHash",
+      "idempotencyKey"
+    ],
+    "ownerSideEffect": [
+      "owner-transaction",
+      "result-inbox",
+      "domain-state-update",
+      "completion-outbox"
+    ],
+    "reconciliation": [
+      "late-generation-finding",
+      "version-conflict",
+      "stale-resource-rejection",
+      "bounded-retry-and-dead-letter"
+    ],
+    "fallbackRollback": [
+      "tenant-workspace-rollout",
+      "in-flight-drain",
+      "local-human-fallback",
+      "connector-disable",
+      "old-path-retention"
+    ]
+  },
+  "forbidden": [
+    "record-hub-direct-owner-side-effect",
+    "unknown-connector-fallback",
+    "cross-owner-domain-write",
+    "result-without-scope-and-version"
+  ],
+  "liveEvidence": [
+    "Approver-outage-request-relay-recovery",
+    "duplicate-request-and-result-no-double-effect",
+    "late-result-and-version-conflict-reconciliation",
+    "tenant-workspace-disable-drain-local-fallback",
+    "old-worker-rollback-and-post-rollback-reconciliation"
+  ]
+}
