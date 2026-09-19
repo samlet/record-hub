@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:record-hub:phase4-evidence-manifest:v1",
+  "title": "Record Hub Phase 4 evidence manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "gate", "runId", "status", "startedAt", "finishedAt", "repositories", "files"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "gate": { "type": "string", "pattern": "^P4-G[0-5]$" },
+    "runId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$" },
+    "status": { "enum": ["IN_PROGRESS", "PASS", "FAIL", "SKIPPED"] },
+    "startedAt": { "type": "string", "format": "date-time" },
+    "finishedAt": { "type": "string", "format": "date-time" },
+    "repositories": {
+      "type": "array",
+      "minItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "commit"],
+        "properties": {
+          "name": { "enum": ["record-hub", "approver", "fluxion", "bids"] },
+          "commit": { "type": "string", "pattern": "^[0-9a-f]{7,64}$" },
+          "artifactSha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+        }
+      }
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256", "category"],
+        "properties": {
+          "path": { "type": "string", "pattern": "^[^/].*$" },
+          "sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+          "category": { "enum": ["config-redacted", "result", "log", "metric", "db-assertion", "recovery", "release", "security"] },
+          "bytes": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "redactions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["secretsRemoved", "payloadsOmitted"],
+      "properties": {
+        "secretsRemoved": { "const": true },
+        "payloadsOmitted": { "const": true }
+      }
+    },
+    "notes": { "type": "array", "items": { "type": "string", "maxLength": 512 } }
+  }
+}

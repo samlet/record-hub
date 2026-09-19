@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "gate": "P4-G0",
+  "runId": "p4-g0-contract-001",
+  "status": "PASS",
+  "startedAt": "2026-09-20T00:00:00Z",
+  "finishedAt": "2026-09-20T00:00:01Z",
+  "repositories": [
+    { "name": "record-hub", "commit": "54d6b5a" },
+    { "name": "approver", "commit": "3194bf8" },
+    { "name": "fluxion", "commit": "1321285" },
+    { "name": "bids", "commit": "c39e07f" }
+  ],
+  "files": [
+    { "path": "config-redacted.json", "sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "category": "config-redacted", "bytes": 42 },
+    { "path": "results.json", "sha256": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "category": "result", "bytes": 21 }
+  ],
+  "redactions": { "secretsRemoved": true, "payloadsOmitted": true },
+  "notes": ["fixture contains no secret or business payload"]
+}

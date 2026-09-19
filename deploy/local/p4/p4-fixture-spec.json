@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "phase": "4",
+  "tenants": [
+    {
+      "tenantId": "tenant-p4-beta",
+      "workspaceId": "workspace-p4-beta",
+      "organizationId": "org-p4-beta",
+      "enabledFlags": [],
+      "disabledFlags": ["fluxion.approval.external", "bids.approval.external"]
+    }
+  ],
+  "owners": [
+    { "system": "approver", "subject": "approver", "resourceType": "APPLICATION" },
+    { "system": "fluxion", "subject": "fluxion", "resourceType": "PROJECT" },
+    { "system": "bids", "subject": "bids", "resourceType": "TENDER" }
+  ],
+  "approvalSlices": [
+    { "id": "fluxion-dispatch", "sourceSystem": "fluxion", "resourceType": "PROJECT", "action": "dispatch.review", "sensitive": false },
+    { "id": "bids-tender-publication", "sourceSystem": "bids", "resourceType": "TENDER", "action": "tender.publish.review", "sensitive": false }
+  ],
+  "recoveryTargets": {
+    "mongo": "p4-mongo-restore",
+    "postgres": ["p4-approver-restore", "p4-fluxion-restore", "p4-bids-restore"],
+    "jetStream": "p4-jetstream-restore"
+  },
+  "releaseWindow": {
+    "strategy": "expand-contract",
+    "featureFlagDefault": "OFF",
+    "retentionRetryWindowRequired": true,
+    "oldWorkerMustIgnoreAdditiveFields": true
+  }
+}

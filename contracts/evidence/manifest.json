@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "contractFamily": "record-hub-phase4-evidence",
+  "contracts": [
+    {
+      "kind": "phase4-evidence-manifest",
+      "schemaId": "urn:record-hub:phase4-evidence-manifest:v1",
+      "schemaFile": "phase4-evidence-manifest-v1.schema.json",
+      "validFixtureFile": "testdata/valid/phase4-evidence-manifest-v1.json",
+      "invalidFixtureFiles": ["testdata/invalid/phase4-evidence-manifest-v1-status.json"]
+    }
+  ]
+}

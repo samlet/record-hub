@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "gate": "P4-G0",
+  "runId": "p4-g0-invalid-001",
+  "status": "UNKNOWN",
+  "startedAt": "2026-09-20T00:00:00Z",
+  "finishedAt": "2026-09-20T00:00:01Z",
+  "repositories": [],
+  "files": []
+}
