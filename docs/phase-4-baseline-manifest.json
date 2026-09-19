@@ -3,7 +3,7 @@
   "phase": "4",
   "baselineKind": "phase4-integration-beta",
   "status": "PASS",
-  "generatedAt": "2026-09-19T18:10:11Z",
+  "generatedAt": "2026-09-19T21:11:45Z",
   "buildMode": "build",
   "source": {
     "trackedWorktreesClean": true
@@ -12,8 +12,8 @@
     {
       "name": "record-hub",
       "workingDirectory": ".",
-      "commit": "9697447b7bf120238e07bc965ab09bfa34c8822f",
-      "sourceTreeSha256": "sha256:1f5ead38d66b583267bd5dd71ea365bebea61decf182ddfa75e581a47d0f7f86",
+      "commit": "cccc8292638ad4c007a57c4472496108d28a8b57",
+      "sourceTreeSha256": "sha256:a4b5e0d602d46e7c68952bbfaa56dc4fdd49fca97ca2a942451e1c763d77feb5",
       "trackedWorktreeClean": true,
       "untracked": [
         "c123.db"
@@ -30,8 +30,8 @@
     {
       "name": "approver",
       "workingDirectory": ".",
-      "commit": "83c1cb145a9a417a8a69262867bd108a6d308904",
-      "sourceTreeSha256": "sha256:672e446fe034a0aed76fb77aaabe97c2cfa7243d125927887cd6df9288bac523",
+      "commit": "41ae52056405415fef14630ed11691d8958f144c",
+      "sourceTreeSha256": "sha256:104e193fcff3576d3a61b27675447912f358690c95014683ff49d9d20ce1e15b",
       "trackedWorktreeClean": true,
       "untracked": [],
       "build": {
@@ -46,8 +46,8 @@
     {
       "name": "fluxion",
       "workingDirectory": "server",
-      "commit": "9349638f1157d190752107bf54ede3691e253d87",
-      "sourceTreeSha256": "sha256:4ae313fde3687ef42985ea5c74425daf7a8135369995dca836b07a85f6355b3d",
+      "commit": "bf538f641bf9b41ac399cbad4fb60d8ecf89dba9",
+      "sourceTreeSha256": "sha256:d4063d1af9cdd80a8cb832b63bdff4d292a30437d4f920a981bb79ef9eb11d64",
       "trackedWorktreeClean": true,
       "untracked": [],
       "build": {
@@ -62,8 +62,8 @@
     {
       "name": "bids",
       "workingDirectory": "backend",
-      "commit": "aae52703bdaf93d69fc136674ebb289cabef7867",
-      "sourceTreeSha256": "sha256:9116cf1e92af01bf592b6ea422e6139788520cdc0714b1a0f4d07152c479b40f",
+      "commit": "b5d2541a50046011d21fae169b86f793a6b22158",
+      "sourceTreeSha256": "sha256:314c2ff72e89e7f846328c3a38e8f0eaa5adead64c37ee8dcc757d7b034c1fbb",
       "trackedWorktreeClean": true,
       "untracked": [],
       "build": {
@@ -83,8 +83,8 @@
         "name": "record-hub",
         "repository": "record-hub",
         "path": "build/p4-baseline-artifacts/record-hub",
-        "sha256": "sha256:587a6c5766def8764bb02073787fa06b98a3b806d989623d19b31e5d2b5c5b59",
-        "bytes": 19203842,
+        "sha256": "sha256:e0592db28574ea263b9250bb165fd537ae6f514d3b5e4cd3694446aaacca28d1",
+        "bytes": 19259410,
         "buildCommand": "go build -trimpath -o build/p4-baseline-artifacts/record-hub ./server/cmd/record-hub",
         "status": "PASS"
       },
@@ -92,8 +92,8 @@
         "name": "approver-api",
         "repository": "approver",
         "path": "build/p4-baseline-artifacts/approver-api.jar",
-        "sha256": "sha256:5214eb9638fe9f19405a575528ebaefb74d4a30e6301932c305cf3ada68099de",
-        "bytes": 114099446,
+        "sha256": "sha256:da5ced1b445f190913f1a9e0f94a8015f5b8e3f6fe0b6540521f578448ce634c",
+        "bytes": 114117253,
         "buildCommand": "mvn -DskipTests package",
         "status": "PASS"
       },
@@ -101,8 +101,8 @@
         "name": "approver-worker",
         "repository": "approver",
         "path": "build/p4-baseline-artifacts/approver-worker.jar",
-        "sha256": "sha256:a066f2988c4528b64d529a7732d590abf89a5729bdc24f9911f6e5e7597568d9",
-        "bytes": 106574043,
+        "sha256": "sha256:947ea7a0455e90ac0be00256d9e2c8cd8e62f245fead1d3bc26c67f86050d339",
+        "bytes": 106583149,
         "buildCommand": "mvn -DskipTests package",
         "status": "PASS"
       },
@@ -110,8 +110,8 @@
         "name": "fluxion-server",
         "repository": "fluxion",
         "path": "build/p4-baseline-artifacts/fluxion-server.jar",
-        "sha256": "sha256:b9b7a2ae1b0191ed5c35bb1a1cbc53890dadcdc55f6c0cc7472e574813f8f898",
-        "bytes": 1010447,
+        "sha256": "sha256:ec01c8838105cb402519c0dfa2f1e7051eb588e88dc6e663050ee98806a676c7",
+        "bytes": 1030292,
         "buildCommand": "./gradlew build",
         "status": "PASS"
       },
@@ -119,8 +119,8 @@
         "name": "bids-api",
         "repository": "bids",
         "path": "build/p4-baseline-artifacts/bids-api",
-        "sha256": "sha256:e83e4cd3fbb2b5bd01b788119d7b167e43c8e887a534d3a1cbe96435fa483728",
-        "bytes": 36235090,
+        "sha256": "sha256:7d44233466c93ae102aabfb0f7afeac7da3a559341c96ac193815560cff575ad",
+        "bytes": 36270146,
         "buildCommand": "go build -trimpath -o build/p4-baseline-artifacts/bids-api ./cmd/api",
         "status": "PASS"
       },
@@ -128,8 +128,8 @@
         "name": "bids-worker",
         "repository": "bids",
         "path": "build/p4-baseline-artifacts/bids-worker",
-        "sha256": "sha256:79cf0e0a33eb9d7a47b744f69a8f412fdb4eb0dd190a448fa1f56284991965b9",
-        "bytes": 34471698,
+        "sha256": "sha256:d08c39d25ae244164b88f47168755d22ff8f3cad5187e53f9fdc937ef3344056",
+        "bytes": 34557138,
         "buildCommand": "go build -trimpath -o build/p4-baseline-artifacts/bids-worker ./cmd/worker",
         "status": "PASS"
       }
