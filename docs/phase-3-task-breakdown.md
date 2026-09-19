@@ -1,7 +1,7 @@
 # Phase 3 真实业务系统接入任务分解
 
 - 日期：2026-09-18
-- 状态：Batch 0 contract gate complete; owner adapters planned
+- 状态：Batch 3 bounded owner-adapter gate complete; P3-308 live matrix skipped pending isolated topology
 - 方案：[phase-3-integration-design.md](phase-3-integration-design.md)
 - 需求：[phase-3-requirements.md](phase-3-requirements.md)
 - 验收：[phase-3-acceptance-plan.md](phase-3-acceptance-plan.md)
