@@ -57,7 +57,7 @@ Batch 4 收口记录：[phase-5-batch4-closure](phase-5-batch4-closure.md)。四
 
 | ID | 范围 | 任务 | 验收 | 状态 |
 | --- | --- | --- | --- | --- |
-| P5-500 | 四仓库 | GA candidate manifest | all mandatory gates PASS、无继承 SKIPPED | TODO |
+| P5-500 | 四仓库 | GA candidate manifest | [closure](phase-5-batch5-p5-500.md)；fail-closed preflight 静态 PASS，当前 BLOCKED、禁止创建 candidate | BLOCKED_BY_GATES |
 | P5-501 | 四仓库 | Production GA rollout | staged expansion、rollback window 和审计 PASS | TODO |
 
 ## 执行规则

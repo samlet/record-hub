@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "phase": "5",
+  "task": "P5-500",
+  "liveRequired": true,
+  "candidateMustHave": [
+    "P4-501-live-all-gates-pass",
+    "P5-G1-pass",
+    "P5-G2-pass",
+    "P5-G3-pass",
+    "P5-G4-pass",
+    "P5-G5-pass",
+    "P5-G6-pass",
+    "P5-G7-pass",
+    "immutable-four-owner-artifacts",
+    "formal-signoff"
+  ],
+  "forbiddenInheritedStatuses": ["SKIPPED", "PARTIAL", "UNVERIFIED", "PENDING"],
+  "manifestRequired": [
+    "four-owner-commit-digest",
+    "artifact-sha256",
+    "contract-migration-config-digest",
+    "topology",
+    "capacity",
+    "rpo-rto",
+    "retention",
+    "rollback",
+    "risk-owner",
+    "signoff"
+  ],
+  "failClosed": true,
+  "currentDecision": "DO_NOT_CREATE_GA_CANDIDATE"
+}
