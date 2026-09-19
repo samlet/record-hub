@@ -1,7 +1,7 @@
 # Phase 3 真实业务系统接入任务分解
 
 - 日期：2026-09-18
-- 状态：Batch 3 bounded owner-adapter gate complete; P3-308 live matrix skipped pending isolated topology
+- 状态：Batch 4A（隔离拓扑与确定性 fixture）完成；P3-308 live matrix、P3-402..409 仍待后续批次
 - 方案：[phase-3-integration-design.md](phase-3-integration-design.md)
 - 需求：[phase-3-requirements.md](phase-3-requirements.md)
 - 验收：[phase-3-acceptance-plan.md](phase-3-acceptance-plan.md)
@@ -18,7 +18,7 @@
 | P3-BASE-003 | Workflow Binding | PARTIAL | Fluxion Temporal 与 Bids Conductor adapter 已实现；真实全拓扑和 Approver 使用场景未验收 |
 | P3-BASE-004 | Owner command processing | PARTIAL | 三个业务系统已接入 strict command durable、原生 Inbox 和 result Outbox；真实四进程故障矩阵留 P3-308 |
 | P3-BASE-005 | Approver service integration | PARTIAL | Approver generic connector 基座已存在；Fluxion/Bids connector 未实现 |
-| P3-BASE-006 | 隔离四应用拓扑 | TODO | P2 只有 core/engine 基线，尚未监督启动四个真实应用进程 |
+| P3-BASE-006 | 隔离四应用拓扑 | DONE | P3-400 原生 supervisor 已能在专用端口/临时 DB 启动四个真实应用及基础设施并通过 readiness；业务操作矩阵仍留 P3-308/P3-402 |
 
 ## Batch 0：方案、契约与仓库基线
 
@@ -88,8 +88,8 @@
 
 | ID | 仓库 | 任务 | 状态 | 验收 |
 | --- | --- | --- | --- | --- |
-| P3-400 | Record Hub | 扩展原生监督脚本启动四应用 | TODO | 独立端口/DB/PID/log，退出只清理自身进程 |
-| P3-401 | 四仓库 | 自动准备 schema、mapping、policy、tenant/org fixture | TODO | 重复运行幂等，fixture hash 固定 |
+| P3-400 | Record Hub | 扩展原生监督脚本启动四应用 | DONE | `scripts/verify-p3-four-owner-topology.sh`；原生 Mongo/NATS/Dex/workload issuer/Temporal/Conductor + Record Hub/Approver/Fluxion/Bids API/worker 隔离启动；独立端口/DB/PID/log，退出只清理自身进程；2026-09-19 Darwin arm64 live PASS，evidence manifest 记录四仓库 SHA |
+| P3-401 | 四仓库 | 自动准备 schema、mapping、policy、tenant/org fixture | DONE | `scripts/bootstrap-p3-fixtures.sh`；topology/owner/policy/schema 生成到临时目录，重复运行幂等，5 个文件 manifest SHA 固定；同一 live evidence 的 fixture manifest 已验收 |
 | P3-402 | 四仓库 | 真实 Temporal + Conductor workflow E2E | TODO | Binding/command/approval history 与 DB 最终断言 |
 | P3-403 | 四仓库 | NATS outage/backlog/recovery | TODO | Outbox 积压可见；恢复清空；无消息丢失/重复副作用 |
 | P3-404 | 四仓库 | 进程 restart/ACK-loss 矩阵 | TODO | 每个 commit/ACK 边界注入崩溃并恢复 |

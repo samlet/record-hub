@@ -44,7 +44,7 @@ db-assertions/         计数/hash/version/unique 断言，不保存敏感正文
 所有端口可通过 `RECORD_HUB_P3_*` 覆盖。启动脚本先检查端口和二进制；任一冲突应 fail fast，
 不得杀死未知 PID。随机 secret 只存在临时目录/进程环境；成功后删除，失败时保留目录但先脱敏。
 
-当前已提供契约门禁入口；owner live 入口仍是后续批次目标：
+当前已提供契约门禁和隔离四 owner topology 入口；业务 owner live matrix 仍是后续批次目标：
 
 ```text
 make p3-contract-gate        # 已实现：四仓库 command/result 镜像与 manifest hash
@@ -53,7 +53,13 @@ make p3-fluxion-command-faults # 可选：双 worker、commit-before-ACK、结�
 make p3-approval-pilot-live
 make p3-three-owner-live
 make p3-full-topology
+make p3-fixtures              # P3-401：确定性 topology/policy/owner/schema fixture
+RECORD_HUB_P3_FOUR_OWNER_LIVE=1 make p3-four-owner-topology # P3-400：原生四 owner readiness
 ```
+
+P3-400/P3-401 的实现与 live evidence 见 [phase-3-batch4a-topology.md](phase-3-batch4a-topology.md)。
+`p3-four-owner-topology` 只做真实进程和依赖 ready 检查，不直接发布业务 command，也不以 ready 结果替代
+P3-308/P3-402 的 workflow、ACK-loss、outage 和最终一致性断言。
 
 ## 3. Gate A：契约与静态边界
 

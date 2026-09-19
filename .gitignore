@@ -3,6 +3,7 @@
 .env.*
 !.env.example
 data/
+.runtime/
 dist/
 build/
 sdk/java/target/

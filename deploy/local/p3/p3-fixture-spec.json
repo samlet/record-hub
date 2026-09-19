@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "topology": {
+    "tenantIds": {
+      "approver": "tenant-p3-approver",
+      "fluxion": "tenant-p3-fluxion",
+      "bids": "tenant-p3-bids"
+    },
+    "workspaceIds": {
+      "approver": "workspace-p3-approver",
+      "fluxion": "workspace-p3-fluxion",
+      "bids": "workspace-p3-bids"
+    },
+    "temporalNamespace": "p3-local",
+    "temporalTaskQueues": {
+      "approver": "approver-p3-local",
+      "fluxion": "fluxion-p3-local"
+    },
+    "conductorServer": "http://127.0.0.1:18080"
+  },
+  "owners": [
+    {
+      "system": "approver",
+      "subject": "approver",
+      "resourceType": "APPLICATION",
+      "action": "application.annotate",
+      "purpose": "application-annotation",
+      "policyFile": "approver-application-annotate-policy.json",
+      "migration": "V32__record_hub_command_adapter.sql"
+    },
+    {
+      "system": "fluxion",
+      "subject": "fluxion",
+      "resourceType": "PROJECT",
+      "action": "project.annotate",
+      "purpose": "project-annotation",
+      "policyFile": "fluxion-project-annotate-policy.json",
+      "migration": "V8__record_hub_command_adapter.sql"
+    },
+    {
+      "system": "bids",
+      "subject": "bids",
+      "resourceType": "TENDER",
+      "action": "tender.annotate",
+      "purpose": "tender-annotation",
+      "policyFile": "bids-tender-annotate-policy.json",
+      "migration": "0027_record_hub_command_adapter.sql"
+    }
+  ],
+  "schemas": [
+    "urn:record-hub:command-envelope:v1",
+    "urn:record-hub:result-envelope:v1",
+    "urn:record-hub:summary:application:v1",
+    "urn:record-hub:summary:project:v1",
+    "urn:record-hub:summary:tender:v1"
+  ]
+}
