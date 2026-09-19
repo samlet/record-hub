@@ -1,7 +1,7 @@
 # Phase 4 Integration Beta 任务分解
 
 - 日期：2026-09-20
-- 状态：Batch 0 planning baseline complete；实现任务待开始
+- 状态：Batch 0 已完成；Batch 1 待开始
 - 方案：[phase-4-design.md](phase-4-design.md)
 - 需求：[phase-4-requirements.md](phase-4-requirements.md)
 - 验收：[phase-4-acceptance-plan.md](phase-4-acceptance-plan.md)
@@ -14,10 +14,10 @@ manifest 必须记录当次实际 commit 和 artifact checksum。
 | ID | 仓库 | 任务 | 依赖 | 状态 | 验收 |
 | --- | --- | --- | --- | --- | --- |
 | P4-000 | Record Hub | Phase 4 方案、需求、任务与验收计划 | P3 report | DONE | 四份文档互链，阶段边界、Gate 和禁止项一致 |
-| P4-001 | 四仓库 | 固定当前 commit、artifact、migration、contract baseline | P4-000 | TODO | machine-readable release manifest；构建命令与 checksum 可重现 |
-| P4-002 | 四仓库 | contract/fixture inventory 与 mirror gate | P4-001 | TODO | command/result、dispatch approval、association assets 无漂移/未知文件 |
-| P4-003 | Record Hub | Phase 4 evidence manifest/schema 与持久目录 | P4-001 | TODO | `build/evidence/phase4/<run-id>`、hash、redacted config、artifact upload contract |
-| P4-004 | 四仓库 | 扩展隔离 topology 与 deterministic fixtures | P4-001..003 | TODO | 独立端口/DB/store/PID；source/restore、old/new artifact、tenant/org fixtures 可重复创建 |
+| P4-001 | 四仓库 | 固定当前 commit、artifact、migration、contract baseline | P4-000 | DONE | `make p4-baseline` 通过；四仓库 commit/source digest 与 6 个构建 artifact checksum 已写入 [baseline manifest](phase-4-baseline-manifest.json) |
+| P4-002 | 四仓库 | contract/fixture inventory 与 mirror gate | P4-001 | DONE | `make p4-contract-inventory` 通过；command/result、dispatch approval、summary owner manifests 与 schema hash 无漂移，详见 [contract inventory](phase-4-contract-inventory.json) |
+| P4-003 | Record Hub | Phase 4 evidence manifest/schema 与持久目录 | P4-001 | DONE | `make p4-evidence-contract` 通过；schema、valid/invalid fixture、redacted path 约束与 `build/evidence/phase4/<run-id>` 布局已固定 |
+| P4-004 | 四仓库 | 扩展隔离 topology 与 deterministic fixtures | P4-001..003 | DONE | `make p4-fixtures` 通过；tenant/org、approval slice、recovery target、expand-contract 与 OFF-by-default flags 可重复生成 |
 
 ## Batch 1：Phase 3 收口
 

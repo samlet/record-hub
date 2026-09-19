@@ -25,7 +25,10 @@ sha256_file() {
 
 source_digest() {
   local repo="$1"
-  (cd "$repo" && git ls-files -z -- . ':(exclude)docs/phase-4-baseline-manifest.json' | xargs -0 shasum -a 256 | shasum -a 256 | awk '{print "sha256:"$1}')
+  (cd "$repo" && git ls-files -z -- . \
+    ':(exclude)docs/phase-4-baseline-manifest.json' \
+    ':(exclude)docs/phase-4-contract-inventory.json' \
+    | xargs -0 shasum -a 256 | shasum -a 256 | awk '{print "sha256:"$1}')
 }
 
 tracked_clean() {

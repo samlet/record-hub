@@ -1,0 +1,267 @@
+{
+  "schemaVersion": 1,
+  "gate": "P4-002",
+  "status": "PASS",
+  "generatedAt": "2026-09-19T18:06:53.201973Z",
+  "sharedMirrors": {
+    "commands": "PASS",
+    "approvals": "PASS"
+  },
+  "ownerSpecificFamilies": [
+    {
+      "repository": "record-hub",
+      "family": "summaries",
+      "commit": "0e86f71e2373e281391bd60e5c771374f8814f19",
+      "rootKind": "summaries",
+      "contracts": [
+        {
+          "kind": "application",
+          "schemaId": "urn:record-hub:summary:application:v1",
+          "schema": "application-summary-v1.schema.json",
+          "fixture": "testdata/valid/application-summary-v1.json"
+        },
+        {
+          "kind": "project",
+          "schemaId": "urn:record-hub:summary:project:v1",
+          "schema": "project-summary-v1.schema.json",
+          "fixture": "testdata/valid/project-summary-v1.json"
+        },
+        {
+          "kind": "tender",
+          "schemaId": "urn:record-hub:summary:tender:v1",
+          "schema": "tender-summary-v1.schema.json",
+          "fixture": "testdata/valid/tender-summary-v1.json"
+        },
+        {
+          "kind": "approval",
+          "schemaId": "urn:record-hub:summary:approval:v1",
+          "schema": "approval-summary-v1.schema.json",
+          "fixture": "testdata/valid/approval-summary-v1.json"
+        }
+      ],
+      "files": [
+        {
+          "path": "application-summary-v1.schema.json",
+          "sha256": "sha256:c7c269943d0d84c090a00c1c624fa5f08c1e994df82016c8dd26ba3d16f621ae",
+          "bytes": 727
+        },
+        {
+          "path": "approval-summary-v1.schema.json",
+          "sha256": "sha256:89a735be5cacc2a09ff24c88f4b76965096507faeb30a9cd9d3106622d250b5b",
+          "bytes": 1761
+        },
+        {
+          "path": "manifest.json",
+          "sha256": "sha256:ac8d556495312dee26799e9cd8ca5dee6da5f578684837dc8f734d9b36ac60ed",
+          "bytes": 1300
+        },
+        {
+          "path": "project-summary-v1.schema.json",
+          "sha256": "sha256:311dbb7d1c9b3841cacd0ada034fba1077c494841b24baaca18a19ffe196a398",
+          "bytes": 802
+        },
+        {
+          "path": "tender-summary-v1.schema.json",
+          "sha256": "sha256:024524fa5b60f8a8deac700bf19745c121f450439532ba22d7ab0f882cad1fff",
+          "bytes": 799
+        },
+        {
+          "path": "testdata/valid/application-summary-v1.json",
+          "sha256": "sha256:0959107cfa960ddea958a334d694698bd714a8000c3e5d98c0ba89d7b97c0838",
+          "bytes": 173
+        },
+        {
+          "path": "testdata/valid/approval-summary-v1.json",
+          "sha256": "sha256:eb70f4cd4ba93460d1053c802ec2fe2933ded8db13e980d3625e8a8264dda880",
+          "bytes": 579
+        },
+        {
+          "path": "testdata/valid/project-summary-v1.json",
+          "sha256": "sha256:46fb037ce84ab9e4265502d4fc647de699c8f0b39161ef3cd46d867c9d285a5d",
+          "bytes": 204
+        },
+        {
+          "path": "testdata/valid/tender-summary-v1.json",
+          "sha256": "sha256:97b10d40291c47f7c7aa44bbc785835eaf4b04782912fed6922cc71a6840d5ff",
+          "bytes": 203
+        }
+      ]
+    },
+    {
+      "repository": "approver",
+      "family": "summaries",
+      "commit": "83c1cb145a9a417a8a69262867bd108a6d308904",
+      "rootKind": "summaries",
+      "contracts": [
+        {
+          "kind": "application",
+          "schemaId": "urn:record-hub:summary:application:v1",
+          "schema": "application-summary-v1.schema.json",
+          "fixture": "testdata/valid/application-summary-v1.json"
+        }
+      ],
+      "files": [
+        {
+          "path": "application-summary-v1.schema.json",
+          "sha256": "sha256:c7c269943d0d84c090a00c1c624fa5f08c1e994df82016c8dd26ba3d16f621ae",
+          "bytes": 727
+        },
+        {
+          "path": "manifest.json",
+          "sha256": "sha256:4294ad76da3233b16d3ad6f6b4151a5f1d8fe4bbd61fe4ad63608529852881be",
+          "bytes": 367
+        },
+        {
+          "path": "testdata/valid/application-summary-v1.json",
+          "sha256": "sha256:0959107cfa960ddea958a334d694698bd714a8000c3e5d98c0ba89d7b97c0838",
+          "bytes": 173
+        }
+      ]
+    },
+    {
+      "repository": "fluxion",
+      "family": "summaries",
+      "commit": "9349638f1157d190752107bf54ede3691e253d87",
+      "rootKind": "summaries",
+      "contracts": [
+        {
+          "kind": "project",
+          "schemaId": "urn:record-hub:summary:project:v1",
+          "schema": "project-summary-v1.schema.json",
+          "fixture": "testdata/valid/project-summary-v1.json"
+        }
+      ],
+      "files": [
+        {
+          "path": "manifest.json",
+          "sha256": "sha256:0d84d4dd715b9396be7ccb3608221dd8f00f63b8aef4d1c4806852d6c8406cba",
+          "bytes": 351
+        },
+        {
+          "path": "project-summary-v1.schema.json",
+          "sha256": "sha256:311dbb7d1c9b3841cacd0ada034fba1077c494841b24baaca18a19ffe196a398",
+          "bytes": 802
+        },
+        {
+          "path": "testdata/valid/project-summary-v1.json",
+          "sha256": "sha256:46fb037ce84ab9e4265502d4fc647de699c8f0b39161ef3cd46d867c9d285a5d",
+          "bytes": 204
+        }
+      ]
+    },
+    {
+      "repository": "bids",
+      "family": "summaries",
+      "commit": "aae52703bdaf93d69fc136674ebb289cabef7867",
+      "rootKind": "contracts",
+      "contracts": [
+        {
+          "kind": "tender",
+          "schemaId": "urn:record-hub:summary:tender:v1",
+          "schema": "tender-summary-v1.schema.json",
+          "fixture": "testdata/valid/tender-summary-v1.json"
+        }
+      ],
+      "files": [
+        {
+          "path": "approvals/dispatch-approval-request-v1.schema.json",
+          "sha256": "sha256:2f87c58552b18cd144f0ee648840ff8c02833ead2247364b7d71e22cba973ddc",
+          "bytes": 2603
+        },
+        {
+          "path": "approvals/dispatch-approval-result-v1.schema.json",
+          "sha256": "sha256:cbc624b1b2e786cd70e5e3005f3a084a36aaf98ca9abd0d5cbba0d60a6e2dcab",
+          "bytes": 1942
+        },
+        {
+          "path": "approvals/error-codes.json",
+          "sha256": "sha256:3b55ad8f12f72fada8be8141bae5e29bddfa5b13a79bfc25b3a3501148594983",
+          "bytes": 735
+        },
+        {
+          "path": "approvals/manifest.json",
+          "sha256": "sha256:35e77592410d087498eec0dc01facf96a37bb27f67c54029320eae32db6744b7",
+          "bytes": 1021
+        },
+        {
+          "path": "approvals/testdata/invalid/dispatch-approval-request-v1-unknown-field.json",
+          "sha256": "sha256:633e2dbf4f0a17de671eb13b443d2bcd30441e3bf5b0e470487b6e7ad163716e",
+          "bytes": 877
+        },
+        {
+          "path": "approvals/testdata/invalid/dispatch-approval-result-v1-decision.json",
+          "sha256": "sha256:9bf716ca7d99770063ddd7201a114c0df718fcd67e4ee85ee04d0e6776d22b99",
+          "bytes": 621
+        },
+        {
+          "path": "approvals/testdata/valid/dispatch-approval-request-v1.json",
+          "sha256": "sha256:2e9638ee11b09aa0dfe5ea20f9925c52d0a34bcabd1e4ab804b49c769dd890ae",
+          "bytes": 833
+        },
+        {
+          "path": "approvals/testdata/valid/dispatch-approval-result-v1.json",
+          "sha256": "sha256:c54b48a3c6d176f8fd56e3c366fec021951e529789a597f7cc592aee22efacf2",
+          "bytes": 731
+        },
+        {
+          "path": "commands/command-envelope-v1.schema.json",
+          "sha256": "sha256:3f738746784be6837cc30609c551189b3a44aa5c74a44c9e4d498a36188314d3",
+          "bytes": 1682
+        },
+        {
+          "path": "commands/error-codes.json",
+          "sha256": "sha256:f013861c8700c02644fc2f86a8765625ddba00f944090fd421b7f325df96086f",
+          "bytes": 1169
+        },
+        {
+          "path": "commands/manifest.json",
+          "sha256": "sha256:f3ea00dc946f849d01091a0c74c283ea5212da4f78e805a6df2137df3241d9e4",
+          "bytes": 1055
+        },
+        {
+          "path": "commands/result-envelope-v1.schema.json",
+          "sha256": "sha256:ce0171d9ac2b549f0d4813cdf207a451d3f8c265f512da819e90e6655480bbf0",
+          "bytes": 1240
+        },
+        {
+          "path": "commands/testdata/invalid/command-envelope-v1-unknown-field.json",
+          "sha256": "sha256:830f23369f8e9bc8c6b37368b112a063b71688cf452640fea7ee70c827c40db5",
+          "bytes": 685
+        },
+        {
+          "path": "commands/testdata/invalid/result-envelope-v1-status.json",
+          "sha256": "sha256:1e5c3dc7e24bd69038afe296d4602728ab3a9dd599b4e3483898f34f7db64d98",
+          "bytes": 312
+        },
+        {
+          "path": "commands/testdata/valid/command-envelope-v1.json",
+          "sha256": "sha256:ecaab9c439034ca326a39d10dd11ace930f5e29727b787d9247ccb58fe423215",
+          "bytes": 711
+        },
+        {
+          "path": "commands/testdata/valid/result-envelope-v1.json",
+          "sha256": "sha256:25d6a7845bdf8ded73c297db890bee9ebde2f2d85f3852147f882f1bf6a257b6",
+          "bytes": 424
+        },
+        {
+          "path": "manifest.json",
+          "sha256": "sha256:eed7f0ee013ba9576f8d5dd4a8e8dd406735688de5f4eb2b2707e143eada4024",
+          "bytes": 347
+        },
+        {
+          "path": "tender-summary-v1.schema.json",
+          "sha256": "sha256:024524fa5b60f8a8deac700bf19745c121f450439532ba22d7ab0f882cad1fff",
+          "bytes": 799
+        },
+        {
+          "path": "testdata/valid/tender-summary-v1.json",
+          "sha256": "sha256:97b10d40291c47f7c7aa44bbc785835eaf4b04782912fed6922cc71a6840d5ff",
+          "bytes": 203
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "Commands and approvals are byte-identical mirrors; summaries are owner-specific and hash-checked against their manifests."
+  ]
+}
