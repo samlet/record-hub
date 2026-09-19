@@ -1,4 +1,4 @@
-.PHONY: build test lint web-check openapi-lint generate-clients dependency-scan sbom secret-scan mongo-up mongo-smoke mongo-down schema-persistence-smoke records-persistence-smoke projection-persistence-smoke nats-up nats-init nats-smoke nats-permissions-smoke nats-down dex-env dex-up dex-smoke dex-down m5-runtime-smoke m5-supervised-live m7-native-restart m7-native-nats-recovery m8-happy-path m8-failure-path m8-local-smoke m8-native-smoke p2-workload-identity-smoke p2-isolated-core p2-engine-foundation p2-mapping-recovery p2-rebuild-cas p2-rebuild-replay p2-slo-baseline p2-realtime-feed p2-command-contract p2-command-result p3-contract-gate p3-fluxion-command-live check ci clean
+.PHONY: build test lint web-check openapi-lint generate-clients dependency-scan sbom secret-scan mongo-up mongo-smoke mongo-down schema-persistence-smoke records-persistence-smoke projection-persistence-smoke nats-up nats-init nats-smoke nats-permissions-smoke nats-down dex-env dex-up dex-smoke dex-down m5-runtime-smoke m5-supervised-live m7-native-restart m7-native-nats-recovery m8-happy-path m8-failure-path m8-local-smoke m8-native-smoke p2-workload-identity-smoke p2-isolated-core p2-engine-foundation p2-mapping-recovery p2-rebuild-cas p2-rebuild-replay p2-slo-baseline p2-realtime-feed p2-command-contract p2-command-result p3-contract-gate p3-fluxion-command-live p3-fluxion-command-faults check ci clean
 
 BUILD_DIR := build
 BINARY := $(BUILD_DIR)/record-hub
@@ -140,6 +140,9 @@ p3-contract-gate:
 
 p3-fluxion-command-live:
 	./scripts/verify-p3-fluxion-command-live.sh
+
+p3-fluxion-command-faults:
+	RECORD_HUB_P3_FAULT_MATRIX=1 ./scripts/verify-p3-fluxion-command-live.sh
 
 check: lint web-check openapi-lint test build
 

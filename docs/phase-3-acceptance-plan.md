@@ -49,6 +49,7 @@ db-assertions/         计数/hash/version/unique 断言，不保存敏感正文
 ```text
 make p3-contract-gate        # 已实现：四仓库 command/result 镜像与 manifest hash
 make p3-fluxion-command-live
+make p3-fluxion-command-faults # 可选：双 worker、commit-before-ACK、结果消费者重启
 make p3-approval-pilot-live
 make p3-three-owner-live
 make p3-full-topology
@@ -68,14 +69,14 @@ make p3-full-topology
 
 ## 4. Gate B：Fluxion Command 正常路径
 
-实现基线已完成（Fluxion commit `3530d96`）：V8 Inbox/Outbox、strict decoder、durable pull runner、
+实现基线已完成（Fluxion commit `7811ddd`）：V8 Inbox/Outbox、strict decoder、durable pull runner、
 `project.annotate` APPEND/VOID 和 result relay 均已接入。以下 live 验收仍需真实 PostgreSQL、NATS、
 Record Hub 与 Fluxion worker 进程共同运行；单测不能替代 Gate B。
 
 ### B1 APPEND
 
-核心正常路径已由 `make p3-fluxion-command-live` 在 2026-09-19 真实通过；下列断言仍是 Gate B 的完整验收标准，
-故障注入和 restart/ACK-loss 部分不能由该核心切片替代。
+核心正常路径已由 `make p3-fluxion-command-live` 在 2026-09-19 真实通过；故障矩阵由
+`make p3-fluxion-command-faults` 在相同隔离拓扑中执行，不能以单测替代。
 
 1. 使用 `fluxion-to-record-hub` token 提交 `project.annotate`，记录 operation ID。
 2. 断言 receipt 从 `ACCEPTED`/`DISPATCHED` 最终进入 `SUCCEEDED`。
@@ -101,13 +102,13 @@ Record Hub 与 Fluxion worker 进程共同运行；单测不能替代 Gate B。
 | C-004 | command publish 前 Record Hub 停止 | receipt 保持可恢复状态；同 key 重试只一条 operation |
 | C-005 | owner transaction 前崩溃 | command 重投后正常执行一次 |
 | C-006 | owner transaction 中途回滚 | Inbox/domain/result Outbox 均不提交 |
-| C-007 | commit 后 ACK 前崩溃 | 重投读取已完成 Inbox；不重复 annotation |
+| C-007 | commit 后 ACK 前崩溃 | 重投读取已完成 Inbox；不重复 annotation（live fault matrix 已覆盖） |
 | C-008 | result publish 后 mark SENT 前崩溃 | 同 event ID 重发；Record Hub 幂等终态 |
-| C-009 | Record Hub result consumer 停止 | owner result Outbox/JetStream 可见；恢复后 receipt 收敛 |
+| C-009 | Record Hub result consumer 停止 | owner result Outbox/JetStream 可见；恢复后 receipt 收敛（live fault matrix 已覆盖） |
 | C-010 | NATS outage | owner/Record Hub 本地事实保留；恢复后 backlog 清空 |
 | C-011 | 非法 owner/action/tenant/workspace | fail closed；不泄露资源存在性 |
 | C-012 | slow/poison message | 有界重试后 DLQ；其他正常消息继续推进 |
-| C-013 | 两个 owner worker 竞争 | unique/CAS 保证一条领域副作用 |
+| C-013 | 两个 owner worker 竞争 | unique/CAS 保证一条领域副作用（live fault matrix 已覆盖） |
 | C-014 | 两个 Record Hub result worker 竞争 | operation revision 单调，终态唯一 |
 
 每个 case 在结束时比较：Record Hub operation、JetStream consumer state、Fluxion Inbox、annotation、

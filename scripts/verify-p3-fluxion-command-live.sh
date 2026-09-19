@@ -26,6 +26,7 @@ record_hub_port="${RECORD_HUB_P3_RECORD_HUB_PORT:-18082}"
 temporal_port="${RECORD_HUB_P3_TEMPORAL_PORT:-17233}"
 temporal_ui_port="${RECORD_HUB_P3_TEMPORAL_UI_PORT:-18233}"
 fluxion_port="${RECORD_HUB_P3_FLUXION_PORT:-18091}"
+fault_matrix="${RECORD_HUB_P3_FAULT_MATRIX:-0}"
 
 for port in "$mongo_port" "$nats_port" "$nats_monitor_port" "$workload_port" "$record_hub_port" "$temporal_port" "$temporal_ui_port" "$fluxion_port"; do
   if lsof -nP -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1; then
@@ -40,6 +41,12 @@ mkdir -p "$runtime_root/mongo" "$runtime_root/nats" "$evidence_dir/logs" "$evide
 pids=()
 fluxion_api_java_pid=""
 fluxion_worker_java_pid=""
+fluxion_worker_launcher_pid=""
+record_hub_pid=""
+fault_worker_java_pid=""
+fault_worker_launcher_pid=""
+competition_worker_java_pid=""
+competition_worker_launcher_pid=""
 pg_db="fluxion_p3_${$}"
 
 write_manifest() {
@@ -64,18 +71,18 @@ cleanup() {
       jq -n '{gate:"P3-110",status:"FAIL",note:"live gate terminated before all cases completed"}' >"$evidence_dir/results.json"
     fi
   fi
-  for pid in "${fluxion_api_java_pid:-}" "${fluxion_worker_java_pid:-}" "${pids[@]}"; do
+  for pid in "${fluxion_api_java_pid:-}" "${fluxion_worker_java_pid:-}" "${fault_worker_java_pid:-}" "${competition_worker_java_pid:-}" "${record_hub_pid:-}" "${pids[@]}"; do
     [[ -n "$pid" ]] && kill -TERM "$pid" 2>/dev/null || true
   done
   for _ in {1..100}; do
     local running=0
-    for pid in "${fluxion_api_java_pid:-}" "${fluxion_worker_java_pid:-}" "${pids[@]}"; do
+    for pid in "${fluxion_api_java_pid:-}" "${fluxion_worker_java_pid:-}" "${fault_worker_java_pid:-}" "${competition_worker_java_pid:-}" "${record_hub_pid:-}" "${pids[@]}"; do
       [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null && running=1
     done
     [[ "$running" == "0" ]] && break
     sleep 0.1
   done
-  for pid in "${fluxion_api_java_pid:-}" "${fluxion_worker_java_pid:-}" "${pids[@]}"; do
+  for pid in "${fluxion_api_java_pid:-}" "${fluxion_worker_java_pid:-}" "${fault_worker_java_pid:-}" "${competition_worker_java_pid:-}" "${record_hub_pid:-}" "${pids[@]}"; do
     [[ -n "$pid" ]] && kill -KILL "$pid" 2>/dev/null || true
     [[ -n "$pid" ]] && wait "$pid" 2>/dev/null || true
   done
@@ -160,11 +167,27 @@ export RECORD_HUB_OIDC_AUDIENCE="$workload_audience"
 export RECORD_HUB_OIDC_PRINCIPAL_KIND=service
 export RECORD_HUB_OIDC_ALLOW_INSECURE_ISSUER=true
 export RECORD_HUB_COMMAND_POLICIES="$(jq -c --arg issuer "$workload_issuer" --arg audience "$workload_audience" '.policies | map(.issuer=$issuer | .audience=$audience)' deploy/local/p3/fluxion-project-annotate-policy.json)"
-"$runtime_root/record-hub" serve >"$evidence_dir/logs/record-hub.log" 2>&1 &
-pids+=("$!")
 record_hub_url="http://127.0.0.1:${record_hub_port}"
-wait_http "$record_hub_url/healthz" "Record Hub API"
-curl --silent --show-error --fail "$record_hub_url/readyz" | jq -e '.status == "ready"' >/dev/null
+start_record_hub() {
+  local log_file="${1:-record-hub.log}"
+  "$runtime_root/record-hub" serve >"$evidence_dir/logs/$log_file" 2>&1 &
+  record_hub_pid="$!"
+  pids+=("$record_hub_pid")
+  wait_http "$record_hub_url/healthz" "Record Hub API"
+  curl --silent --show-error --fail "$record_hub_url/readyz" | jq -e '.status == "ready"' >/dev/null
+}
+stop_record_hub() {
+  [[ -n "${record_hub_pid:-}" ]] || return 0
+  kill -TERM "$record_hub_pid" 2>/dev/null || true
+  for _ in {1..100}; do
+    kill -0 "$record_hub_pid" 2>/dev/null || break
+    sleep 0.1
+  done
+  kill -KILL "$record_hub_pid" 2>/dev/null || true
+  wait "$record_hub_pid" 2>/dev/null || true
+  record_hub_pid=""
+}
+start_record_hub
 
 createdb "$pg_db"
 temporal server start-dev --headless --ip 127.0.0.1 --port "$temporal_port" --ui-port "$temporal_ui_port" --db-filename "$runtime_root/temporal.sqlite" >"$evidence_dir/logs/temporal.log" 2>&1 &
@@ -193,19 +216,53 @@ export FLUXION_PI_AGENT_TIMEOUT_SECONDS=5
 fluxion_api_launcher_pid="$!"
 pids+=("$fluxion_api_launcher_pid")
 wait_http "http://127.0.0.1:${fluxion_port}/api/health" "Fluxion API"
-(
-  cd "$fluxion_root/server"
-  exec ./gradlew --no-daemon -q runWorker
-) >"$evidence_dir/logs/fluxion-worker.log" 2>&1 &
-fluxion_worker_launcher_pid="$!"
-pids+=("$fluxion_worker_launcher_pid")
-for _ in {1..180}; do
-  fluxion_api_java_pid="$(pgrep -f 'fluxion\.ApiKt' | head -1 || true)"
-  fluxion_worker_java_pid="$(pgrep -f 'fluxion\.WorkerKt' | head -1 || true)"
-  [[ -n "$fluxion_worker_java_pid" ]] && break
-  sleep 0.2
-done
-[[ -n "$fluxion_worker_java_pid" ]] || { tail -80 "$evidence_dir/logs/fluxion-worker.log" >&2; exit 1; }
+start_fluxion_worker() {
+  local log_file="$1"
+  shift
+  local existing_worker_pids
+  existing_worker_pids=" $(pgrep -f 'fluxion\.WorkerKt' | tr '\n' ' ') "
+  (
+    cd "$fluxion_root/server"
+    env "$@" ./gradlew --no-daemon -q runWorker
+  ) >"$evidence_dir/logs/$log_file" 2>&1 &
+  local launcher_pid="$!"
+  pids+=("$launcher_pid")
+  for _ in {1..180}; do
+    local worker_pid=""
+    for candidate in $(pgrep -f 'fluxion\.WorkerKt' || true); do
+      [[ "$existing_worker_pids" == *" $candidate "* ]] || { worker_pid="$candidate"; break; }
+    done
+    if [[ -n "$worker_pid" ]]; then
+      printf '%s|%s\n' "$launcher_pid" "$worker_pid"
+      return 0
+    fi
+    sleep 0.2
+  done
+  tail -80 "$evidence_dir/logs/$log_file" >&2
+  return 1
+}
+stop_fluxion_worker() {
+  local launcher_pid="${1:-}" worker_pid="${2:-}"
+  for pid in "$worker_pid" "$launcher_pid"; do
+    [[ -n "$pid" ]] && kill -TERM "$pid" 2>/dev/null || true
+  done
+  for _ in {1..100}; do
+    local running=0
+    for pid in "$worker_pid" "$launcher_pid"; do
+      [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null && running=1
+    done
+    [[ "$running" == "0" ]] && break
+    sleep 0.1
+  done
+  for pid in "$worker_pid" "$launcher_pid"; do
+    [[ -n "$pid" ]] && kill -KILL "$pid" 2>/dev/null || true
+    [[ -n "$pid" ]] && wait "$pid" 2>/dev/null || true
+  done
+}
+fluxion_api_java_pid="$(pgrep -f 'fluxion\.ApiKt' | head -1 || true)"
+worker_pids="$(start_fluxion_worker fluxion-worker.log)"
+fluxion_worker_launcher_pid="${worker_pids%%|*}"
+fluxion_worker_java_pid="${worker_pids#*|}"
 
 fluxion_url="http://127.0.0.1:${fluxion_port}"
 cookie_jar="$runtime_root/fluxion.cookies"
@@ -238,6 +295,12 @@ for _ in {1..180}; do
   sleep 0.2
 done
 [[ "$before_version" =~ ^[0-9]+$ ]] || { echo "Fluxion project did not reach stable waitAck state" >&2; exit 1; }
+
+if [[ "$fault_matrix" == "1" ]]; then
+  competition_pids="$(start_fluxion_worker fluxion-worker-competition.log)"
+  competition_worker_launcher_pid="${competition_pids%%|*}"
+  competition_worker_java_pid="${competition_pids#*|}"
+fi
 
 token="$(curl --silent --show-error --fail --user "fluxion:$fluxion_secret" --data-urlencode 'grant_type=client_credentials' --data-urlencode "scope=$workload_scope" "$workload_issuer/token" | jq -er '.access_token')"
 resource_ref="fluxion:PROJECT:${project_id}"
@@ -319,16 +382,134 @@ for _ in {1..150}; do
 done
 [[ "$projected_version" == "$after_void_version" ]] || { echo "Record Hub Fluxion projection did not converge: $projected_version" >&2; exit 1; }
 
+fault_replay_operation=""
+fault_pause_operation=""
+fault_final_version="$after_void_version"
+if [[ "$fault_matrix" == "1" ]]; then
+  # Two Fluxion workers sharing the same durable consumer have already handled
+  # the core APPEND/VOID matrix above.  Now stop both and inject a crash after
+  # the owner transaction commits but before JetStream ACK.
+  stop_fluxion_worker "$competition_worker_launcher_pid" "$competition_worker_java_pid"
+  competition_worker_launcher_pid=""
+  competition_worker_java_pid=""
+  stop_fluxion_worker "$fluxion_worker_launcher_pid" "$fluxion_worker_java_pid"
+  fluxion_worker_launcher_pid=""
+  fluxion_worker_java_pid=""
+
+  crash_pids="$(start_fluxion_worker fluxion-worker-crash.log \
+    FLUXION_RECORD_HUB_TEST_CRASH_BEFORE_ACK=true \
+    FLUXION_RECORD_HUB_RESULT_RELAY_ENABLED=false)"
+  fault_worker_launcher_pid="${crash_pids%%|*}"
+  fault_worker_java_pid="${crash_pids#*|}"
+  replay_annotation="p3-replay-${project_id}"
+  replay_key="p3-replay-${project_id}"
+  replay_payload="$(jq -cn --arg id "$replay_annotation" '{annotationId:$id,mode:"APPEND",text:"P3 crash replay"}')"
+  replay_http="$(submit "$replay_key" "$after_void_version" "$replay_payload" "$runtime_root/replay.json")"
+  [[ "$replay_http" == "202" ]] || { cat "$runtime_root/replay.json" >&2; exit 1; }
+  fault_replay_operation="$(jq -er '.operationId' "$runtime_root/replay.json")"
+
+  replay_inbox_status=""
+  replay_outbox_status=""
+  for _ in {1..180}; do
+    replay_inbox_status="$(psql -At -d "$pg_db" -c "select status from record_hub_command_inbox where operation_id='${fault_replay_operation}'" 2>/dev/null || true)"
+    replay_outbox_status="$(psql -At -d "$pg_db" -c "select status from record_hub_command_result_outbox where operation_id='${fault_replay_operation}'" 2>/dev/null || true)"
+    if [[ "$replay_inbox_status" == "SUCCEEDED" && "$replay_outbox_status" == "PENDING" ]]; then break; fi
+    sleep 0.2
+  done
+  [[ "$replay_inbox_status" == "SUCCEEDED" && "$replay_outbox_status" == "PENDING" ]] || {
+    echo "crash-before-ACK did not leave a committed owner Inbox/PENDING result Outbox" >&2
+    exit 1
+  }
+  replay_events="$(psql -At -d "$pg_db" -c "select count(*) from project_events where project_id='${project_id}' and payload_ref='record-hub-annotation:${replay_annotation}'")"
+  [[ "$replay_events" == "1" ]] || exit 1
+  for _ in {1..100}; do
+    kill -0 "$fault_worker_java_pid" 2>/dev/null || break
+    sleep 0.1
+  done
+  if kill -0 "$fault_worker_java_pid" 2>/dev/null; then
+    echo "crash-before-ACK worker did not halt" >&2
+    exit 1
+  fi
+
+  stop_fluxion_worker "$fault_worker_launcher_pid" "$fault_worker_java_pid"
+  fault_worker_launcher_pid=""
+  fault_worker_java_pid=""
+  replay_pids="$(start_fluxion_worker fluxion-worker-replay.log)"
+  fault_worker_launcher_pid="${replay_pids%%|*}"
+  fault_worker_java_pid="${replay_pids#*|}"
+  replay_status=""
+  for _ in {1..600}; do
+    replay_status="$(curl --silent --show-error --fail -H "Authorization: Bearer $token" "$record_hub_url/api/v1/commands/${fault_replay_operation}?tenantId=$FLUXION_RECORD_HUB_TENANT_ID&workspaceId=$FLUXION_RECORD_HUB_WORKSPACE_ID" | tee "$runtime_root/replay-result.json" | jq -r '.status')"
+    [[ "$replay_status" == "SUCCEEDED" || "$replay_status" == "REJECTED" || "$replay_status" == "FAILED" ]] && break
+    sleep 0.2
+  done
+  [[ "$replay_status" == "SUCCEEDED" ]] || { cat "$runtime_root/replay-result.json" >&2; exit 1; }
+  replay_outbox_status="$(psql -At -d "$pg_db" -c "select status from record_hub_command_result_outbox where operation_id='${fault_replay_operation}'")"
+  [[ "$replay_outbox_status" == "SENT" ]] || exit 1
+
+  # Pause the Record Hub result consumer while the owner still processes a
+  # command.  The result remains durable in COMMAND_RESULTS and is consumed
+  # after the Record Hub process restarts.
+  stop_fluxion_worker "$fault_worker_launcher_pid" "$fault_worker_java_pid"
+  fault_worker_launcher_pid=""
+  fault_worker_java_pid=""
+  pause_annotation="p3-consumer-pause-${project_id}"
+  pause_key="p3-consumer-pause-${project_id}"
+  pause_payload="$(jq -cn --arg id "$pause_annotation" '{annotationId:$id,mode:"APPEND",text:"P3 consumer pause"}')"
+  pause_http="$(submit "$pause_key" "$((after_void_version + 1))" "$pause_payload" "$runtime_root/consumer-pause.json")"
+  [[ "$pause_http" == "202" ]] || { cat "$runtime_root/consumer-pause.json" >&2; exit 1; }
+  fault_pause_operation="$(jq -er '.operationId' "$runtime_root/consumer-pause.json")"
+  stop_record_hub
+  paused_pids="$(start_fluxion_worker fluxion-worker-consumer-pause.log)"
+  fault_worker_launcher_pid="${paused_pids%%|*}"
+  fault_worker_java_pid="${paused_pids#*|}"
+  pause_inbox_status=""
+  pause_outbox_status=""
+  for _ in {1..180}; do
+    pause_inbox_status="$(psql -At -d "$pg_db" -c "select status from record_hub_command_inbox where operation_id='${fault_pause_operation}'" 2>/dev/null || true)"
+    pause_outbox_status="$(psql -At -d "$pg_db" -c "select status from record_hub_command_result_outbox where operation_id='${fault_pause_operation}'" 2>/dev/null || true)"
+    if [[ "$pause_inbox_status" == "SUCCEEDED" && "$pause_outbox_status" == "SENT" ]]; then break; fi
+    sleep 0.2
+  done
+  [[ "$pause_inbox_status" == "SUCCEEDED" && "$pause_outbox_status" == "SENT" ]] || {
+    echo "owner did not commit/publish while Record Hub result consumer was paused" >&2
+    exit 1
+  }
+  start_record_hub record-hub-restart.log
+  pause_status=""
+  for _ in {1..240}; do
+    pause_status="$(curl --silent --show-error --fail -H "Authorization: Bearer $token" "$record_hub_url/api/v1/commands/${fault_pause_operation}?tenantId=$FLUXION_RECORD_HUB_TENANT_ID&workspaceId=$FLUXION_RECORD_HUB_WORKSPACE_ID" | tee "$runtime_root/consumer-pause-result.json" | jq -r '.status')"
+    [[ "$pause_status" == "SUCCEEDED" || "$pause_status" == "REJECTED" || "$pause_status" == "FAILED" ]] && break
+    sleep 0.2
+  done
+  [[ "$pause_status" == "SUCCEEDED" ]] || { cat "$runtime_root/consumer-pause-result.json" >&2; exit 1; }
+  pause_events="$(psql -At -d "$pg_db" -c "select count(*) from project_events where project_id='${project_id}' and payload_ref='record-hub-annotation:${pause_annotation}'")"
+  [[ "$pause_events" == "1" ]] || exit 1
+  fault_final_version="$((after_void_version + 2))"
+  for _ in {1..180}; do
+    projected_version="$(mongosh --quiet "$mongo_uri" --eval "const r=db.records.find({tenantId:'${FLUXION_RECORD_HUB_TENANT_ID}',workspaceId:'${FLUXION_RECORD_HUB_WORKSPACE_ID}','source.system':'fluxion','source.id':'${project_id}'}).sort({recordVersion:-1}).limit(1).next(); print(r ? r.source.version.toString() : '')" 2>/dev/null || true)"
+    [[ "$projected_version" == "$fault_final_version" ]] && break
+    sleep 0.2
+  done
+  [[ "$projected_version" == "$fault_final_version" ]] || exit 1
+fi
+
 runtime_seconds="$(( $(date +%s) - started_epoch ))"
 jq -n \
   --arg project_id "$project_id" --arg append_operation "$append_operation" --arg void_operation "$void_operation" --arg stale_operation "$stale_operation" \
-  --argjson before "$before_version" --argjson append_version "$after_append_version" --argjson void_version "$after_void_version" \
-  --argjson runtime_seconds "$runtime_seconds" \
-  '{gate:"P3-110",cases:{append:{status:"PASS",operationId:$append_operation},duplicate:{status:"PASS",sameOperation:true},hashConflict:{status:"PASS",http:409},void:{status:"PASS",operationId:$void_operation},versionConflict:{status:"PASS",operationId:$stale_operation,error:"project version conflict"},projection:{status:"PASS",sourceVersion:$void_version}},projectId:$project_id,summaryVersion:{before:$before,afterAppend:$append_version,afterVoid:$void_version},runtimeSeconds:$runtime_seconds}' \
+  --arg fault_replay_operation "$fault_replay_operation" --arg fault_pause_operation "$fault_pause_operation" \
+  --argjson before "$before_version" --argjson append_version "$after_append_version" --argjson void_version "$after_void_version" --argjson final_version "$fault_final_version" \
+  --argjson runtime_seconds "$runtime_seconds" --argjson fault_matrix "$fault_matrix" \
+  '{gate:"P3-110",cases:{append:{status:"PASS",operationId:$append_operation},duplicate:{status:"PASS",sameOperation:true},hashConflict:{status:"PASS",http:409},void:{status:"PASS",operationId:$void_operation},versionConflict:{status:"PASS",operationId:$stale_operation,error:"project version conflict"},projection:{status:"PASS",sourceVersion:$final_version},faultMatrix:(if $fault_matrix == 1 then {ownerCompetition:{status:"PASS",sharedDurable:true},crashBeforeAckReplay:{status:"PASS",operationId:$fault_replay_operation,ownerEventAppliedOnce:true,outboxConverged:true},resultConsumerPause:{status:"PASS",operationId:$fault_pause_operation,ownerPublishedWhileConsumerDown:true,replayedAfterRestart:true}} else null end)},projectId:$project_id,summaryVersion:{before:$before,afterAppend:$append_version,afterVoid:$void_version,final:$final_version},runtimeSeconds:$runtime_seconds}' \
   >"$evidence_dir/results.json"
 jq -n --arg mongo_port "$mongo_port" --arg nats_port "$nats_port" --arg record_hub_port "$record_hub_port" --arg fluxion_port "$fluxion_port" --arg temporal_port "$temporal_port" --arg tenant "$FLUXION_RECORD_HUB_TENANT_ID" --arg workspace "$FLUXION_RECORD_HUB_WORKSPACE_ID" \
   '{mongoPort:($mongo_port|tonumber),natsPort:($nats_port|tonumber),recordHubPort:($record_hub_port|tonumber),fluxionPort:($fluxion_port|tonumber),temporalPort:($temporal_port|tonumber),tenantId:$tenant,workspaceId:$workspace,issuer:"redacted",audience:"record-hub-api",scope:"recordhub.command.submit",database:"temporary"}' \
   >"$evidence_dir/config-redacted.json"
 printf 'project_id=%s\nappend_operation=%s\nvoid_operation=%s\nversion_conflict_operation=%s\nsummary_version_before=%s\nsummary_version_after_void=%s\n' "$project_id" "$append_operation" "$void_operation" "$stale_operation" "$before_version" "$after_void_version" >"$evidence_dir/db-assertions/fluxion.txt"
+if [[ "$fault_matrix" == "1" ]]; then
+  printf 'fault_replay_operation=%s\nfault_replay_inbox=%s\nfault_replay_outbox=%s\nfault_pause_operation=%s\nfault_pause_inbox=%s\nfault_pause_outbox=%s\nsummary_version_final=%s\n' \
+    "$fault_replay_operation" "$replay_inbox_status" "$replay_outbox_status" "$fault_pause_operation" "$pause_inbox_status" "$pause_outbox_status" "$fault_final_version" \
+    >>"$evidence_dir/db-assertions/fluxion.txt"
+fi
 write_manifest PASS
 echo "P3-110 Fluxion command live gate passed (project ${project_id}, evidence ${evidence_dir})"
