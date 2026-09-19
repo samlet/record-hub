@@ -27,7 +27,7 @@ schema reader 或 Fluxion 本地审批 fallback。
 | P3-403 | DONE | `467d207` | NATS outage 后复用同一 JetStream store；owner outbox、Mongo Inbox/APPLIED 与 source version 收敛 PASS；live evidence `record-hub-p3-four-owner-evidence.GtrV3H/nats-outage-recovery.json` |
 | P3-404 | DONE | `d3c6591` | 真实 P3-110 fault matrix：commit-before-ACK、consumer pause/restart、cross restart、durable competition、DLQ follow-up 全部 PASS；live evidence `record-hub-p3-404-evidence.soZmDX/p3-404-restart-ack-loss.json` |
 | P3-405 | SKIPPED | `427b56f` | OIDC JWKS 与 workload secret fail-closed contract PASS；四 owner 热轮换/JWKS overlap/credential reload 未实现，live SKIPPED；evidence `record-hub-p3-405-evidence.Nyyi1e/credential-rotation.json` |
-| P3-406 | SKIPPED | `0abac2b` | native dump/restore/archive gate 已交付；未提供六个显式 source/isolated restore target，live SKIPPED；evidence `record-hub-p3-406-evidence.V6zml1/backup-restore.json` |
+| P3-406 | SKIPPED | `0abac2b`、`de9d3cb` | native dump/restore/archive gate 已交付；`de9d3cb` 修正为对恢复后的 Mongo/PostgreSQL/NATS 目标重新导出并比较 normalized manifests；未提供六个显式 source/isolated restore target，live SKIPPED；evidence `record-hub-p3-406-evidence.V6zml1/backup-restore.json` |
 | P3-407 | PARTIAL | `c6d8e85` | 20 条 synthetic summary envelope 的真实 Mongo/NATS/projection baseline PASS；publish 23.202 events/s、drain 16.013 events/s、latency p50/p95/p99 21ms、max 22ms；四 owner mixed workflow load SKIPPED；evidence `record-hub-p3-407-evidence.Zl1FhN/capacity-metrics.json` |
 | P3-408 | SKIPPED | `12c6c6c` | 全量 Go、command/result 与 approval contract mirror checks PASS；缺 previous/new worker artifacts、隔离升级目标和 rollback runner，live SKIPPED；evidence `record-hub-p3-408-evidence.u98qdZ/upgrade-rollback.json` |
 | P3-409 | DONE | 本报告提交 | 本报告与 `verify-p3-phase3-report.sh` 完整性校验 PASS |
