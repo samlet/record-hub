@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "contractFamily": "record-hub-connector-manifest",
+  "entries": [
+    {
+      "connector": "fluxion.approval",
+      "event": "dispatch.result",
+      "schemaVersion": 1,
+      "ownerSystem": "approver",
+      "sdkVersion": "1.2.0",
+      "compatibilityMin": "1.0.0",
+      "compatibilityMax": "1.9.9",
+      "contractHash": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "allowedFields": ["decision", "generation"],
+      "status": "DRAFT"
+    },
+    {
+      "connector": "bids.approval",
+      "event": "tender.result",
+      "schemaVersion": 1,
+      "ownerSystem": "approver",
+      "sdkVersion": "1.2.0",
+      "compatibilityMin": "1.0.0",
+      "compatibilityMax": "1.9.9",
+      "contractHash": "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+      "allowedFields": ["decision", "generation"],
+      "status": "DRAFT"
+    }
+  ]
+}

@@ -35,7 +35,7 @@ Batch 2 收口记录：[phase-5-batch2-closure](phase-5-batch2-closure.md)。四
 
 | ID | 范围 | 任务 | 验收 | 状态 |
 | --- | --- | --- | --- | --- |
-| P5-300 | Approver/Record Hub | connector registry、SDK semver、compatibility window | unknown connector fail closed、manifest/hash PASS | TODO |
+| P5-300 | Approver/Record Hub | connector registry、SDK semver、compatibility window | [closure](phase-5-batch3-p5-300.md)；exact registry/semver/fail-closed 静态 PASS，owner lifecycle live SKIPPED | PARTIAL |
 | P5-301 | Approver/Settlement | Settlement confirmation request/result/Apply contract | 双仓库 schema/fixture、scope/version/hash/idempotency PASS | TODO |
 | P5-302 | Record Hub | Settlement safe association/projection | 不含金额/银行/附件/密封数据，late result/finding PASS | TODO |
 | P5-303 | Fluxion/Bids | approval connector production hardening | owner-side effect、reconciliation、fallback、rollback PASS | TODO |

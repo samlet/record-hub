@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "phase": "5",
+  "task": "P5-300",
+  "owner": "approver-record-hub",
+  "liveRequired": true,
+  "registryKey": ["connector", "event", "schemaVersion"],
+  "requiredManifestFields": [
+    "ownerSystem",
+    "sdkVersion",
+    "compatibilityMin",
+    "compatibilityMax",
+    "contractHash",
+    "allowedFields",
+    "status",
+    "revision"
+  ],
+  "lifecycle": ["DRAFT", "ENABLED", "DISABLED", "DEPRECATED"],
+  "failClosed": [
+    "unknown-connector",
+    "unknown-event",
+    "unknown-schema-version",
+    "disabled-connector",
+    "sdk-outside-window",
+    "duplicate-registration",
+    "stale-revision"
+  ],
+  "liveEvidence": [
+    "manifest-and-hash-parity",
+    "connector-enable-disable-revoke",
+    "unknown-key-negative-matrix",
+    "sdk-compatibility-window",
+    "owner-reconciliation-and-rollback"
+  ]
+}
