@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "gate": "P4-002",
   "status": "PASS",
-  "generatedAt": "2026-09-19T20:37:34.971524Z",
+  "generatedAt": "2026-09-19T20:40:12.166972Z",
   "sharedMirrors": {
     "commands": "PASS",
     "approvals": "PASS"
@@ -11,7 +11,7 @@
     {
       "repository": "record-hub",
       "family": "summaries",
-      "commit": "073e1be0f8edb2748a06d765bfd0512b55072711",
+      "commit": "6542a91b95db7f01ee8201fcb4588df6ad22e225",
       "rootKind": "summaries",
       "contracts": [
         {
@@ -152,7 +152,7 @@
     {
       "repository": "bids",
       "family": "summaries",
-      "commit": "408441e81e12b6454c9996a0976438753e3646c0",
+      "commit": "b5d2541a50046011d21fae169b86f793a6b22158",
       "rootKind": "contracts",
       "contracts": [
         {
@@ -202,8 +202,8 @@
         },
         {
           "path": "approvals/manifest.json",
-          "sha256": "sha256:35e77592410d087498eec0dc01facf96a37bb27f67c54029320eae32db6744b7",
-          "bytes": 1021
+          "sha256": "sha256:3c4b46d8829924ba505603b02d52a72e68c8c0e49b1a1fc516fefe1690babf73",
+          "bytes": 1938
         },
         {
           "path": "approvals/testdata/invalid/bids-tender-publication-approval-request-v1-sensitive-field.json",
