@@ -65,6 +65,7 @@ HTTP 契约以 [`api/openapi.yaml`](api/openapi.yaml) 为准。`make generate-cl
 - [Phase 4 Batch 0 基线验收](docs/phase-4-batch0-baseline.md)
 - [Phase 4 baseline manifest](docs/phase-4-baseline-manifest.json)
 - [Phase 4 contract inventory](docs/phase-4-contract-inventory.json)
+- [Phase 4 Batch 1 收口报告](docs/phase-4-batch1-closure.md)
 - [原生隔离验收拓扑](deploy/local/isolated/README.md)
 - [参考资料](docs/references.md)
 - [ADR-0001：独立仓库与事实所有权](docs/adr/0001-independent-service-and-data-ownership.md)

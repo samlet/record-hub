@@ -1,7 +1,7 @@
 # Phase 4 Integration Beta 任务分解
 
 - 日期：2026-09-20
-- 状态：Batch 0 已完成；Batch 1 待开始
+- 状态：Batch 0 已完成；Batch 1 静态收口完成，live 验收待隔离环境
 - 方案：[phase-4-design.md](phase-4-design.md)
 - 需求：[phase-4-requirements.md](phase-4-requirements.md)
 - 验收：[phase-4-acceptance-plan.md](phase-4-acceptance-plan.md)
@@ -23,13 +23,13 @@ manifest 必须记录当次实际 commit 和 artifact checksum。
 
 | ID | 仓库 | 任务 | 依赖 | 状态 | 验收 |
 | --- | --- | --- | --- | --- | --- |
-| P4-100 | Record Hub | reloadable workload issuer 与双 JWKS key overlap | P4-004 | TODO | 新旧 token overlap、cache refresh、撤销后 fail closed live PASS |
-| P4-101 | 四仓库 | workload client secret reload/rotation | P4-100 | TODO | 每调用方向双 secret；无丢请求/重复副作用 |
-| P4-102 | 四仓库 | Mongo/PostgreSQL/JetStream recovery set | P4-004 | TODO | isolated restore 后 count/hash/index/version/cursor 与未完成 backlog 对齐 |
-| P4-103 | 四仓库 | mixed owner capacity/recovery harness | P4-004 | TODO | 10k history、50/200 msg/s、100 pending approval、hardware/SLO/drain evidence |
-| P4-104 | 四仓库 | old/new rolling upgrade/rollback harness | P4-002,004 | TODO | expand/contract、durable、feature flag、旧 worker rollback PASS |
-| P4-105 | Record Hub/Fluxion | transaction rollback 与 publish-before-SENT crash | P4-004 | TODO | P3 C-006/C-008 live PASS，无重复 annotation/terminal result |
-| P4-106 | 四仓库 | 三 owner 同时运行 live behavior matrix | P4-004 | TODO | duplicate/hash/version/ACK loss/restart/DLQ 在三 owner 行为一致 |
+| P4-100 | Record Hub | reloadable workload issuer 与双 JWKS key overlap | P4-004 | PARTIAL | `tools/workload-issuer` 已支持 SIGHUP、clients file reload、双 JWKS overlap 和过期移除；单测 PASS，四 owner live overlap SKIPPED |
+| P4-101 | 四仓库 | workload client secret reload/rotation | P4-100 | PARTIAL | 六个独立调用方向已进入 Batch 1 spec；owner in-place reload、双 secret overlap 和无副作用 live 验收 SKIPPED |
+| P4-102 | 四仓库 | Mongo/PostgreSQL/JetStream recovery set | P4-004 | PARTIAL | 原生 dump/restore/archive runner 与 count/hash/index/version/cursor 断言入口已复用；未提供显式 source/restore targets，live SKIPPED |
+| P4-103 | 四仓库 | mixed owner capacity/recovery harness | P4-004 | PARTIAL | 10k history、50/200 msg/s、100 pending、10 分钟 drain 规格已固定；四 owner mixed live load SKIPPED |
+| P4-104 | 四仓库 | old/new rolling upgrade/rollback harness | P4-002,004 | PARTIAL | expand/contract、durable、feature flag、old worker 规则与兼容性 gate 已固定；immutable old/new artifacts 与隔离目标缺失，live SKIPPED |
+| P4-105 | Record Hub/Fluxion | transaction rollback 与 publish-before-SENT crash | P4-004 | SKIPPED | 现有 P3 runner 尚未暴露两处精确 fault injection boundary；保留为下一批 live 前置，不以近似 ACK-loss 替代 |
+| P4-106 | 四仓库 | 三 owner 同时运行 live behavior matrix | P4-004 | PARTIAL | 三 owner contract matrix 入口 PASS；四应用同时运行及 duplicate/hash/version/ACK loss/restart/DLQ live matrix SKIPPED |
 
 ## Batch 2：Fluxion Approval Beta
 

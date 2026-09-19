@@ -1,4 +1,4 @@
-.PHONY: build test lint web-check openapi-lint generate-clients dependency-scan sbom secret-scan mongo-up mongo-smoke mongo-down schema-persistence-smoke records-persistence-smoke projection-persistence-smoke nats-up nats-init nats-smoke nats-permissions-smoke nats-down dex-env dex-up dex-smoke dex-down m5-runtime-smoke m7-native-restart m7-native-nats-recovery m8-happy-path m8-failure-path m8-local-smoke m8-native-smoke p2-workload-identity-smoke p2-isolated-core p2-engine-foundation p2-mapping-recovery p2-rebuild-cas p2-rebuild-replay p2-slo-baseline p2-realtime-feed p2-command-contract p2-command-result p3-contract-gate p3-fluxion-command-live p3-fluxion-command-faults p3-fixtures p3-four-owner-topology p3-workflow-e2e p3-nats-outage-recovery p3-process-restart-ack-loss p3-credential-rotation p3-backup-restore p3-capacity-baseline p3-upgrade-rollback p3-phase3-report p4-baseline p4-contract-inventory p4-evidence-contract p4-fixtures check ci clean
+.PHONY: build test lint web-check openapi-lint generate-clients dependency-scan sbom secret-scan mongo-up mongo-smoke mongo-down schema-persistence-smoke records-persistence-smoke projection-persistence-smoke nats-up nats-init nats-smoke nats-permissions-smoke nats-down dex-env dex-up dex-smoke dex-down m5-runtime-smoke m7-native-restart m7-native-nats-recovery m8-happy-path m8-failure-path m8-local-smoke m8-native-smoke p2-workload-identity-smoke p2-isolated-core p2-engine-foundation p2-mapping-recovery p2-rebuild-cas p2-rebuild-replay p2-slo-baseline p2-realtime-feed p2-command-contract p2-command-result p3-contract-gate p3-fluxion-command-live p3-fluxion-command-faults p3-fixtures p3-four-owner-topology p3-workflow-e2e p3-nats-outage-recovery p3-process-restart-ack-loss p3-credential-rotation p3-backup-restore p3-capacity-baseline p3-upgrade-rollback p3-phase3-report p4-baseline p4-contract-inventory p4-evidence-contract p4-fixtures p4-batch1 check ci clean
 
 BUILD_DIR := build
 BINARY := $(BUILD_DIR)/record-hub
@@ -186,6 +186,9 @@ p4-evidence-contract:
 
 p4-fixtures:
 	./scripts/bootstrap-p4-fixtures.sh
+
+p4-batch1:
+	./scripts/verify-p4-batch1.sh
 
 check: lint web-check openapi-lint test build
 

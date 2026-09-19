@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -119,5 +120,73 @@ func TestTokenEndpointRejectsBadCredentialGrantAndScope(t *testing.T) {
 				t.Fatalf("response = %d %s", response.Code, response.Body.String())
 			}
 		})
+	}
+}
+
+func TestIssuerReloadRotatesKeysAndReloadsClients(t *testing.T) {
+	config := testIssuerConfig()
+	config.KeyOverlap = time.Hour
+	config.RotateOnSIGHUP = true
+	server, err := newIssuerServer(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 9, 20, 1, 0, 0, 0, time.UTC)
+	server.now = func() time.Time { return now }
+	oldKeyID := server.publicKey.KeyID
+	if err := server.reload(); err != nil {
+		t.Fatal(err)
+	}
+	if server.publicKey.KeyID == oldKeyID || server.keyCount() != 2 {
+		t.Fatalf("rotation did not retain old key during overlap: old=%q current=%q keys=%d", oldKeyID, server.publicKey.KeyID, server.keyCount())
+	}
+	response := httptest.NewRecorder()
+	server.handler().ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/workload/keys", nil))
+	var keySet jose.JSONWebKeySet
+	if err := json.Unmarshal(response.Body.Bytes(), &keySet); err != nil {
+		t.Fatal(err)
+	}
+	if response.Code != http.StatusOK || len(keySet.Keys) != 2 {
+		t.Fatalf("JWKS overlap response = %d %#v", response.Code, keySet.Keys)
+	}
+
+	server.now = func() time.Time { return now.Add(2 * time.Hour) }
+	response = httptest.NewRecorder()
+	server.handler().ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/workload/keys", nil))
+	keySet = jose.JSONWebKeySet{}
+	if err := json.Unmarshal(response.Body.Bytes(), &keySet); err != nil {
+		t.Fatal(err)
+	}
+	if len(keySet.Keys) != 1 || keySet.Keys[0].KeyID == oldKeyID {
+		t.Fatalf("expired overlap key remained in JWKS: %#v", keySet.Keys)
+	}
+
+	clientsFile := t.TempDir() + "/clients.json"
+	if err := os.WriteFile(clientsFile, []byte(`[{"id":"replacement","secret":"01234567890123456789012345678901","scopes":["recordhub.binding.snapshot"]}]`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	server.config.ClientsFile = clientsFile
+	server.config.RotateOnSIGHUP = false
+	if err := server.reload(); err != nil {
+		t.Fatal(err)
+	}
+	if server.clientCount() != 1 {
+		t.Fatalf("reloaded client count = %d", server.clientCount())
+	}
+	newRequest := httptest.NewRequest(http.MethodPost, "/workload/token", strings.NewReader(url.Values{"grant_type": {"client_credentials"}, "scope": {"recordhub.binding.snapshot"}}.Encode()))
+	newRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	newRequest.SetBasicAuth("replacement", "01234567890123456789012345678901")
+	newResponse := httptest.NewRecorder()
+	server.handler().ServeHTTP(newResponse, newRequest)
+	if newResponse.Code != http.StatusOK {
+		t.Fatalf("replacement client token status = %d body=%s", newResponse.Code, newResponse.Body.String())
+	}
+	oldRequest := httptest.NewRequest(http.MethodPost, "/workload/token", strings.NewReader(url.Values{"grant_type": {"client_credentials"}, "scope": {"recordhub.binding.snapshot"}}.Encode()))
+	oldRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	oldRequest.SetBasicAuth("fluxion-to-record-hub", strings.Repeat("a", 32))
+	oldResponse := httptest.NewRecorder()
+	server.handler().ServeHTTP(oldResponse, oldRequest)
+	if oldResponse.Code != http.StatusUnauthorized {
+		t.Fatalf("revoked client status = %d body=%s", oldResponse.Code, oldResponse.Body.String())
 	}
 }

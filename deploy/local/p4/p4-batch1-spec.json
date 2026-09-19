@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "phase": "4",
+  "batch": "1",
+  "name": "phase3-closure",
+  "liveRequired": true,
+  "identity": {
+    "reloadSignal": "SIGHUP",
+    "clientsFileEnv": "RECORD_HUB_WORKLOAD_CLIENTS_FILE",
+    "keyOverlapEnv": "RECORD_HUB_WORKLOAD_ISSUER_KEY_OVERLAP",
+    "keyOverlapAtLeast": "5m",
+    "tokenTtl": "5m",
+    "revocationRule": "remove-client-and-retire-key-after-overlap; reject expired tokens"
+  },
+  "clientDirections": [
+    "fluxion-to-approver",
+    "bids-to-approver",
+    "fluxion-to-record-hub",
+    "bids-to-record-hub",
+    "approver-to-record-hub",
+    "record-hub-to-owner-result"
+  ],
+  "recovery": {
+    "components": ["mongodb", "approver-postgres", "fluxion-postgres", "bids-postgres", "nats-jetstream"],
+    "requiredAssertions": ["count", "hash", "index", "version", "cursor", "inbox-outbox-backlog"],
+    "sourceAndRestoreMustBeIsolated": true,
+    "rpoTarget": "15m",
+    "rtoTarget": "60m"
+  },
+  "capacity": {
+    "ownerCount": 4,
+    "historyPerOwner": 10000,
+    "steadyEventsPerSecond": 50,
+    "burstEventsPerSecond": 200,
+    "pendingApprovals": 100,
+    "consumerPauseSeconds": 600,
+    "requiredSnapshots": ["cpu", "rss", "mongo-storage", "postgres-storage", "jetstream-storage", "connections", "worker-concurrency", "lag", "drain-time"]
+  },
+  "rollingUpgrade": {
+    "strategy": "expand-contract",
+    "requiredArtifacts": ["immutable-old", "immutable-new"],
+    "requiredChecks": ["additive-migration", "old-reader", "feature-flag-off", "durable-cursor-preserved", "inflight-drain", "old-worker-rollback"]
+  },
+  "faultMatrix": [
+    "duplicate-operation",
+    "hash-conflict",
+    "version-reject",
+    "owner-transaction-rollback",
+    "commit-before-ack-crash",
+    "result-publish-before-sent-crash",
+    "ack-loss",
+    "owner-restart",
+    "nats-outage-backlog",
+    "poison-message-dlq"
+  ]
+}

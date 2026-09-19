@@ -15,9 +15,13 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
+	"sync"
+	"syscall"
 	"time"
 
 	"github.com/go-jose/go-jose/v4"
@@ -25,8 +29,9 @@ import (
 )
 
 const (
-	tokenTTL       = 5 * time.Minute
-	maxRequestBody = 16 << 10
+	tokenTTL          = 5 * time.Minute
+	maxRequestBody    = 16 << 10
+	defaultKeyOverlap = tokenTTL
 )
 
 var safeName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$`)
@@ -38,17 +43,29 @@ type clientConfig struct {
 }
 
 type issuerConfig struct {
-	Address  string
-	Issuer   string
-	Audience string
-	Clients  map[string]clientConfig
+	Address        string
+	Issuer         string
+	Audience       string
+	Clients        map[string]clientConfig
+	ClientsFile    string
+	KeyOverlap     time.Duration
+	RotateOnSIGHUP bool
+}
+
+type signingKey struct {
+	signer    jose.Signer
+	publicKey jose.JSONWebKey
+	retireAt  time.Time
 }
 
 type issuerServer struct {
-	config    issuerConfig
-	signer    jose.Signer
-	publicKey jose.JSONWebKey
-	now       func() time.Time
+	config      issuerConfig
+	mu          sync.RWMutex
+	signer      jose.Signer
+	publicKey   jose.JSONWebKey
+	signingKeys []signingKey
+	clients     map[string]clientConfig
+	now         func() time.Time
 }
 
 func main() {
@@ -63,6 +80,20 @@ func main() {
 		os.Exit(1)
 	}
 	slog.Info("starting ephemeral workload issuer", "address", config.Address, "issuer", config.Issuer, "audience", config.Audience, "clients", len(config.Clients))
+	if config.RotateOnSIGHUP || config.ClientsFile != "" {
+		signals := make(chan os.Signal, 1)
+		signal.Notify(signals, syscall.SIGHUP)
+		defer signal.Stop(signals)
+		go func() {
+			for range signals {
+				if err := server.reload(); err != nil {
+					slog.Error("reload workload issuer", "error", err)
+					continue
+				}
+				slog.Info("reloaded workload issuer", "clients", server.clientCount(), "jwksKeys", server.keyCount())
+			}
+		}()
+	}
 	httpServer := &http.Server{Addr: config.Address, Handler: server.handler(), ReadHeaderTimeout: 3 * time.Second, ReadTimeout: 5 * time.Second, WriteTimeout: 5 * time.Second, IdleTimeout: 30 * time.Second}
 	if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		slog.Error("workload issuer stopped", "error", err)
@@ -76,9 +107,12 @@ func loadConfig(lookup func(string) (string, bool)) (issuerConfig, error) {
 		return strings.TrimSpace(value)
 	}
 	config := issuerConfig{
-		Address:  read("RECORD_HUB_WORKLOAD_ISSUER_ADDRESS"),
-		Issuer:   strings.TrimRight(read("RECORD_HUB_WORKLOAD_ISSUER"), "/"),
-		Audience: read("RECORD_HUB_WORKLOAD_AUDIENCE"),
+		Address:        read("RECORD_HUB_WORKLOAD_ISSUER_ADDRESS"),
+		Issuer:         strings.TrimRight(read("RECORD_HUB_WORKLOAD_ISSUER"), "/"),
+		Audience:       read("RECORD_HUB_WORKLOAD_AUDIENCE"),
+		ClientsFile:    read("RECORD_HUB_WORKLOAD_CLIENTS_FILE"),
+		KeyOverlap:     defaultKeyOverlap,
+		RotateOnSIGHUP: true,
 	}
 	if config.Address == "" || config.Issuer == "" || config.Audience == "" {
 		return issuerConfig{}, errors.New("RECORD_HUB_WORKLOAD_ISSUER_ADDRESS, RECORD_HUB_WORKLOAD_ISSUER, and RECORD_HUB_WORKLOAD_AUDIENCE are required")
@@ -93,44 +127,74 @@ func loadConfig(lookup func(string) (string, bool)) (issuerConfig, error) {
 	if !safeName.MatchString(config.Audience) {
 		return issuerConfig{}, errors.New("RECORD_HUB_WORKLOAD_AUDIENCE contains unsupported characters")
 	}
+	if rawOverlap := read("RECORD_HUB_WORKLOAD_ISSUER_KEY_OVERLAP"); rawOverlap != "" {
+		overlap, err := time.ParseDuration(rawOverlap)
+		if err != nil || overlap <= 0 {
+			return issuerConfig{}, errors.New("RECORD_HUB_WORKLOAD_ISSUER_KEY_OVERLAP must be a positive duration")
+		}
+		config.KeyOverlap = overlap
+	}
+	if rawRotate := read("RECORD_HUB_WORKLOAD_ISSUER_ROTATE_ON_SIGHUP"); rawRotate != "" {
+		value, err := strconv.ParseBool(rawRotate)
+		if err != nil {
+			return issuerConfig{}, errors.New("RECORD_HUB_WORKLOAD_ISSUER_ROTATE_ON_SIGHUP must be true or false")
+		}
+		config.RotateOnSIGHUP = value
+	}
 	rawClients := read("RECORD_HUB_WORKLOAD_CLIENTS")
+	if config.ClientsFile != "" {
+		contents, err := os.ReadFile(config.ClientsFile)
+		if err != nil {
+			return issuerConfig{}, fmt.Errorf("read RECORD_HUB_WORKLOAD_CLIENTS_FILE: %w", err)
+		}
+		rawClients = string(contents)
+	}
+	clients, err := parseClients(rawClients)
+	if err != nil {
+		return issuerConfig{}, err
+	}
+	config.Clients = clients
+	return config, nil
+}
+
+func parseClients(rawClients string) (map[string]clientConfig, error) {
 	decoder := json.NewDecoder(strings.NewReader(rawClients))
 	decoder.DisallowUnknownFields()
 	var clients []clientConfig
 	if rawClients == "" || decoder.Decode(&clients) != nil || len(clients) == 0 || len(clients) > 32 {
-		return issuerConfig{}, errors.New("RECORD_HUB_WORKLOAD_CLIENTS must be a JSON array containing 1-32 clients")
+		return nil, errors.New("RECORD_HUB_WORKLOAD_CLIENTS must be a JSON array containing 1-32 clients")
 	}
-	config.Clients = make(map[string]clientConfig, len(clients))
+	parsed := make(map[string]clientConfig, len(clients))
 	for index, client := range clients {
 		client.ID = strings.TrimSpace(client.ID)
 		if !safeName.MatchString(client.ID) {
-			return issuerConfig{}, fmt.Errorf("workload client %d has an invalid id", index)
+			return nil, fmt.Errorf("workload client %d has an invalid id", index)
 		}
 		if len(client.Secret) < 32 {
-			return issuerConfig{}, fmt.Errorf("workload client %q secret must contain at least 32 bytes", client.ID)
+			return nil, fmt.Errorf("workload client %q secret must contain at least 32 bytes", client.ID)
 		}
 		if len(client.Scopes) == 0 || len(client.Scopes) > 16 {
-			return issuerConfig{}, fmt.Errorf("workload client %q must have 1-16 scopes", client.ID)
+			return nil, fmt.Errorf("workload client %q must have 1-16 scopes", client.ID)
 		}
 		scopeSet := make(map[string]struct{}, len(client.Scopes))
 		for scopeIndex, scope := range client.Scopes {
 			scope = strings.TrimSpace(scope)
 			if !safeName.MatchString(scope) {
-				return issuerConfig{}, fmt.Errorf("workload client %q scope %d is invalid", client.ID, scopeIndex)
+				return nil, fmt.Errorf("workload client %q scope %d is invalid", client.ID, scopeIndex)
 			}
 			if _, exists := scopeSet[scope]; exists {
-				return issuerConfig{}, fmt.Errorf("workload client %q contains duplicate scope %q", client.ID, scope)
+				return nil, fmt.Errorf("workload client %q contains duplicate scope %q", client.ID, scope)
 			}
 			scopeSet[scope] = struct{}{}
 			client.Scopes[scopeIndex] = scope
 		}
 		sort.Strings(client.Scopes)
-		if _, exists := config.Clients[client.ID]; exists {
-			return issuerConfig{}, fmt.Errorf("duplicate workload client %q", client.ID)
+		if _, exists := parsed[client.ID]; exists {
+			return nil, fmt.Errorf("duplicate workload client %q", client.ID)
 		}
-		config.Clients[client.ID] = client
+		parsed[client.ID] = client
 	}
-	return config, nil
+	return parsed, nil
 }
 
 func newIssuerServer(config issuerConfig) (*issuerServer, error) {
@@ -147,11 +211,101 @@ func newIssuerServer(config issuerConfig) (*issuerServer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("create signer: %w", err)
 	}
-	return &issuerServer{
-		config:    config,
+	keyMaterial := signingKey{
 		signer:    signer,
 		publicKey: jose.JSONWebKey{Key: &key.PublicKey, KeyID: keyID, Algorithm: string(jose.RS256), Use: "sig"},
-		now:       time.Now,
+	}
+	return &issuerServer{
+		config:      config,
+		signer:      signer,
+		publicKey:   keyMaterial.publicKey,
+		signingKeys: []signingKey{keyMaterial},
+		clients:     cloneClients(config.Clients),
+		now:         time.Now,
+	}, nil
+}
+
+func (server *issuerServer) reload() error {
+	server.mu.Lock()
+	defer server.mu.Unlock()
+	if server.config.ClientsFile != "" {
+		contents, err := os.ReadFile(server.config.ClientsFile)
+		if err != nil {
+			return fmt.Errorf("read workload clients file: %w", err)
+		}
+		clients, err := parseClients(string(contents))
+		if err != nil {
+			return err
+		}
+		server.clients = clients
+	}
+	if !server.config.RotateOnSIGHUP {
+		return nil
+	}
+	key, err := generateSigningKey()
+	if err != nil {
+		return err
+	}
+	now := server.now().UTC()
+	if len(server.signingKeys) > 0 {
+		server.signingKeys[0].retireAt = now.Add(server.config.KeyOverlap)
+	}
+	server.signingKeys = append([]signingKey{key}, server.signingKeys...)
+	server.signer = key.signer
+	server.publicKey = key.publicKey
+	server.pruneKeysLocked(now)
+	return nil
+}
+
+func (server *issuerServer) pruneKeysLocked(now time.Time) {
+	active := server.signingKeys[:0]
+	for _, key := range server.signingKeys {
+		if key.retireAt.IsZero() || now.Before(key.retireAt) {
+			active = append(active, key)
+		}
+	}
+	server.signingKeys = active
+}
+
+func (server *issuerServer) clientCount() int {
+	server.mu.RLock()
+	defer server.mu.RUnlock()
+	return len(server.clients)
+}
+
+func (server *issuerServer) keyCount() int {
+	server.mu.Lock()
+	defer server.mu.Unlock()
+	server.pruneKeysLocked(server.now().UTC())
+	return len(server.signingKeys)
+}
+
+func cloneClients(clients map[string]clientConfig) map[string]clientConfig {
+	clone := make(map[string]clientConfig, len(clients))
+	for id, client := range clients {
+		client.Scopes = append([]string(nil), client.Scopes...)
+		clone[id] = client
+	}
+	return clone
+}
+
+func generateSigningKey() (signingKey, error) {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return signingKey{}, fmt.Errorf("generate signing key: %w", err)
+	}
+	keyIDBytes := make([]byte, 12)
+	if _, err := rand.Read(keyIDBytes); err != nil {
+		return signingKey{}, fmt.Errorf("generate key id: %w", err)
+	}
+	keyID := hex.EncodeToString(keyIDBytes)
+	signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.RS256, Key: key}, (&jose.SignerOptions{}).WithType("JWT").WithHeader("kid", keyID))
+	if err != nil {
+		return signingKey{}, fmt.Errorf("create signer: %w", err)
+	}
+	return signingKey{
+		signer:    signer,
+		publicKey: jose.JSONWebKey{Key: &key.PublicKey, KeyID: keyID, Algorithm: string(jose.RS256), Use: "sig"},
 	}, nil
 }
 
@@ -191,13 +345,23 @@ func (server *issuerServer) discovery(writer http.ResponseWriter, _ *http.Reques
 }
 
 func (server *issuerServer) keys(writer http.ResponseWriter, _ *http.Request) {
-	writeJSON(writer, http.StatusOK, jose.JSONWebKeySet{Keys: []jose.JSONWebKey{server.publicKey}})
+	server.mu.Lock()
+	defer server.mu.Unlock()
+	server.pruneKeysLocked(server.now().UTC())
+	keys := make([]jose.JSONWebKey, 0, len(server.signingKeys))
+	for _, key := range server.signingKeys {
+		keys = append(keys, key.publicKey)
+	}
+	writeJSON(writer, http.StatusOK, jose.JSONWebKeySet{Keys: keys})
 }
 
 func (server *issuerServer) token(writer http.ResponseWriter, request *http.Request) {
 	request.Body = http.MaxBytesReader(writer, request.Body, maxRequestBody)
 	clientID, clientSecret, ok := request.BasicAuth()
-	client, exists := server.config.Clients[clientID]
+	server.mu.RLock()
+	client, exists := server.clients[clientID]
+	signer := server.signer
+	server.mu.RUnlock()
 	if !ok || !exists || subtle.ConstantTimeCompare([]byte(client.Secret), []byte(clientSecret)) != 1 {
 		writer.Header().Set("WWW-Authenticate", `Basic realm="workload-token"`)
 		writeOAuthError(writer, http.StatusUnauthorized, "invalid_client", "Client authentication failed.")
@@ -218,7 +382,7 @@ func (server *issuerServer) token(writer http.ResponseWriter, request *http.Requ
 	}
 	sort.Strings(requestedScopes)
 	now := server.now().UTC()
-	rawToken, err := jwt.Signed(server.signer).Claims(jwt.Claims{
+	rawToken, err := jwt.Signed(signer).Claims(jwt.Claims{
 		Issuer:   server.config.Issuer,
 		Subject:  client.ID,
 		Audience: jwt.Audience{server.config.Audience},
