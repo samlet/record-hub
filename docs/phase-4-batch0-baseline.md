@@ -16,11 +16,11 @@
 
 ## 跨仓库快照
 
-P4-001 基线捕获的四仓库 commit 如下；外部仓库的 manifest hash 修复已经分别提交并推送：
+Batch 0 gates 实现与外部 manifest hash 修复的 commit 如下；Record Hub 最终 P4-001 快照以 [baseline manifest](phase-4-baseline-manifest.json) 的 `repositories.record-hub.commit` 字段为准：
 
 | 仓库 | commit | 说明 |
 | --- | --- | --- |
-| Record Hub | `0e86f71e2373e281391bd60e5c771374f8814f19` | Batch 0 gates 实现基线 |
+| Record Hub | `0e86f71e2373e281391bd60e5c771374f8814f19` | Batch 0 gates 实现基线；验收文档和快照提交另见 manifest |
 | Approver | `83c1cb145a9a417a8a69262867bd108a6d308904` | application summary schema hash 刷新 |
 | Fluxion | `9349638f1157d190752107bf54ede3691e253d87` | project summary schema hash 刷新 |
 | Bids | `aae52703bdaf93d69fc136674ebb289cabef7867` | tender summary schema hash 刷新 |
