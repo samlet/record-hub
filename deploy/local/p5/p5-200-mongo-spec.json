@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "phase": "5",
+  "task": "P5-200",
+  "owner": "record-hub-platform",
+  "liveRequired": true,
+  "topology": {
+    "replicaSet": true,
+    "minimumVotingMembers": 3,
+    "readConcern": "majority",
+    "writeConcern": "majority",
+    "pitr": true,
+    "encryptedBackup": true,
+    "restoreVerification": [
+      "count",
+      "canonicalHash",
+      "uniqueAndRequiredIndexes",
+      "highestAggregateVersion",
+      "projectionCursor",
+      "inboxBacklog"
+    ]
+  },
+  "retention": {
+    "policyVersion": "p5-200-v1",
+    "terminalInboxDays": 30,
+    "terminalCommandDays": 90,
+    "projectionArchiveDays": 90,
+    "auditDays": 400,
+    "businessProjection": "owner-defined; no implicit TTL"
+  },
+  "indexContract": {
+    "requiredAdapters": [
+      "identity.membership",
+      "schema.repository",
+      "schema.receipts",
+      "schema.migrationReceipts",
+      "records.repository",
+      "records.receipts",
+      "projection.inbox",
+      "projection.archive",
+      "projection.catalog",
+      "projection.rebuild",
+      "projection.readPointers",
+      "commands.operations",
+      "commands.inbox",
+      "binding.snapshots",
+      "audit.writer"
+    ],
+    "noUnboundedCollectionScan": true
+  },
+  "liveEvidence": [
+    "replica-set-stepdown-and-recovery",
+    "backup-pitr-restore",
+    "count-hash-index-version-cursor-assertions",
+    "retention-expiry-and-archive-check",
+    "rollback-or-restore-abort-record"
+  ]
+}

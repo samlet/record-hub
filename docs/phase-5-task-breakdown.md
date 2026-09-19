@@ -24,7 +24,7 @@ Batch 1 收口记录：[phase-5-batch1-closure](phase-5-batch1-closure.md)。静
 
 | ID | 范围 | 任务 | 验收 | 状态 |
 | --- | --- | --- | --- | --- |
-| P5-200 | Record Hub | Mongo replica set、index、retention、PITR | failover、restore、count/hash/index/version/cursor PASS | TODO |
+| P5-200 | Record Hub | Mongo replica set、index、retention、PITR | [closure](phase-5-batch2-p5-200.md)；HA/index/retention/PITR 静态 contract PASS，failover/restore live SKIPPED | PARTIAL |
 | P5-201 | Record Hub/四 owner | JetStream stream/consumer HA | duplicate/ACK loss/restart/DLQ/replay PASS | TODO |
 | P5-202 | 四仓库 | capacity、SLO、RPO/RTO drill | 目标由实测 evidence 证明，不接受 UNVERIFIED | TODO |
 | P5-203 | 四仓库 | production rotation/rolling rollback | old/new overlap、drain、rollback/no-double-write PASS | TODO |
