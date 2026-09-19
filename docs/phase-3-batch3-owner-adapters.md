@@ -11,7 +11,7 @@
 | Approver | `3194bf8` | Flyway V32、`application.annotate` strict codec/executor、owner Inbox、durable pull consumer、result Outbox relay |
 | Bids | `c39e07f` | PostgreSQL V27/SQLite AutoMigrate、`tender.annotate` strict codec/executor、owner Inbox、durable pull consumer、result Outbox relay |
 | Fluxion | 既有 Batch 1 基线 | `project.annotate` 的同一 command/result 语义与共享 contract gate |
-| Record Hub | 本批提交 | 三份 exact policy fixture、command receipt 安全运维汇总、批次状态和 skip log |
+| Record Hub | `9650193` | 三份 exact policy fixture、command receipt 安全运维汇总、批次状态和 skip log |
 
 ## 共享行为边界
 
