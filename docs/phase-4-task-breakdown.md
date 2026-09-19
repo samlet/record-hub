@@ -71,7 +71,7 @@ manifest 必须记录当次实际 commit 和 artifact checksum。
 | P4-501 | 四仓库 | 完整 rotation + restore + mixed load + rolling rollback | P4-500 | SKIPPED | [closure](phase-4-batch5-p4-501.md)；预检静态 PASS，P4-G1..G5 live 因隔离 topology/harness 缺失 SKIPPED；不得进入 Beta |
 | P4-502 | 四仓库 | 单 tenant Beta 灰度与观察窗口 | P4-501 | SKIPPED | [closure](phase-4-batch5-p4-502.md)；观察规格已固化，因 P4-501 live 未通过未启动灰度 |
 | P4-503 | Record Hub | Phase 4 Beta 验收报告 | P4-502 | SKIPPED | [closure](phase-4-batch5-p4-503.md)；报告模板已固化，因 P4-501/P4-502 未完成未签字 |
-| P4-504 | 四仓库 | fallback/旧版本去留评审 | P4-503 | TODO | 单独决策；未批准则继续保留，不作为报告完成的隐含动作 |
+| P4-504 | 四仓库 | fallback/旧版本去留评审 | P4-503 | DONE | [closure](phase-4-batch5-p4-504.md)；独立决策为 KEEP，P4-501/P4-503 完成前不删除旧路径 |
 
 ## 依赖与执行规则
 
