@@ -79,3 +79,20 @@
   human task，以隔离 outbox 调度延迟；项目随后由真实 Bids worker 收敛为 `READY`。
 - 未覆盖：P3-308 的完整 transaction rollback/ACK-loss/NATS outage 矩阵，以及 P3-403..409 的恢复、轮换、
   容量、升级和最终报告；这些仍按任务表执行，不能从本 gate 推断通过。
+
+## P3-403 — native NATS outage/backlog/recovery
+
+- 当前状态：`DONE`（2026-09-19，脚本与静态验收完成；live gate 需显式设置
+  `RECORD_HUB_P3_NATS_RECOVERY_LIVE=1`）。
+- 入口：`make p3-nats-outage-recovery`。
+- gate 在 P3-400/P3-401 隔离 topology 内停止 supervisor 自己启动的 NATS，随后通过真实 Fluxion API
+  创建项目；Temporal/owner transaction 仍会把每个 summary event 写入 `record_hub_outbox`，dispatcher
+  的失败重试使 `PENDING/PROCESSING` backlog 可见。恢复时复用同一 JetStream file store，并重新运行
+  `tools/nats-init` 校验 streams/consumers；最终断言 owner outbox 全部 `SENT`、Mongo `inbox_events`
+  全部 `APPLIED`，current record version 等于该项目 outbox 的最高 aggregate version。
+- 证据：`nats-outage/nats-down.json`、`nats-outage/outbox-during-outage.tsv`、
+  `nats-outage/domain-events-after-recovery.json`、`nats-outage/fluxion-consumer-after-recovery.json`、
+  `nats-outage/domain-events-final.json`、`nats-outage/fluxion-consumer-final.json`、
+  `nats-outage-recovery.json` 和 `db-assertions/p3-403-nats-outage.json`。
+- 本 gate 只宣称 NATS outage/backlog/recovery；commit/ACK 边界崩溃、credential rotation、备份恢复、
+  容量和升级仍保持 `TODO/SKIPPED`，不得从本 gate 推断通过。

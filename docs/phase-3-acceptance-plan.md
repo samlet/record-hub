@@ -56,12 +56,14 @@ make p3-full-topology
 make p3-fixtures              # P3-401：确定性 topology/policy/owner/schema fixture
 RECORD_HUB_P3_FOUR_OWNER_LIVE=1 make p3-four-owner-topology # P3-400：原生四 owner readiness
 make p3-workflow-e2e          # P3-402：真实 Fluxion Temporal + Bids Conductor binding E2E
+make p3-nats-outage-recovery  # P3-403：真实 Fluxion summary outbox 的 NATS outage/backlog/recovery
 ```
 
 P3-400/P3-401 的实现与 live evidence 见 [phase-3-batch4a-topology.md](phase-3-batch4a-topology.md)。
 `p3-four-owner-topology` 只做真实进程和依赖 ready 检查，不直接发布业务 command，也不以 ready 结果替代
 P3-308 的 ACK-loss/outage 矩阵；P3-402 的 workflow gate 实现与证据见
 [phase-3-batch4b-workflow-e2e.md](phase-3-batch4b-workflow-e2e.md)。
+P3-403 的 outage/recovery gate 与证据见 [phase-3-batch4c-nats-recovery.md](phase-3-batch4c-nats-recovery.md)。
 
 ## 3. Gate A：契约与静态边界
 

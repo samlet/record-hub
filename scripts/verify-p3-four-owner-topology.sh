@@ -49,6 +49,7 @@ temporal_address="127.0.0.1:${temporal_port}"
 conductor_url="http://127.0.0.1:${conductor_port}/api"
 created_databases=()
 pids=()
+nats_pid=""
 fluxion_worker_launcher_pid=""
 fluxion_worker_java_pid=""
 
@@ -189,7 +190,9 @@ for _ in {1..180}; do
 done
 mongosh --quiet --host "127.0.0.1:${mongo_port}" --eval 'quit(db.hello().isWritablePrimary ? 0 : 1)' >/dev/null
 
+nats_pid=""
 start_background nats.log nats-server -js -a 127.0.0.1 -p "$nats_port" -m "$nats_monitor_port" -sd "$runtime_root/nats" -n record-hub-p3-four-owner
+nats_pid="${pids[${#pids[@]}-1]}"
 wait_http "http://127.0.0.1:${nats_monitor_port}/healthz?js-enabled-only=true" NATS
 (cd "$root_dir" && RECORD_HUB_NATS_URL="$nats_url" go run ./tools/nats-init) >"$evidence_dir/logs/nats-init.log" 2>&1
 
@@ -285,6 +288,11 @@ if [[ -n "${RECORD_HUB_P3_READY_HOOK:-}" ]]; then
   export RECORD_HUB_P3_TEMPORAL_ADDRESS="$temporal_address"
   export RECORD_HUB_P3_CONDUCTOR_URL="$conductor_url"
   export RECORD_HUB_P3_RECORD_HUB_URL="http://127.0.0.1:${record_hub_port}"
+  export RECORD_HUB_P3_NATS_URL="$nats_url"
+  export RECORD_HUB_P3_NATS_PORT="$nats_port"
+  export RECORD_HUB_P3_NATS_MONITOR_PORT="$nats_monitor_port"
+  export RECORD_HUB_P3_NATS_PID="$nats_pid"
+  export RECORD_HUB_P3_NATS_STORE="$runtime_root/nats"
   export RECORD_HUB_P3_FLUXION_URL="http://127.0.0.1:${fluxion_port}"
   export RECORD_HUB_P3_BIDS_URL="http://127.0.0.1:${bids_api_port}"
   export RECORD_HUB_P3_FLUXION_DATABASE="$fluxion_database"
