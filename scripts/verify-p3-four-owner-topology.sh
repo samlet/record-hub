@@ -141,6 +141,7 @@ curl --silent --show-error --fail "$minio_endpoint/minio/health/live" >/dev/null
 
 RECORD_HUB_P3_FIXTURE_DIR="$fixture_dir" "$root_dir/scripts/bootstrap-p3-fixtures.sh" >"$evidence_dir/fixture-bootstrap.log"
 policy_json="$(jq -c --arg issuer "$workload_issuer" --arg audience "$workload_audience" '. | map(.issuer=$issuer | .audience=$audience)' "$fixture_dir/command-policies.json")"
+binding_policy_json="$(jq -c --arg issuer "$workload_issuer" --arg audience "$workload_audience" '. | map(.issuer=$issuer | .audience=$audience)' "$fixture_dir/binding-machine-policies.json")"
 
 echo "P3-400 building isolated owner runtimes"
 (cd "$approver_root" && mvn -q -DskipTests package)
@@ -218,9 +219,12 @@ export RECORD_HUB_WORKLOAD_AUDIENCE="$workload_audience"
 approver_workload_secret="$(openssl rand -hex 32)"
 fluxion_workload_secret="$(openssl rand -hex 32)"
 bids_workload_secret="$(openssl rand -hex 32)"
-export RECORD_HUB_WORKLOAD_CLIENTS="$(jq -cn --arg scope recordhub.command.submit --arg approver "$approver_workload_secret" --arg fluxion "$fluxion_workload_secret" --arg bids "$bids_workload_secret" '[{id:"approver",secret:$approver,scopes:[$scope]},{id:"fluxion",secret:$fluxion,scopes:[$scope]},{id:"bids",secret:$bids,scopes:[$scope]}]')"
+export RECORD_HUB_WORKLOAD_CLIENTS="$(jq -cn --arg commandScope recordhub.command.submit --arg bindingScope recordhub.binding.snapshot --arg approver "$approver_workload_secret" --arg fluxion "$fluxion_workload_secret" --arg bids "$bids_workload_secret" '[{id:"approver",secret:$approver,scopes:[$commandScope]},{id:"fluxion",secret:$fluxion,scopes:[$commandScope,$bindingScope]},{id:"bids",secret:$bids,scopes:[$commandScope,$bindingScope]}]')"
 start_background workload-issuer.log "$runtime_root/workload-issuer"
 wait_http "$workload_issuer/.well-known/openid-configuration" "workload issuer"
+fluxion_record_hub_token="$(curl --silent --show-error --fail --user "fluxion:${fluxion_workload_secret}" --data-urlencode 'grant_type=client_credentials' --data-urlencode 'scope=recordhub.binding.snapshot' "$workload_issuer/token" | jq -er '.access_token')"
+bids_record_hub_token="$(curl --silent --show-error --fail --user "bids:${bids_workload_secret}" --data-urlencode 'grant_type=client_credentials' --data-urlencode 'scope=recordhub.binding.snapshot' "$workload_issuer/token" | jq -er '.access_token')"
+fluxion_command_token="$(curl --silent --show-error --fail --user "fluxion:${fluxion_workload_secret}" --data-urlencode 'grant_type=client_credentials' --data-urlencode 'scope=recordhub.command.submit' "$workload_issuer/token" | jq -er '.access_token')"
 
 start_background temporal.log temporal server start-dev --headless --ip 127.0.0.1 --port "$temporal_port" --ui-port "$temporal_ui_port" --db-filename "$runtime_root/temporal.sqlite" --namespace p3-local
 wait_tcp 127.0.0.1 "$temporal_port" Temporal
@@ -241,7 +245,7 @@ record_hub_env=(
   env RECORD_HUB_MODE=all RECORD_HUB_HTTP_ADDRESS="127.0.0.1:${record_hub_port}" RECORD_HUB_SHUTDOWN_TIMEOUT=5s
   RECORD_HUB_MONGODB_URI="$mongo_uri" RECORD_HUB_MONGODB_DATABASE="$mongo_database" RECORD_HUB_NATS_URL="$nats_url"
   RECORD_HUB_OIDC_ISSUER="$workload_issuer" RECORD_HUB_OIDC_AUDIENCE="$workload_audience" RECORD_HUB_OIDC_PRINCIPAL_KIND=service
-  RECORD_HUB_OIDC_ALLOW_INSECURE_ISSUER=true RECORD_HUB_COMMAND_POLICIES="$policy_json" "$runtime_root/record-hub" serve
+  RECORD_HUB_OIDC_ALLOW_INSECURE_ISSUER=true RECORD_HUB_BINDING_MACHINE_POLICIES="$binding_policy_json" RECORD_HUB_COMMAND_POLICIES="$policy_json" "$runtime_root/record-hub" serve
 )
 start_background record-hub.log "${record_hub_env[@]}"
 wait_http "http://127.0.0.1:${record_hub_port}/healthz" "Record Hub"
@@ -253,7 +257,7 @@ start_background approver-worker.log env "${approver_common[@]}" APPROVER_WORKER
 wait_http "http://127.0.0.1:${approver_api_port}/actuator/health" "Approver API"
 wait_http "http://127.0.0.1:${approver_worker_port}/actuator/health" "Approver worker"
 
-fluxion_common=(FLUXION_SERVER_PORT="$fluxion_port" FLUXION_PG_URL="jdbc:postgresql://127.0.0.1:5432/${fluxion_database}" FLUXION_PG_USER="$pg_user" FLUXION_PG_PASSWORD="" FLUXION_TEMPORAL_ADDRESS="$temporal_address" FLUXION_TEMPORAL_NAMESPACE=p3-local FLUXION_TEMPORAL_TASK_QUEUE=fluxion-p3-local FLUXION_RECORD_HUB_NATS_URL="$nats_url" FLUXION_RECORD_HUB_COMMAND_RUNNER_ENABLED=true FLUXION_RECORD_HUB_RESULT_RELAY_ENABLED=true)
+fluxion_common=(FLUXION_SERVER_PORT="$fluxion_port" FLUXION_PG_URL="jdbc:postgresql://127.0.0.1:5432/${fluxion_database}" FLUXION_PG_USER="$pg_user" FLUXION_PG_PASSWORD="" FLUXION_TEMPORAL_ADDRESS="$temporal_address" FLUXION_TEMPORAL_NAMESPACE=p3-local FLUXION_TEMPORAL_TASK_QUEUE=fluxion-p3-local FLUXION_RECORD_HUB_NATS_URL="$nats_url" FLUXION_RECORD_HUB_COMMAND_RUNNER_ENABLED=true FLUXION_RECORD_HUB_RESULT_RELAY_ENABLED=true FLUXION_RECORD_HUB_URL="http://127.0.0.1:${record_hub_port}" FLUXION_RECORD_HUB_TOKEN="$fluxion_record_hub_token" FLUXION_RECORD_HUB_TENANT_ID=tenant-p3-fluxion FLUXION_RECORD_HUB_WORKSPACE_ID=workspace-p3-fluxion)
 start_background fluxion-api.log bash -c "cd '$fluxion_root/server' && exec env ${fluxion_common[*]} ./gradlew --no-daemon -q runApi"
 wait_http "http://127.0.0.1:${fluxion_port}/api/health" "Fluxion API"
 existing_worker_pids=" $(pgrep -f 'fluxion\.WorkerKt' 2>/dev/null || true) "
@@ -269,10 +273,28 @@ for _ in {1..240}; do
 done
 [[ -n "$fluxion_worker_java_pid" ]] || { write_manifest FAIL "Fluxion worker did not start"; exit 1; }
 
-bids_common=(DB_DRIVER=postgres DATABASE_DSN="postgres://$pg_user@127.0.0.1:5432/${bids_database}?sslmode=disable" CONDUCTOR_SERVER_URL="$conductor_url" RECORD_HUB_NATS_URL="$nats_url" RECORD_HUB_COMMANDS_ENABLED=true)
+bids_common=(DB_DRIVER=postgres DATABASE_DSN="postgres://$pg_user@127.0.0.1:5432/${bids_database}?sslmode=disable" CONDUCTOR_SERVER_URL="$conductor_url" RECORD_HUB_NATS_URL="$nats_url" RECORD_HUB_COMMANDS_ENABLED=true RECORD_HUB_URL="http://127.0.0.1:${record_hub_port}" RECORD_HUB_TOKEN="$bids_record_hub_token" RECORD_HUB_WORKSPACE_ID=workspace-p3-bids)
 start_background bids-worker.log env "${bids_common[@]}" "$runtime_root/bids-worker"
 start_background bids-api.log env "${bids_common[@]}" HTTP_ADDR="127.0.0.1:${bids_api_port}" AUTH_SEED_ENABLED=true AUTH_COOKIE_SECURE=false MINIO_ENDPOINT="${minio_endpoint#http://}" MINIO_ACCESS_KEY="${MINIO_ACCESS_KEY:-minioadmin}" MINIO_SECRET_KEY="${MINIO_SECRET_KEY:-minioadmin}" MINIO_BUCKET="${MINIO_BUCKET:-bids-documents}" "$runtime_root/bids-api"
 wait_http "http://127.0.0.1:${bids_api_port}/healthz" "Bids API"
+
+if [[ -n "${RECORD_HUB_P3_READY_HOOK:-}" ]]; then
+  export RECORD_HUB_P3_EVIDENCE_DIR="$evidence_dir"
+  export RECORD_HUB_P3_RUNTIME_ROOT="$runtime_root"
+  export RECORD_HUB_P3_MONGO_URI="$mongo_uri"
+  export RECORD_HUB_P3_TEMPORAL_ADDRESS="$temporal_address"
+  export RECORD_HUB_P3_CONDUCTOR_URL="$conductor_url"
+  export RECORD_HUB_P3_RECORD_HUB_URL="http://127.0.0.1:${record_hub_port}"
+  export RECORD_HUB_P3_FLUXION_URL="http://127.0.0.1:${fluxion_port}"
+  export RECORD_HUB_P3_BIDS_URL="http://127.0.0.1:${bids_api_port}"
+  export RECORD_HUB_P3_FLUXION_DATABASE="$fluxion_database"
+  export RECORD_HUB_P3_BIDS_DATABASE="$bids_database"
+  export RECORD_HUB_P3_PG_USER="$pg_user"
+  export RECORD_HUB_P3_FLUXION_BINDING_TOKEN="$fluxion_record_hub_token"
+  export RECORD_HUB_P3_BIDS_BINDING_TOKEN="$bids_record_hub_token"
+  export RECORD_HUB_P3_FLUXION_COMMAND_TOKEN="$fluxion_command_token"
+  "$RECORD_HUB_P3_READY_HOOK"
+fi
 
 write_manifest PASS "all native infrastructure and four owner API/worker processes became ready"
 echo "P3-400/P3-401 four-owner topology passed"

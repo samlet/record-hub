@@ -1,0 +1,24 @@
+[
+  {
+    "issuer": "http://127.0.0.1:15557/workload",
+    "subject": "fluxion",
+    "audience": "record-hub-api",
+    "scope": "recordhub.binding.snapshot",
+    "tenantId": "tenant-p3-fluxion",
+    "workspaceId": "workspace-p3-fluxion",
+    "purpose": "diagnostic",
+    "resourceSystem": "fluxion",
+    "resourceType": "PROJECT"
+  },
+  {
+    "issuer": "http://127.0.0.1:15557/workload",
+    "subject": "bids",
+    "audience": "record-hub-api",
+    "scope": "recordhub.binding.snapshot",
+    "tenantId": "00000000-0000-0000-0000-000000000001",
+    "workspaceId": "workspace-p3-bids",
+    "purpose": "diagnostic",
+    "resourceSystem": "bids",
+    "resourceType": "TENDER"
+  }
+]

@@ -41,12 +41,14 @@ topology.json
 command-policies.json
 owner-fixtures.json
 schema-plan.json
+binding-machine-policies.json
 record-hub-command-policies.env.json
 manifest.json
 ```
 
 输出目录默认是 `.runtime/p3/fixtures`，可由 `RECORD_HUB_P3_FIXTURE_DIR` 指定。文件没有时间戳、随机 ID
-或 secret；manifest 对五个输出逐一计算 SHA-256，因此重复运行内容和 hash 稳定。脚本不直接写业务表，
+或 secret；manifest 对六个输出逐一计算 SHA-256，因此重复运行内容和 hash 稳定。binding machine policy
+只允许 Fluxion PROJECT 与 Bids TENDER 的 `recordhub.binding.snapshot` 诊断读取，不授予写入权限。脚本不直接写业务表，
 schema/mapping 的落地仍由真实应用 migration 和后续 live gate 完成。
 
 ## Live evidence
@@ -66,4 +68,5 @@ RECORD_HUB_P3_FOUR_OWNER_LIVE=1 ./scripts/verify-p3-four-owner-topology.sh
 - fixture manifest 和每个进程日志。
 
 本批只证明四应用及其依赖可以在隔离拓扑中同时启动并 ready。P3-308 的 replay/hash-conflict/version/
-rollback/ACK-loss/outage 矩阵仍需后续业务操作脚本；P3-402..409 仍未通过。
+rollback/ACK-loss/outage 矩阵仍需后续业务操作脚本；P3-402 已由 Batch 4B 的 workflow gate 验收，P3-403..409
+仍未通过。

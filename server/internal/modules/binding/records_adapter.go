@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/samlet/record-hub/server/internal/modules/records"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -27,7 +28,12 @@ func (reader *MongoRecordReader) Read(ctx context.Context, tenantID, workspaceID
 	if err != nil {
 		return SourceRecord{}, err
 	}
-	record, err := reader.repository.GetRecordBySource(ctx, tenantID, workspaceID, reference.System, reference.Type, reference.ID)
+	// Workflow resource references use the stable upper-case resource type
+	// convention (for example, fluxion:PROJECT:<id>), while owner summary
+	// projections keep their source.type in the owner's lower-case form. Keep
+	// the external binding contract case-stable and normalize only the storage
+	// lookup boundary.
+	record, err := reader.repository.GetRecordBySource(ctx, tenantID, workspaceID, reference.System, strings.ToLower(reference.Type), reference.ID)
 	if err != nil {
 		if errors.Is(err, records.ErrRecordNotFound) {
 			return SourceRecord{}, ErrRecordNotFound

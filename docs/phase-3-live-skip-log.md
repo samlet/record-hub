@@ -63,7 +63,19 @@
   NATS JetStream、Dex、workload issuer、Temporal、Conductor、Record Hub、Approver、Fluxion 和 Bids 的
   隔离端口/临时 PostgreSQL database 启动并通过 readiness；退出只清理脚本登记的 PID 和 database。
 - 证据：live PASS 的 `manifest.json` 记录 Darwin arm64、四仓库 commit、端口和 fixture manifest；每个
-  进程有独立日志。`scripts/bootstrap-p3-fixtures.sh` 生成 topology、owner、policy、schema 五份稳定
+  进程有独立日志。`scripts/bootstrap-p3-fixtures.sh` 生成 topology、owner、policy、schema、binding-policy 六份稳定
   文件及 SHA-256 manifest，重复运行结果一致且不含 secret。
-- 本条不等价于 P3-308 或 P3-402 的业务 E2E。后续 gate 必须在该隔离入口上执行真实 command/approval
-  操作、故障注入和 DB 最终断言；不能只因 topology ready 就把 owner matrix 标记为通过。
+- 本条不等价于 P3-308 的完整故障矩阵；P3-402 已由 Batch 4B workflow gate 单独验收。后续 gate 必须在该
+  隔离入口上执行故障注入和 DB 最终断言，不能只因 topology ready 就把 owner matrix 标记为通过。
+
+## P3-402 — real Temporal + Conductor workflow binding E2E
+
+- 当前状态：`DONE`（2026-09-19）。`make p3-workflow-e2e` 在 P3-400/P3-401 隔离 topology 中真实启动
+  Fluxion Temporal workflow 和 Bids Conductor diagnostic workflow；同时覆盖 Fluxion `project.annotate`
+  command、Bids 项目审批/tender summary、Mongo binding snapshot、Inbox/Result Outbox 和 workflow history
+  safe-marker 断言。
+- 证据：每次运行生成 `workflow-e2e/`、`workflow-e2e.json` 和 `db-assertions/p3-402-workflow.json`；最近一次
+  Darwin arm64 live run 为 `PASS`。Bids 审批 API 先写入真实 approval/outbox，gate 再完成同一真实 Conductor
+  human task，以隔离 outbox 调度延迟；项目随后由真实 Bids worker 收敛为 `READY`。
+- 未覆盖：P3-308 的完整 transaction rollback/ACK-loss/NATS outage 矩阵，以及 P3-403..409 的恢复、轮换、
+  容量、升级和最终报告；这些仍按任务表执行，不能从本 gate 推断通过。
