@@ -6,6 +6,9 @@
 - 覆盖仓库：Record Hub、Approver、Fluxion、Bids
 - 阶段定位：真实业务集成收口与 Production-like Beta 准入，不是生产 GA
 
+本文件中的 Phase 4 指 Record Hub 跨仓库集成计划，不等同于 Approver、Fluxion 或 Bids 各自内部的
+同名阶段。
+
 ## 1. 结论
 
 Phase 4 建议定位为 **Integration Beta：在受限租户、受限动作和可回滚条件下运行真实业务集成**。
@@ -113,6 +116,8 @@ Phase 3 的试点在 Phase 4 中提升为 Beta 切片：
 - Approver 决定只表达 `APPROVED/REJECTED/CANCELLED/EXPIRED`，Bids 自己校验当前版本和业务前置条件；
 - Bids result Inbox 与业务状态/Conductor task-completion Outbox 在同一 PostgreSQL 事务提交；
 - Conductor retry 必须复用原 external request ID，不重复创建 Application 或完成 task。
+- feature flag 按 organization/tender generation 在 external Approver 与现有 Bids HUMAN task 中二选一；
+  同一 generation 不得创建两套可决定的审批任务，关闭 flag 后既有外部申请仍可 drain/cancel。
 
 该切片通过故障、安全和回滚矩阵前，不扩展到定标、合同和付款审批。
 
@@ -253,9 +258,9 @@ Batch 5 的 Beta 发布判定。
 
 本方案评审后依次产出：
 
-1. `phase-4-requirements.md`：把目标拆成可验证需求和安全负向要求；
-2. `phase-4-task-breakdown.md`：按四仓库、依赖、批次和 commit gate 分解任务；
-3. `phase-4-acceptance-plan.md`：定义 live topology、fault matrix、容量、恢复和发布证据；
+1. [Phase 4 需求](phase-4-requirements.md)：把目标拆成可验证需求和安全负向要求；
+2. [Phase 4 任务分解](phase-4-task-breakdown.md)：按四仓库、依赖、批次和 commit gate 分解任务；
+3. [Phase 4 验收计划](phase-4-acceptance-plan.md)：定义 live topology、fault matrix、容量、恢复和发布证据；
 4. 每批独立实现、验证、提交；最终形成 `phase-4-acceptance-report.md`。
 
 需要在需求冻结前确认的参数只有 Beta 部署规模、evidence 保留期、RPO/RTO 目标和正式 workload

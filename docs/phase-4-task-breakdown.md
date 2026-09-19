@@ -1,0 +1,92 @@
+# Phase 4 Integration Beta 任务分解
+
+- 日期：2026-09-20
+- 状态：Batch 0 planning baseline complete；实现任务待开始
+- 方案：[phase-4-design.md](phase-4-design.md)
+- 需求：[phase-4-requirements.md](phase-4-requirements.md)
+- 验收：[phase-4-acceptance-plan.md](phase-4-acceptance-plan.md)
+
+本任务表属于 Record Hub 跨仓库集成计划。每批必须在涉及仓库独立提交，跨仓库 gate 的 evidence
+manifest 必须记录当次实际 commit 和 artifact checksum。
+
+## Batch 0：契约与证据基线
+
+| ID | 仓库 | 任务 | 依赖 | 状态 | 验收 |
+| --- | --- | --- | --- | --- | --- |
+| P4-000 | Record Hub | Phase 4 方案、需求、任务与验收计划 | P3 report | DONE | 四份文档互链，阶段边界、Gate 和禁止项一致 |
+| P4-001 | 四仓库 | 固定当前 commit、artifact、migration、contract baseline | P4-000 | TODO | machine-readable release manifest；构建命令与 checksum 可重现 |
+| P4-002 | 四仓库 | contract/fixture inventory 与 mirror gate | P4-001 | TODO | command/result、dispatch approval、association assets 无漂移/未知文件 |
+| P4-003 | Record Hub | Phase 4 evidence manifest/schema 与持久目录 | P4-001 | TODO | `build/evidence/phase4/<run-id>`、hash、redacted config、artifact upload contract |
+| P4-004 | 四仓库 | 扩展隔离 topology 与 deterministic fixtures | P4-001..003 | TODO | 独立端口/DB/store/PID；source/restore、old/new artifact、tenant/org fixtures 可重复创建 |
+
+## Batch 1：Phase 3 收口
+
+| ID | 仓库 | 任务 | 依赖 | 状态 | 验收 |
+| --- | --- | --- | --- | --- | --- |
+| P4-100 | Record Hub | reloadable workload issuer 与双 JWKS key overlap | P4-004 | TODO | 新旧 token overlap、cache refresh、撤销后 fail closed live PASS |
+| P4-101 | 四仓库 | workload client secret reload/rotation | P4-100 | TODO | 每调用方向双 secret；无丢请求/重复副作用 |
+| P4-102 | 四仓库 | Mongo/PostgreSQL/JetStream recovery set | P4-004 | TODO | isolated restore 后 count/hash/index/version/cursor 与未完成 backlog 对齐 |
+| P4-103 | 四仓库 | mixed owner capacity/recovery harness | P4-004 | TODO | 10k history、50/200 msg/s、100 pending approval、hardware/SLO/drain evidence |
+| P4-104 | 四仓库 | old/new rolling upgrade/rollback harness | P4-002,004 | TODO | expand/contract、durable、feature flag、旧 worker rollback PASS |
+| P4-105 | Record Hub/Fluxion | transaction rollback 与 publish-before-SENT crash | P4-004 | TODO | P3 C-006/C-008 live PASS，无重复 annotation/terminal result |
+| P4-106 | 四仓库 | 三 owner 同时运行 live behavior matrix | P4-004 | TODO | duplicate/hash/version/ACK loss/restart/DLQ 在三 owner 行为一致 |
+
+## Batch 2：Fluxion Approval Beta
+
+| ID | 仓库 | 任务 | 依赖 | 状态 | 验收 |
+| --- | --- | --- | --- | --- | --- |
+| P4-200 | Fluxion | tenant/workspace feature flag 与在途 drain | P4-101,106 | TODO | 默认关闭；关闭后停止新流量，既有 request 可管理 |
+| P4-201 | Fluxion/Approver | 五类终态与稳定 request state machine | P4-200 | TODO | approve/reject/cancel/expire/fail live E2E |
+| P4-202 | Fluxion/Approver | late result、generation guard 与 reconciliation | P4-201 | TODO | 不覆盖新事实；finding taxonomy、operator view 与审计完整 |
+| P4-203 | Fluxion | local human fallback 与 replay/Continue-As-New | P4-200..202 | TODO | 单 generation 不双写；replay 不重新创建 Application |
+| P4-204 | Record Hub | Project↔Application typed association projection/API | P4-002,201 | TODO | monotonic projection、gap/conflict、tenant auth、安全字段测试 |
+| P4-205 | 四仓库 | Fluxion Approval Beta fault matrix | P4-200..204 | TODO | response loss、restart、NATS outage、late result、flag rollback 全 PASS |
+
+## Batch 3：Bids Approval Pilot
+
+| ID | 仓库 | 任务 | 依赖 | 状态 | 验收 |
+| --- | --- | --- | --- | --- | --- |
+| P4-300 | Approver/Bids | 招标准备发布 approval contract 与 allowlist fixture | P4-002 | TODO | strict schema；高敏字段/unknown/oversize fixtures 全拒绝 |
+| P4-301 | Bids | request/result Inbox/Outbox migration 与 repository | P4-300 | TODO | PostgreSQL 空库/升级库、unique/scope/version/lease/index PASS |
+| P4-302 | Bids/Approver | request relay、materializer 与 result dispatcher | P4-301 | TODO | stable ID/hash、response-loss recovery、terminal replay PASS |
+| P4-303 | Bids | result apply、单一审批 authority 与 Conductor task-completion Outbox | P4-302 | TODO | Inbox/domain/task Outbox 同事务；external/local 按 generation 二选一；task retry 复用 request ID |
+| P4-304 | Record Hub | Tender↔Application association projection/API | P4-204,302 | TODO | 只读安全摘要、org/tenant auth、gap/conflict/finding PASS |
+| P4-305 | 四仓库 | Bids approval live/fault/security matrix | P4-300..304 | TODO | duplicate/restart/timeout/version/cross-org/sealed-data cases 全 PASS |
+
+## Batch 4：运维与安全
+
+| ID | 仓库 | 任务 | 依赖 | 状态 | 验收 |
+| --- | --- | --- | --- | --- | --- |
+| P4-400 | 四仓库 | tenant/organization/identity/ACL negative matrix | P4-205,305 | TODO | cross-scope 全拒绝且不泄露资源存在性 |
+| P4-401 | 四仓库 | 指标、SLO snapshot 与有限基数检查 | P4-103,205,305 | TODO | terminal/materialization/delivery/lag/backlog/dead/finding/recovery 可测 |
+| P4-402 | Record Hub | approval association/operator/reconciliation UI | P4-204,304,401 | TODO | Viewer/Editor/Operator 权限分离；无直接改终态入口 |
+| P4-403 | 四仓库 | secret/PII/Bids sealed-data evidence scan | P4-400 | TODO | Git、log、history、DLQ、metrics、evidence 扫描无发现 |
+| P4-404 | 四仓库 | rotation/recovery/reconciliation runbook | P4-100..104,401 | TODO | owner、触发条件、步骤、停止条件、回滚和升级路径完整 |
+
+## Batch 5：Beta 发布
+
+| ID | 仓库 | 任务 | 依赖 | 状态 | 验收 |
+| --- | --- | --- | --- | --- | --- |
+| P4-500 | 四仓库 | release candidate manifest 与 immutable artifacts | Batch 0..4 | TODO | commit/checksum/migration/contract/config 摘要固定 |
+| P4-501 | 四仓库 | 完整 rotation + restore + mixed load + rolling rollback | P4-500 | TODO | P4-G1..G5 必选 live cases 全 PASS，无 SKIPPED/PARTIAL |
+| P4-502 | 四仓库 | 单 tenant Beta 灰度与观察窗口 | P4-501 | TODO | 至少一个完整 retention/retry window；SLO/告警/finding 可接受 |
+| P4-503 | Record Hub | Phase 4 Beta 验收报告 | P4-502 | TODO | commit/artifact、case、RPO/RTO、容量、风险 owner、rollback、签字完整 |
+| P4-504 | 四仓库 | fallback/旧版本去留评审 | P4-503 | TODO | 单独决策；未批准则继续保留，不作为报告完成的隐含动作 |
+
+## 依赖与执行规则
+
+```text
+Batch 0 contract/evidence
+        ↓
+Batch 1 Phase 3 closure
+        ↓
+Batch 2 Fluxion Beta ──┐
+                       ├──> Batch 4 operations/security ──> Batch 5 release
+Batch 3 Bids pilot ────┘
+```
+
+- Batch 1 是真实 Beta 流量的硬前置；可以并行开发 Batch 2/3，但不能跳过 Gate 发布。
+- Batch 2 与 Batch 3 可在契约冻结后并行，必须共享 identity、evidence、finding taxonomy 和安全规则。
+- 每批完成都在涉及仓库提交；不得用 Record Hub 单仓库提交代表四仓库已验收。
+- live 项缺依赖时标记 `SKIPPED` 并继续可安全完成的任务，但 P4-501 不接受必选项 `SKIPPED`。
+- 任何跨租户、敏感泄漏、重复领域副作用、不可恢复 migration 立即阻止后续发布 Gate。

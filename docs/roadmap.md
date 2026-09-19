@@ -53,7 +53,9 @@
 
 ## Phase 4：Integration Beta
 
-详细边界和发布门见 [Phase 4 技术方案](phase-4-design.md)。
+详细边界和发布门见 [Phase 4 技术方案](phase-4-design.md)、
+[需求](phase-4-requirements.md)、[任务分解](phase-4-task-breakdown.md)和
+[验收计划](phase-4-acceptance-plan.md)。
 
 - 收口 Phase 3 的 credential rotation、备份恢复、混合容量和升级回滚 live gate。
 - 将 Fluxion → Approver 试点提升为可灰度、可对账、可降级的 Beta 集成。
