@@ -492,13 +492,23 @@ if [[ "$fault_matrix" == "1" ]]; then
     FLUXION_RECORD_HUB_COMMAND_DELIVER_NEW=true)"
   fault_worker_launcher_pid="${rollback_recovery_pids%%|*}"
   fault_worker_java_pid="${rollback_recovery_pids#*|}"
+  # The recovery worker intentionally keeps the result relay disabled so this
+  # case can assert the owner-side result Outbox remains PENDING.  Therefore
+  # the Record Hub command API remains DISPATCHED until a later relay run; the
+  # authoritative recovery assertion here is the owner Inbox/domain commit.
   rollback_status=""
+  rollback_inbox_status=""
+  rollback_outbox_status=""
+  rollback_events=""
   for _ in {1..300}; do
-    rollback_status="$(curl --silent --show-error --fail -H "Authorization: Bearer $token" "$record_hub_url/api/v1/commands/${rollback_operation}?tenantId=$FLUXION_RECORD_HUB_TENANT_ID&workspaceId=$FLUXION_RECORD_HUB_WORKSPACE_ID" | tee "$runtime_root/rollback-result.json" | jq -r '.status')"
-    [[ "$rollback_status" == "SUCCEEDED" || "$rollback_status" == "REJECTED" || "$rollback_status" == "FAILED" ]] && break
+    rollback_inbox_status="$(psql -At -d "$pg_db" -c "select status from record_hub_command_inbox where operation_id='${rollback_operation}'" 2>/dev/null || true)"
+    rollback_outbox_status="$(psql -At -d "$pg_db" -c "select status from record_hub_command_result_outbox where operation_id='${rollback_operation}'" 2>/dev/null || true)"
+    rollback_events="$(psql -At -d "$pg_db" -c "select count(*) from project_events where project_id='${project_id}' and payload_ref='record-hub-annotation:${rollback_annotation}'" 2>/dev/null || true)"
+    rollback_status="$rollback_inbox_status"
+    [[ "$rollback_inbox_status" == "SUCCEEDED" && "$rollback_outbox_status" == "PENDING" && "$rollback_events" == "1" ]] && break
     sleep 0.2
   done
-  if [[ "$rollback_status" != "SUCCEEDED" ]]; then
+  if [[ "$rollback_inbox_status" != "SUCCEEDED" || "$rollback_outbox_status" != "PENDING" || "$rollback_events" != "1" ]]; then
     # Some local JetStream builds retain a pull delivery until the original
     # consumer heartbeat expires. Re-publish the exact envelope with a fresh
     # NATS message id so recovery remains bounded; Inbox operationId still
@@ -516,16 +526,18 @@ if [[ "$fault_matrix" == "1" ]]; then
       '{operationId:$operationId,tenantId:$tenantId,workspaceId:$workspaceId,policyId:"project.annotate",ownerSystem:"fluxion",resourceType:"PROJECT",action:"project.annotate",purpose:"project-annotation",resourceRef:$resourceRef,expectedVersion:$expectedVersion,payloadHash:$payloadHash,payload:$payload,requestedBy:$requestedBy,createdAt:$createdAt}')"
     nats --server "$nats_url" pub -H "Nats-Msg-Id: ${rollback_operation}-recovery" "commands.fluxion.project.annotate.v1" "$rollback_envelope" >/dev/null
     for _ in {1..300}; do
-      rollback_status="$(curl --silent --show-error --fail -H "Authorization: Bearer $token" "$record_hub_url/api/v1/commands/${rollback_operation}?tenantId=$FLUXION_RECORD_HUB_TENANT_ID&workspaceId=$FLUXION_RECORD_HUB_WORKSPACE_ID" | tee "$runtime_root/rollback-result.json" | jq -r '.status')"
-      [[ "$rollback_status" == "SUCCEEDED" || "$rollback_status" == "REJECTED" || "$rollback_status" == "FAILED" ]] && break
+      rollback_inbox_status="$(psql -At -d "$pg_db" -c "select status from record_hub_command_inbox where operation_id='${rollback_operation}'" 2>/dev/null || true)"
+      rollback_outbox_status="$(psql -At -d "$pg_db" -c "select status from record_hub_command_result_outbox where operation_id='${rollback_operation}'" 2>/dev/null || true)"
+      rollback_events="$(psql -At -d "$pg_db" -c "select count(*) from project_events where project_id='${project_id}' and payload_ref='record-hub-annotation:${rollback_annotation}'" 2>/dev/null || true)"
+      rollback_status="$rollback_inbox_status"
+      [[ "$rollback_inbox_status" == "SUCCEEDED" && "$rollback_outbox_status" == "PENDING" && "$rollback_events" == "1" ]] && break
       sleep 0.2
     done
   fi
-  [[ "$rollback_status" == "SUCCEEDED" ]] || { cat "$runtime_root/rollback-result.json" >&2; exit 1; }
-  rollback_inbox_status="$(psql -At -d "$pg_db" -c "select status from record_hub_command_inbox where operation_id='${rollback_operation}'")"
-  rollback_outbox_status="$(psql -At -d "$pg_db" -c "select status from record_hub_command_result_outbox where operation_id='${rollback_operation}'")"
-  rollback_events="$(psql -At -d "$pg_db" -c "select count(*) from project_events where project_id='${project_id}' and payload_ref='record-hub-annotation:${rollback_annotation}'")"
-  [[ "$rollback_inbox_status" == "SUCCEEDED" && "$rollback_outbox_status" == "PENDING" && "$rollback_events" == "1" ]] || exit 1
+  [[ "$rollback_inbox_status" == "SUCCEEDED" && "$rollback_outbox_status" == "PENDING" && "$rollback_events" == "1" ]] || {
+    echo "transaction rollback recovery did not commit owner Inbox/PENDING result outbox exactly once" >&2
+    exit 1
+  }
   fault_final_version="$((after_void_version + 1))"
   stop_fluxion_worker "$fault_worker_launcher_pid" "$fault_worker_java_pid"
   fault_worker_launcher_pid=""
