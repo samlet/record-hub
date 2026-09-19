@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "phase": "5",
+  "task": "P5-203",
+  "owner": "four-workflow-release-owners",
+  "liveRequired": true,
+  "sequence": [
+    "additive-migration",
+    "compatible-reader",
+    "new-producer-consumer-with-flag-off",
+    "single-tenant-canary",
+    "drain-inflight",
+    "old-artifact-rollback",
+    "read-only-smoke",
+    "contract-tightening-after-old-exit"
+  ],
+  "invariants": [
+    "old-and-new-artifacts-are-immutable-and-addressable",
+    "durable-cursors-are-not-recreated-during-rollout",
+    "feature-flag-stops-new-flow-but-allows-drain",
+    "idempotency-and-CAS-prevent-double-write",
+    "rollback-keeps-inbox-outbox-receipts-findings-and-audit"
+  ],
+  "requiredEvidence": [
+    "old-new-artifact-digests",
+    "migration-and-contract-digests",
+    "flag-and-drain-snapshot",
+    "rollback-no-double-write-assertion",
+    "post-rollback-reconciliation",
+    "owner-signoff"
+  ]
+}
