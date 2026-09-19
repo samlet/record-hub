@@ -61,7 +61,7 @@ manifest 必须记录当次实际 commit 和 artifact checksum。
 | P4-401 | 四仓库 | 指标、SLO snapshot 与有限基数检查 | P4-103,205,305 | PARTIAL | [closure](phase-4-batch4-p4-401.md)；bounded metrics/static SLO PASS，混合压测 live SKIPPED |
 | P4-402 | Record Hub | approval association/operator/reconciliation UI | P4-204,304,401 | PARTIAL | [closure](phase-4-batch4-p4-402.md)；只读控制台与 403/405 回归 PASS，角色 live SKIPPED |
 | P4-403 | 四仓库 | secret/PII/Bids sealed-data evidence scan | P4-400 | PARTIAL | [closure](phase-4-batch4-p4-403.md)；源码/evidence 静态扫描 PASS，真实日志/DLQ live SKIPPED |
-| P4-404 | 四仓库 | rotation/recovery/reconciliation runbook | P4-100..104,401 | TODO | owner、触发条件、步骤、停止条件、回滚和升级路径完整 |
+| P4-404 | 四仓库 | rotation/recovery/reconciliation runbook | P4-100..104,401 | PARTIAL | [closure](phase-4-batch4-p4-404.md)；runbook 与入口 PASS，恢复演练 live SKIPPED |
 
 ## Batch 5：Beta 发布
 
