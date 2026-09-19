@@ -74,6 +74,9 @@ Record Hub 与 Fluxion worker 进程共同运行；单测不能替代 Gate B。
 
 ### B1 APPEND
 
+核心正常路径已由 `make p3-fluxion-command-live` 在 2026-09-19 真实通过；下列断言仍是 Gate B 的完整验收标准，
+故障注入和 restart/ACK-loss 部分不能由该核心切片替代。
+
 1. 使用 `fluxion-to-record-hub` token 提交 `project.annotate`，记录 operation ID。
 2. 断言 receipt 从 `ACCEPTED`/`DISPATCHED` 最终进入 `SUCCEEDED`。
 3. 断言 Fluxion 只有一条 Inbox、一条 annotation、一条 result Outbox。

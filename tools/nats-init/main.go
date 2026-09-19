@@ -36,9 +36,9 @@ var commandConsumers = []struct {
 	stream string
 	config jetstream.ConsumerConfig
 }{
-	{stream: approvalCommandsStream, config: consumerConfig("approver-command-inbox-v1", "commands.approver.>")},
-	{stream: ownerCommandsStream, config: consumerConfig("fluxion-command-inbox-v1", "commands.fluxion.>")},
-	{stream: ownerCommandsStream, config: consumerConfig("bids-command-inbox-v1", "commands.bids.>")},
+	{stream: approvalCommandsStream, config: ownerCommandConsumerConfig("approver-command-inbox-v1", "commands.approver.>")},
+	{stream: ownerCommandsStream, config: ownerCommandConsumerConfig("fluxion-command-inbox-v1", "commands.fluxion.>")},
+	{stream: ownerCommandsStream, config: ownerCommandConsumerConfig("bids-command-inbox-v1", "commands.bids.>")},
 }
 
 func main() {
@@ -182,6 +182,17 @@ func consumerConfig(name, filter string) jetstream.ConsumerConfig {
 		MaxRequestExpires: 10 * time.Second,
 		Replicas:          1,
 	}
+}
+
+// Owner command runners use a longer bounded retry budget and a smaller
+// in-flight window than projections. Keeping that topology server-side avoids
+// clients racing to mutate a durable consumer during startup.
+func ownerCommandConsumerConfig(name, filter string) jetstream.ConsumerConfig {
+	config := consumerConfig(name, filter)
+	config.Description = "Record Hub owner command consumer"
+	config.MaxDeliver = 12
+	config.MaxAckPending = 64
+	return config
 }
 
 func verifyTopology(ctx context.Context, js jetstream.JetStream) error {
