@@ -210,8 +210,62 @@ func TestLoadWorkerDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load() error = %v", err)
 	}
-	if cfg.HTTPAddress != "" || cfg.LogLevel != slog.LevelInfo || cfg.ShutdownTimeout != 10*time.Second {
+	if cfg.Environment != "local" || cfg.HTTPAddress != "" || cfg.LogLevel != slog.LevelInfo || cfg.ShutdownTimeout != 10*time.Second {
 		t.Fatalf("load() config = %+v", cfg)
+	}
+}
+
+func TestLoadProductionRejectsInsecureIdentitySettings(t *testing.T) {
+	base := map[string]string{
+		"RECORD_HUB_MODE":                         "api",
+		"RECORD_HUB_HTTP_ADDRESS":                 "127.0.0.1:8080",
+		"RECORD_HUB_ENVIRONMENT":                  "production",
+		"RECORD_HUB_OIDC_ISSUER":                  "http://dex.internal",
+		"RECORD_HUB_OIDC_AUDIENCE":                "record-hub-api",
+		"RECORD_HUB_OIDC_ALLOW_INSECURE_ISSUER":   "true",
+		"RECORD_HUB_WEB_ENABLED":                  "true",
+		"RECORD_HUB_WEB_ISSUER":                   "http://dex.internal",
+		"RECORD_HUB_WEB_AUDIENCE":                 "record-hub-web",
+		"RECORD_HUB_WEB_AUTHORIZATION_ENDPOINT":   "http://dex.internal/auth",
+		"RECORD_HUB_WEB_TOKEN_ENDPOINT":           "http://dex.internal/token",
+		"RECORD_HUB_WEB_CLIENT_ID":                "record-hub-web",
+		"RECORD_HUB_WEB_CLIENT_SECRET":            "secret",
+		"RECORD_HUB_WEB_REDIRECT_URL":             "https://record-hub.example/callback",
+		"RECORD_HUB_WEB_SESSION_SECRET":           "01234567890123456789012345678901",
+		"RECORD_HUB_WEB_SECURE_COOKIES":           "false",
+		"RECORD_HUB_WEB_ALLOW_INSECURE_ENDPOINTS": "true",
+	}
+	_, err := load(mapLookup(base))
+	if err == nil || !strings.Contains(err.Error(), "must be false in production") || !strings.Contains(err.Error(), "must be true in production") {
+		t.Fatalf("production identity error = %v", err)
+	}
+}
+
+func TestLoadProductionAcceptsSecureIdentitySettings(t *testing.T) {
+	env := map[string]string{
+		"RECORD_HUB_MODE":                         "api",
+		"RECORD_HUB_HTTP_ADDRESS":                 "127.0.0.1:8080",
+		"RECORD_HUB_ENVIRONMENT":                  "production",
+		"RECORD_HUB_OIDC_ISSUER":                  "https://dex.internal",
+		"RECORD_HUB_OIDC_AUDIENCE":                "record-hub-api",
+		"RECORD_HUB_WEB_ENABLED":                  "true",
+		"RECORD_HUB_WEB_ISSUER":                   "https://dex.internal",
+		"RECORD_HUB_WEB_AUDIENCE":                 "record-hub-web",
+		"RECORD_HUB_WEB_AUTHORIZATION_ENDPOINT":   "https://dex.internal/auth",
+		"RECORD_HUB_WEB_TOKEN_ENDPOINT":           "https://dex.internal/token",
+		"RECORD_HUB_WEB_CLIENT_ID":                "record-hub-web",
+		"RECORD_HUB_WEB_CLIENT_SECRET":            "secret",
+		"RECORD_HUB_WEB_REDIRECT_URL":             "https://record-hub.example/callback",
+		"RECORD_HUB_WEB_SESSION_SECRET":           "01234567890123456789012345678901",
+		"RECORD_HUB_WEB_SECURE_COOKIES":           "true",
+		"RECORD_HUB_WEB_ALLOW_INSECURE_ENDPOINTS": "false",
+	}
+	cfg, err := load(mapLookup(env))
+	if err != nil {
+		t.Fatalf("secure production config error = %v", err)
+	}
+	if cfg.Environment != "production" || !cfg.Web.SecureCookies || cfg.Web.AllowInsecureEndpoints {
+		t.Fatalf("production identity config = %+v", cfg)
 	}
 }
 

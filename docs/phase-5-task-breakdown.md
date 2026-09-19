@@ -14,7 +14,7 @@ Phase 5 依赖 Phase 4 P4-501 live gate；在 live gate 未完成前只能进行
 
 | ID | 范围 | 任务 | 验收 | 状态 |
 | --- | --- | --- | --- | --- |
-| P5-100 | Record Hub/Dex | production OIDC、workspace membership、service principal | issuer/audience/scope/rotation/审计 live PASS | TODO |
+| P5-100 | Record Hub/Dex | production OIDC、workspace membership、service principal | [closure](phase-5-batch1-p5-100.md)；静态身份边界 PASS，production rotation/revocation live SKIPPED | PARTIAL |
 | P5-101 | 四仓库 | tenant/org/connector policy lifecycle | cross-scope negative matrix 与禁用/撤销 PASS | TODO |
 | P5-102 | Record Hub | Viewer/Editor/Operator/Admin console/API parity | API/UI/worker 权限矩阵无绕过 | TODO |
 

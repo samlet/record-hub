@@ -104,6 +104,10 @@ type CommandPolicyConfig struct {
 
 // Config contains process-level runtime configuration.
 type Config struct {
+	// Environment controls production-only safety checks. Local remains the
+	// default so contract smoke tests can use a local Dex endpoint; production
+	// rejects insecure OIDC endpoints and non-secure browser cookies.
+	Environment     string
 	Mode            Mode
 	HTTPAddress     string
 	LogLevel        slog.Level
@@ -148,6 +152,13 @@ type lookupEnv func(string) (string, bool)
 func load(lookup lookupEnv) (Config, error) {
 	var cfg Config
 	var errs []error
+	cfg.Environment = "local"
+	if value, present := optional(lookup, "RECORD_HUB_ENVIRONMENT"); present {
+		cfg.Environment = strings.ToLower(strings.TrimSpace(value))
+		if cfg.Environment != "local" && cfg.Environment != "staging" && cfg.Environment != "production" {
+			errs = append(errs, fmt.Errorf("RECORD_HUB_ENVIRONMENT must be local, staging, or production; got %q", value))
+		}
+	}
 
 	mode, ok := required(lookup, "RECORD_HUB_MODE")
 	if !ok {
@@ -310,6 +321,19 @@ func load(lookup lookupEnv) (Config, error) {
 			errs = append(errs, errors.New("RECORD_HUB_WEB_ENABLED requires RECORD_HUB_MODE=api or all"))
 		}
 		loadWebConfig(lookup, &cfg.Web, &errs)
+	}
+	if cfg.Environment == "production" {
+		if cfg.OIDCAllowInsecureIssuer {
+			errs = append(errs, errors.New("RECORD_HUB_OIDC_ALLOW_INSECURE_ISSUER must be false in production"))
+		}
+		if cfg.Web.Enabled {
+			if cfg.Web.AllowInsecureEndpoints {
+				errs = append(errs, errors.New("RECORD_HUB_WEB_ALLOW_INSECURE_ENDPOINTS must be false in production"))
+			}
+			if !cfg.Web.SecureCookies {
+				errs = append(errs, errors.New("RECORD_HUB_WEB_SECURE_COOKIES must be true in production"))
+			}
+		}
 	}
 
 	if len(errs) > 0 {

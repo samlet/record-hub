@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "phase": "5",
+  "task": "P5-100",
+  "name": "production-oidc-and-service-identity",
+  "liveRequired": true,
+  "staticChecks": [
+    "production rejects insecure OIDC issuer and browser endpoints",
+    "OIDC verifier validates issuer, audience, expiry, subject and JWKS rotation",
+    "service policies use exact issuer/subject/audience/scope/tenant/workspace tuples",
+    "browser session secret and secure cookie controls are explicit"
+  ],
+  "livePrerequisites": [
+    "production Dex/OIDC issuer with TLS and managed JWKS",
+    "external secret manager or certificate provider",
+    "four owner service principals with independent audiences/scopes",
+    "rotation overlap, in-flight drain and revocation evidence runner"
+  ]
+}

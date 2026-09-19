@@ -187,6 +187,9 @@ p4-release-candidate:
 p4-batch5:
 	./scripts/verify-p4-batch5.sh
 
+p5-100:
+	./scripts/verify-p5-100-identity.sh
+
 p4-contract-inventory:
 	./scripts/verify-p4-contract-inventory.sh
 
