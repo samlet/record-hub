@@ -1,7 +1,7 @@
 # Phase 3 真实业务系统接入任务分解
 
 - 日期：2026-09-18
-- 状态：Batch 4F（backup/restore gate）完成；P3-308、P3-407..409 仍待后续批次
+- 状态：Batch 4G（capacity/recovery baseline）完成；P3-308、P3-408..409 仍待后续批次
 - 方案：[phase-3-integration-design.md](phase-3-integration-design.md)
 - 需求：[phase-3-requirements.md](phase-3-requirements.md)
 - 验收：[phase-3-acceptance-plan.md](phase-3-acceptance-plan.md)
@@ -95,7 +95,7 @@
 | P3-404 | 四仓库 | 进程 restart/ACK-loss 矩阵 | DONE | `make p3-process-restart-ack-loss`；真实 P3-110 fault matrix 验证 owner commit-before-ACK、result publish-before-SENT、consumer pause/restart、cross restart、durable consumer competition 和 safe DLQ follow-up；证据 `p3-404-restart-ack-loss.json` |
 | P3-405 | 四仓库 | workload/JWKS/secret rotation | SKIPPED | `make p3-credential-rotation` 已通过 OIDC JWKS rotation 与 workload secret fail-closed contract checks；四 owner overlap SKIPPED：本地 issuer 启动时生成单 key，暂无热轮换/JWKS overlap 和 owner credential reload 协议；证据 `credential-rotation.json` |
 | P3-406 | 四仓库 | Mongo/PostgreSQL/JetStream 备份恢复 | SKIPPED | `make p3-backup-restore` 已交付原生 `mongodump/mongorestore`、`pg_dump/pg_restore`、JetStream store archive 与 hash manifest；当前四 owner supervisor 会在 teardown 删除临时 source/restore 目标，未提供持久隔离恢复目标，故 live restore SKIPPED；证据 `backup-restore.json` |
-| P3-407 | 四仓库 | 容量与 recovery baseline | TODO | 数据规模、事件率、p95/p99、backlog drain time 和硬件记录 |
+| P3-407 | 四仓库 | 容量与 recovery baseline | PARTIAL | `make p3-capacity-baseline` 对真实 Mongo/NATS/Record Hub projection 跑 bounded summary load，输出 publish/drain rate、p50/p95/p99/max latency；当前仅 synthetic transport/projection baseline，四 owner mixed workflow load SKIPPED，证据 `capacity-metrics.json` |
 | P3-408 | 四仓库 | 升级/回滚演练 | TODO | contract/migration/worker/feature flag 兼容窗口通过 |
 | P3-409 | Record Hub | Phase 3 验收报告 | TODO | commit、版本、PASS/SKIPPED/FAIL、风险 owner、重试条件完整 |
 
