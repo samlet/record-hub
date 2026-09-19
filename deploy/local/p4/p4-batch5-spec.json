@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "phase": "4",
+  "batch": "5",
+  "gate": "P4-501",
+  "liveRequired": true,
+  "cases": [
+    {"id": "P4-G1", "name": "credential-and-jwks-rotation", "acceptance": "old/new overlap, in-flight drain, expired-key rejection, no cross-scope access"},
+    {"id": "P4-G2", "name": "restore-and-checkpoint-recovery", "acceptance": "Mongo/PostgreSQL/NATS restore count/hash/index/version/cursor assertions"},
+    {"id": "P4-G3", "name": "mixed-load-and-drain", "acceptance": "10k history, 50/200 msg/s, 100 pending, bounded drain and SLO"},
+    {"id": "P4-G4", "name": "rolling-upgrade-and-rollback", "acceptance": "old/new worker compatibility, expand-contract, durable rollback"},
+    {"id": "P4-G5", "name": "cross-owner-fault-matrix", "acceptance": "duplicate, ACK loss, restart, NATS outage, late result, DLQ and reconciliation"}
+  ],
+  "requiredEnvironment": [
+    "RECORD_HUB_P4_TOPOLOGY_FILE",
+    "RECORD_HUB_P4_EVIDENCE_ROOT",
+    "RECORD_HUB_P4_OPERATOR_CREDENTIALS_FILE",
+    "RECORD_HUB_P4_OLD_ARTIFACT_ROOT",
+    "RECORD_HUB_P4_NEW_ARTIFACT_ROOT"
+  ]
+}

@@ -1,7 +1,7 @@
 # Phase 4 Integration Beta 任务分解
 
 - 日期：2026-09-20
-- 状态：Batch 0 已完成；Batch 1/2/3/4 静态收口完成，Batch 1/2/3/4 live 验收待隔离环境
+- 状态：Batch 0 已完成；Batch 1/2/3/4 静态收口完成；P4-500 RC 静态冻结完成，P4-501 live gate 待隔离环境
 - 方案：[phase-4-design.md](phase-4-design.md)
 - 需求：[phase-4-requirements.md](phase-4-requirements.md)
 - 验收：[phase-4-acceptance-plan.md](phase-4-acceptance-plan.md)
@@ -68,7 +68,7 @@ manifest 必须记录当次实际 commit 和 artifact checksum。
 | ID | 仓库 | 任务 | 依赖 | 状态 | 验收 |
 | --- | --- | --- | --- | --- | --- |
 | P4-500 | 四仓库 | release candidate manifest 与 immutable artifacts | Batch 0..4 | DONE | [closure](phase-4-batch5-p4-500.md)；`make p4-release-candidate` 固定四仓库 commit、digest 和 6 个 artifact，静态 PASS |
-| P4-501 | 四仓库 | 完整 rotation + restore + mixed load + rolling rollback | P4-500 | TODO | P4-G1..G5 必选 live cases 全 PASS，无 SKIPPED/PARTIAL |
+| P4-501 | 四仓库 | 完整 rotation + restore + mixed load + rolling rollback | P4-500 | SKIPPED | [closure](phase-4-batch5-p4-501.md)；预检静态 PASS，P4-G1..G5 live 因隔离 topology/harness 缺失 SKIPPED；不得进入 Beta |
 | P4-502 | 四仓库 | 单 tenant Beta 灰度与观察窗口 | P4-501 | TODO | 至少一个完整 retention/retry window；SLO/告警/finding 可接受 |
 | P4-503 | Record Hub | Phase 4 Beta 验收报告 | P4-502 | TODO | commit/artifact、case、RPO/RTO、容量、风险 owner、rollback、签字完整 |
 | P4-504 | 四仓库 | fallback/旧版本去留评审 | P4-503 | TODO | 单独决策；未批准则继续保留，不作为报告完成的隐含动作 |
