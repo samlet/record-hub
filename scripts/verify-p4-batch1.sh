@@ -37,6 +37,12 @@ run_static P4-106-behavior-contract "$root_dir/scripts/verify-p3-approval-contra
 live_requested="${RECORD_HUB_P4_BATCH1_LIVE:-0}"
 live_status="SKIPPED"
 live_reason="live gate is opt-in and requires the isolated four-owner topology, explicit recovery targets, or immutable old/new artifacts"
+p4100_live="SKIPPED"
+p4101_live="SKIPPED"
+p4102_live="SKIPPED"
+p4103_live="SKIPPED"
+p4104_live="SKIPPED"
+p4106_live="SKIPPED"
 if [[ "$live_requested" == "1" ]]; then
   live_status="REQUESTED"
   live_reason="live sub-gates are delegated to the existing P3 runners; each runner records PASS/FAIL/SKIPPED in its own evidence"
@@ -52,6 +58,32 @@ if [[ "$live_requested" == "1" ]]; then
   RECORD_HUB_P3_RESTART_ACK_LIVE=1 "$root_dir/scripts/verify-p3-process-restart-ack-loss.sh" >"$evidence_dir/live/P4-106.log" 2>&1
   printf '%s\n' "$?" >"$evidence_dir/live/P4-106.exit"
   set -e
+
+  classify_log() {
+    local log="$1"
+    if grep -q 'FAIL' "$log"; then
+      printf 'FAIL'
+    elif grep -q 'P3-407' "$log" && grep -q 'fourOwnerMixedWorkload.*SKIPPED' "$log"; then
+      printf 'PARTIAL'
+    elif grep -q 'SKIPPED' "$log"; then
+      printf 'SKIPPED'
+    elif grep -q 'passed' "$log" || grep -q 'PASS' "$log"; then
+      printf 'PASS'
+    else
+      printf 'SKIPPED'
+    fi
+  }
+  p4100_live="$(classify_log "$evidence_dir/live/P4-100.log")"
+  p4102_live="$(classify_log "$evidence_dir/live/P4-102.log")"
+  p4103_live="$(classify_log "$evidence_dir/live/P4-103.log")"
+  p4104_live="$(classify_log "$evidence_dir/live/P4-104.log")"
+  if grep -q 'FAIL' "$evidence_dir/live/P4-106.log"; then
+    p4106_live="FAIL"
+  elif grep -q 'passed' "$evidence_dir/live/P4-106.log" || grep -q 'PASS' "$evidence_dir/live/P4-106.log"; then
+    p4106_live="PARTIAL"
+  else
+    p4106_live="SKIPPED"
+  fi
 fi
 
 if [[ "$static_status" != "0" ]]; then
@@ -84,14 +116,16 @@ jq -S -n \
   --arg p4103 "$(static_value P4-103-capacity-contract)" \
   --arg p4104 "$(static_value P4-104-upgrade-contract)" \
   --arg p4106 "$(static_value P4-106-behavior-contract)" \
+  --arg p4100Live "$p4100_live" --arg p4101Live "$p4101_live" --arg p4102Live "$p4102_live" \
+  --arg p4103Live "$p4103_live" --arg p4104Live "$p4104_live" --arg p4106Live "$p4106_live" \
   '{gate:"P4-BATCH1",status:$overall,generatedAt:$generatedAt,spec:"deploy/local/p4/p4-batch1-spec.json",evidenceDir:$evidenceDir,liveRequested:($liveRequested == "1"),tasks:[
-    {id:"P4-100",scope:"reloadable workload issuer and JWKS overlap",staticStatus:$p4100,liveStatus:$liveStatus,liveReason:$liveReason},
-    {id:"P4-101",scope:"independent workload client secret rotation",staticStatus:$p4101,liveStatus:$liveStatus,liveReason:$liveReason},
-    {id:"P4-102",scope:"Mongo/PostgreSQL/JetStream recovery set",staticStatus:$p4102,liveStatus:$liveStatus,liveReason:$liveReason},
-    {id:"P4-103",scope:"four-owner mixed capacity and drain",staticStatus:$p4103,liveStatus:$liveStatus,liveReason:$liveReason},
-    {id:"P4-104",scope:"expand-contract rolling upgrade and rollback",staticStatus:$p4104,liveStatus:$liveStatus,liveReason:$liveReason},
+    {id:"P4-100",scope:"reloadable workload issuer and JWKS overlap",staticStatus:$p4100,liveStatus:$p4100Live,liveReason:$liveReason},
+    {id:"P4-101",scope:"independent workload client secret rotation",staticStatus:$p4101,liveStatus:$p4101Live,liveReason:$liveReason},
+    {id:"P4-102",scope:"Mongo/PostgreSQL/JetStream recovery set",staticStatus:$p4102,liveStatus:$p4102Live,liveReason:$liveReason},
+    {id:"P4-103",scope:"four-owner mixed capacity and drain",staticStatus:$p4103,liveStatus:$p4103Live,liveReason:$liveReason},
+    {id:"P4-104",scope:"expand-contract rolling upgrade and rollback",staticStatus:$p4104,liveStatus:$p4104Live,liveReason:$liveReason},
     {id:"P4-105",scope:"transaction rollback and publish-before-SENT crash",staticStatus:"SKIPPED",liveStatus:"SKIPPED",liveReason:"the existing P3 runner does not yet expose both required fault injection boundaries"},
-    {id:"P4-106",scope:"three-owner live behavior matrix",staticStatus:$p4106,liveStatus:$liveStatus,liveReason:$liveReason}
+    {id:"P4-106",scope:"three-owner live behavior matrix",staticStatus:$p4106,liveStatus:$p4106Live,liveReason:$liveReason}
   ],retry:"Provide isolated source/restore targets, the four-owner runtime and immutable old/new artifacts; rerun with RECORD_HUB_P4_BATCH1_LIVE=1"}' \
   | tee "$evidence_dir/batch1.json"
 

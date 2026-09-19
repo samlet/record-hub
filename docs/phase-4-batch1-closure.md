@@ -23,6 +23,12 @@
 | P4-105 | SKIPPED | SKIPPED | 现有 runner 尚未提供 transaction rollback 和 publish-before-SENT 两个精确注入点 |
 | P4-106 | PASS | SKIPPED | contract mirror 通过；四 owner 同时运行的 live behavior matrix 未执行 |
 
+在 2026-09-20 的一次显式 live 尝试中，聚合结果进一步细化为：P4-100、P4-101、P4-102、P4-104
+仍为 `SKIPPED`；P4-103 为 `PARTIAL`（200 条 synthetic projection 的 P3-407 子 gate PASS，但
+`fourOwnerMixedWorkload` 明确为 `SKIPPED`）；P4-106 为 `PARTIAL`（Fluxion restart/ACK-loss
+子矩阵 PASS，但不是 Approver/Fluxion/Bids 三 owner 全矩阵）。原始临时证据目录为
+`/tmp/record-hub-p4-batch1-live-final/`，可通过同一命令重建，不作为持久报告路径。
+
 默认运行会在 `build/evidence/phase4/batch1-<run-id>/` 保存报告；现场重试需显式设置：
 
 ```text
