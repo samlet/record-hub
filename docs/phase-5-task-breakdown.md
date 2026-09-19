@@ -55,6 +55,8 @@ Batch 4 收口记录：[phase-5-batch4-closure](phase-5-batch4-closure.md)。四
 
 ## Batch 5：GA release
 
+Batch 5 preflight 收口记录：[phase-5-batch5-closure](phase-5-batch5-closure.md)。P5-500/P5-501 的静态 fail-closed 检查已通过，但 candidate 和 rollout 均明确阻塞。
+
 | ID | 范围 | 任务 | 验收 | 状态 |
 | --- | --- | --- | --- | --- |
 | P5-500 | 四仓库 | GA candidate manifest | [closure](phase-5-batch5-p5-500.md)；fail-closed preflight 静态 PASS，当前 BLOCKED、禁止创建 candidate | BLOCKED_BY_GATES |
