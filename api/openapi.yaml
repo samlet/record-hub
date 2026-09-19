@@ -14,6 +14,7 @@ tags:
   - name: Schema
   - name: Projection Catalog
   - name: Operations
+  - name: Associations
   - name: Bindings
   - name: Commands
 paths:
@@ -72,6 +73,48 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ReadinessResponse"
+  /api/v1/associations/project-applications:
+    get:
+      tags: [Associations]
+      operationId: listProjectApplicationAssociations
+      summary: Read typed Project↔Application associations
+      parameters:
+        - $ref: "#/components/parameters/TenantIdQuery"
+        - $ref: "#/components/parameters/WorkspaceIdQuery"
+        - name: projectRef
+          in: query
+          schema:
+            type: string
+            pattern: "^fluxion:PROJECT:[0-9a-fA-F-]{36}$"
+        - name: applicationRef
+          in: query
+          schema:
+            type: string
+            pattern: "^approver:APPLICATION:[a-zA-Z0-9][a-zA-Z0-9._:-]{0,127}$"
+        - $ref: "#/components/parameters/LimitQuery"
+      responses:
+        "200":
+          description: Safe typed association read model.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    maxItems: 100
+                    items:
+                      $ref: "#/components/schemas/ProjectApplicationAssociation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
   /api/v1/projection/rebuilds:
     post:
       tags: [Operations]
@@ -1574,6 +1617,53 @@ components:
         status:
           type: string
           enum: [ready, not_ready]
+    ProjectApplicationAssociation:
+      type: object
+      additionalProperties: false
+      required: [id, tenantId, workspaceId, projectRef, applicationRef, workflowId, workflowRunId, approvalStatus, proposalHash, dispatchGeneration, decisionVersion, sourceVersion, observedVersion, projectionState, updatedAt]
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        workspaceId:
+          type: string
+        projectRef:
+          type: string
+          pattern: "^fluxion:PROJECT:[0-9a-fA-F-]{36}$"
+        applicationRef:
+          type: string
+          pattern: "^approver:APPLICATION:[a-zA-Z0-9][a-zA-Z0-9._:-]{0,127}$"
+        workflowId:
+          type: string
+        workflowRunId:
+          type: string
+        approvalStatus:
+          type: string
+          enum: [PENDING, APPROVED, REJECTED, CANCELLED, EXPIRED, FAILED]
+        proposalHash:
+          type: string
+          pattern: "^sha256:[0-9a-f]{64}$"
+        dispatchGeneration:
+          type: integer
+          minimum: 1
+        decisionVersion:
+          type: integer
+          minimum: 1
+        sourceVersion:
+          type: integer
+          minimum: 0
+        observedVersion:
+          type: integer
+          minimum: 0
+        lastEventId:
+          type: string
+        projectionState:
+          type: string
+          enum: [CURRENT, GAP, CONFLICT]
+        updatedAt:
+          type: string
+          format: date-time
     ProjectionOperationsSnapshot:
       type: object
       additionalProperties: false

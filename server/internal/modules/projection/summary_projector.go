@@ -29,6 +29,7 @@ type SummaryProjector struct {
 	inbox             InboxRepository
 	projection        ProjectionRepository
 	archive           ProjectionEventArchiveWriter
+	association       AssociationWriter
 	workspaceID       string
 	workspaceByTenant map[string]string
 	projectorKey      identity.IdentityKey
@@ -98,6 +99,16 @@ func (projector *SummaryProjector) WithMappingGenerations(registry *MappingGener
 func (projector *SummaryProjector) WithEventArchive(archive ProjectionEventArchiveWriter) *SummaryProjector {
 	if projector != nil {
 		projector.archive = archive
+	}
+	return projector
+}
+
+// WithAssociationWriter enables the typed Project↔Application read model.
+// The writer is fed only the allowlisted approval summary payload; it never
+// receives arbitrary source metadata or the full workflow input.
+func (projector *SummaryProjector) WithAssociationWriter(writer AssociationWriter) *SummaryProjector {
+	if projector != nil {
+		projector.association = writer
 	}
 	return projector
 }
@@ -226,6 +237,18 @@ func (projector *SummaryProjector) Handle(ctx context.Context, subject string, r
 	}
 	if claim.Duplicate && claim.Event.Status == InboxApplied {
 		return nil
+	}
+	if projector.association != nil && envelope.EventType == "approver.dispatch-approval.summary-changed" {
+		associationEvent, associationErr := associationEventFromSummary(envelope, envelope.Payload, now)
+		if associationErr != nil {
+			return DeterministicError(associationErr, "approval association rejected")
+		}
+		if associationEvent.WorkspaceID == "" {
+			associationEvent.WorkspaceID = workspaceID
+		}
+		if err := projector.association.Apply(ctx, associationEvent); err != nil {
+			return err
+		}
 	}
 	recordID := projectionRecordID(envelope.TenantID, workspaceID, envelope.SourceSystem, envelope.AggregateType, envelope.AggregateID)
 	if runtimeMapping != nil {

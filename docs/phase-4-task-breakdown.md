@@ -37,9 +37,9 @@ manifest 必须记录当次实际 commit 和 artifact checksum。
 | --- | --- | --- | --- | --- | --- |
 | P4-200 | Fluxion | tenant/workspace feature flag 与在途 drain | P4-101,106 | PARTIAL | 静态 config/relay/result boundary 与 Fluxion 全量单测 PASS；C-001/C-008 live 因隔离拓扑缺失 SKIPPED，详见 [P4-200 closure](phase-4-batch2-p4-200.md) |
 | P4-201 | Fluxion/Approver | 五类终态与稳定 request state machine | P4-200 | PARTIAL | 五类终态、alias、同事务 request/InBox/update-outbox 状态机与单测 PASS；C-003..006 live 因隔离拓扑缺失 SKIPPED，详见 [P4-201 closure](phase-4-batch2-p4-201.md) |
-| P4-202 | Fluxion/Approver | late result、generation guard 与 reconciliation | P4-201 | TODO | 不覆盖新事实；finding taxonomy、operator view 与审计完整 |
-| P4-203 | Fluxion | local human fallback 与 replay/Continue-As-New | P4-200..202 | TODO | 单 generation 不双写；replay 不重新创建 Application |
-| P4-204 | Record Hub | Project↔Application typed association projection/API | P4-002,201 | TODO | monotonic projection、gap/conflict、tenant auth、安全字段测试 |
+| P4-202 | Fluxion/Approver | late result、generation guard 与 reconciliation | P4-201 | PARTIAL | late result 不更新 Temporal；VERSION_DRIFT/LATE_RESULT finding、operator view 与审计静态/单测 PASS，跨服务 live SKIPPED，详见 [P4-202 closure](phase-4-batch2-p4-202.md) |
+| P4-203 | Fluxion | local human fallback 与 replay/Continue-As-New | P4-200..202 | PARTIAL | local fallback、stable request ID、replay/CAN 不重复 Application/update 单测 PASS；Temporal+Approver live SKIPPED，详见 [P4-203 closure](phase-4-batch2-p4-203.md) |
+| P4-204 | Record Hub | Project↔Application typed association projection/API | P4-002,201 | PARTIAL | Mongo projection/API、monotonic version、gap/conflict、tenant auth、安全字段和 OpenAPI 单测 PASS；Mongo/NATS live SKIPPED，详见 [P4-204 closure](phase-4-batch2-p4-204.md) |
 | P4-205 | 四仓库 | Fluxion Approval Beta fault matrix | P4-200..204 | TODO | response loss、restart、NATS outage、late result、flag rollback 全 PASS |
 
 ## Batch 3：Bids Approval Pilot
