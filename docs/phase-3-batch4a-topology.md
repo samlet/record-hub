@@ -62,7 +62,7 @@ RECORD_HUB_P3_FOUR_OWNER_LIVE=1 ./scripts/verify-p3-four-owner-topology.sh
 - Mongo `37018`、NATS `14223/18223`、Dex `15566`、workload issuer `15557`；
 - Temporal `17233`、Conductor `18080`、Record Hub `18081`；
 - Approver API/worker `18090/18091`、Fluxion API `18092`、Bids API `18093`；
-- Record Hub `44eef02`、Approver `3194bf8`、Fluxion `1321285`、Bids `c39e07f`；
+- Record Hub `5c38ab0`、Approver `3194bf8`、Fluxion `1321285`、Bids `c39e07f`；
 - fixture manifest 和每个进程日志。
 
 本批只证明四应用及其依赖可以在隔离拓扑中同时启动并 ready。P3-308 的 replay/hash-conflict/version/

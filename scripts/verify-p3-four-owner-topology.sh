@@ -81,12 +81,20 @@ skip_gate() {
 
 cleanup() {
   local status=$?
-  set +e
+  set +e +u
   if [[ "$status" != "0" ]]; then
     write_manifest FAIL "topology process or readiness check failed"
   fi
+  stop_pid_tree() {
+    local pid="$1" child
+    [[ -n "$pid" ]] || return 0
+    for child in $(pgrep -P "$pid" 2>/dev/null || true); do
+      stop_pid_tree "$child"
+    done
+    kill -TERM "$pid" 2>/dev/null || true
+  }
   for pid in "$fluxion_worker_java_pid" "$fluxion_worker_launcher_pid" "${pids[@]}"; do
-    [[ -n "$pid" ]] && kill -TERM "$pid" 2>/dev/null || true
+    stop_pid_tree "$pid"
   done
   for _ in {1..100}; do
     local running=0
