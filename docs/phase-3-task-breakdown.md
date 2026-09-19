@@ -1,7 +1,7 @@
 # Phase 3 真实业务系统接入任务分解
 
 - 日期：2026-09-18
-- 状态：Batch 4H（upgrade/rollback gate）完成；P3-308、P3-409 仍待后续批次
+- 状态：Batch 4I（Phase 3 acceptance report）完成；P3-308 仍待后续现场重试
 - 方案：[phase-3-integration-design.md](phase-3-integration-design.md)
 - 需求：[phase-3-requirements.md](phase-3-requirements.md)
 - 验收：[phase-3-acceptance-plan.md](phase-3-acceptance-plan.md)
@@ -97,7 +97,7 @@
 | P3-406 | 四仓库 | Mongo/PostgreSQL/JetStream 备份恢复 | SKIPPED | `make p3-backup-restore` 已交付原生 `mongodump/mongorestore`、`pg_dump/pg_restore`、JetStream store archive 与 hash manifest；当前四 owner supervisor 会在 teardown 删除临时 source/restore 目标，未提供持久隔离恢复目标，故 live restore SKIPPED；证据 `backup-restore.json` |
 | P3-407 | 四仓库 | 容量与 recovery baseline | PARTIAL | `make p3-capacity-baseline` 对真实 Mongo/NATS/Record Hub projection 跑 bounded summary load，输出 publish/drain rate、p50/p95/p99/max latency；当前仅 synthetic transport/projection baseline，四 owner mixed workflow load SKIPPED，证据 `capacity-metrics.json` |
 | P3-408 | 四仓库 | 升级/回滚演练 | SKIPPED | `make p3-upgrade-rollback` contract checks PASS；真实 rolling upgrade/rollback 因缺少 previous-version/new-version worker artifacts、隔离目标和 rollback runner SKIPPED；证据 `upgrade-rollback.json` |
-| P3-409 | Record Hub | Phase 3 验收报告 | TODO | commit、版本、PASS/SKIPPED/FAIL、风险 owner、重试条件完整 |
+| P3-409 | Record Hub | Phase 3 验收报告 | DONE | `make p3-phase3-report` 校验 P3-400..409 状态、提交基线、证据、RPO/RTO 限制、风险 owner 与重试条件；见 [phase-3-acceptance-report.md](phase-3-acceptance-report.md) |
 
 ## 依赖与顺序
 
