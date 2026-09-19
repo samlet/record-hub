@@ -6,7 +6,7 @@ Phase 5 依赖 Phase 4 P4-501 live gate；在 live gate 未完成前只能进行
 
 | ID | 范围 | 任务 | 验收 | 状态 |
 | --- | --- | --- | --- | --- |
-| P5-000 | Record Hub | 方案、需求、验收和风险边界冻结 | 文档互链、non-goal 和 dependency 一致 | TODO |
+| P5-000 | Record Hub | 方案、需求、验收和风险边界冻结 | 文档互链、non-goal 和 dependency 一致 | DONE |
 | P5-001 | 四仓库 | RC/contract/migration/config baseline | commit、artifact、digest、owner 清单固定 | TODO |
 | P5-002 | 四仓库 | Phase 4 live gap re-audit | P4-G1～G5 无 SKIPPED/PARTIAL | BLOCKED_BY_P4 |
 
