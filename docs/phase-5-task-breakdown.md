@@ -44,7 +44,7 @@ Batch 3 收口记录：[phase-5-batch3-closure](phase-5-batch3-closure.md)。四
 
 ## Batch 4：GA evidence 与治理
 
-Batch 4 已开始；P5-400 的静态扫描验收门已加入，运行时 history/log/metrics/DLQ/evidence scan 仍需隔离 topology。
+Batch 4 收口记录：[phase-5-batch4-closure](phase-5-batch4-closure.md)。四项静态验收门已通过；P4-501 prerequisite、runtime export、canary window、GA signoff 和 legacy review live 仍为 `SKIPPED`。
 
 | ID | 范围 | 任务 | 验收 | 状态 |
 | --- | --- | --- | --- | --- |
