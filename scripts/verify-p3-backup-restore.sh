@@ -35,7 +35,15 @@ fi
 
 backup_root="$evidence_dir/backup"
 restore_root="$evidence_dir/restore"
-mkdir -p "$backup_root/mongo" "$backup_root/postgres" "$backup_root/nats" "$restore_root"
+mkdir -p "$backup_root/mongo" "$backup_root/postgres" "$backup_root/nats-source" "$restore_root"
+
+write_component_manifest() {
+  local label="$1" root="$2" output="$3"
+  {
+    printf '## %s\n' "$label"
+    (cd "$root" && find . -type f -print0 | sort -z | xargs -0 shasum -a 256)
+  } >>"$output"
+}
 
 # Capture each source using native tools.  The caller is responsible for
 # making restore PostgreSQL databases and Mongo/NATS targets disposable.
@@ -46,9 +54,13 @@ for database in "${databases[@]}"; do
   [[ -n "$database" ]] || continue
   pg_dump --format=custom --file "$backup_root/postgres/${database}.dump" "$database"
 done
-tar -C "$RECORD_HUB_P3_BACKUP_NATS_STORE" -czf "$backup_root/nats/jetstream.tar.gz" .
+tar -C "$RECORD_HUB_P3_BACKUP_NATS_STORE" -cf - . | tar -C "$backup_root/nats-source" -xf -
+tar -C "$backup_root/nats-source" -czf "$backup_root/jetstream.tar.gz" .
 
-find "$backup_root" -type f -print0 | sort -z | xargs -0 shasum -a 256 >"$evidence_dir/backup.sha256"
+: >"$evidence_dir/backup.sha256"
+write_component_manifest mongo "$backup_root/mongo" "$evidence_dir/backup.sha256"
+write_component_manifest postgres "$backup_root/postgres" "$evidence_dir/backup.sha256"
+write_component_manifest nats "$backup_root/nats-source" "$evidence_dir/backup.sha256"
 
 mongorestore --uri "$RECORD_HUB_P3_RESTORE_MONGO_URI" --drop --gzip "$backup_root/mongo"
 IFS=',' read -r -a restore_databases <<<"$RECORD_HUB_P3_RESTORE_PG_DATABASES"
@@ -61,9 +73,23 @@ for database in "${restore_databases[@]}"; do
 done
 rm -rf "$RECORD_HUB_P3_RESTORE_NATS_STORE"
 mkdir -p "$RECORD_HUB_P3_RESTORE_NATS_STORE"
-tar -C "$RECORD_HUB_P3_RESTORE_NATS_STORE" -xzf "$backup_root/nats/jetstream.tar.gz"
+tar -C "$RECORD_HUB_P3_RESTORE_NATS_STORE" -xzf "$backup_root/jetstream.tar.gz"
 
-find "$backup_root" -type f -print0 | sort -z | xargs -0 shasum -a 256 >"$evidence_dir/restore.sha256"
+# Re-dump the restored databases and compare normalized component manifests.
+# Comparing the backup directory with itself would be a false PASS; the
+# verification below reads every restored Mongo/PostgreSQL/NATS target.
+mkdir -p "$restore_root/mongo" "$restore_root/postgres"
+mongodump --uri "$RECORD_HUB_P3_RESTORE_MONGO_URI" --out "$restore_root/mongo" --gzip
+IFS=',' read -r -a restore_verify_databases <<<"$RECORD_HUB_P3_RESTORE_PG_DATABASES"
+for database in "${restore_verify_databases[@]}"; do
+  database="${database//[[:space:]]/}"
+  [[ -n "$database" ]] || continue
+  pg_dump --format=custom --file "$restore_root/postgres/${database}.dump" "$database"
+done
+: >"$evidence_dir/restore.sha256"
+write_component_manifest mongo "$restore_root/mongo" "$evidence_dir/restore.sha256"
+write_component_manifest postgres "$restore_root/postgres" "$evidence_dir/restore.sha256"
+write_component_manifest nats "$RECORD_HUB_P3_RESTORE_NATS_STORE" "$evidence_dir/restore.sha256"
 if cmp -s "$evidence_dir/backup.sha256" "$evidence_dir/restore.sha256"; then
   status="PASS"
 else
