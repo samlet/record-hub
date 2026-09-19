@@ -10,7 +10,7 @@ Native topology 环境准备：[phase-5-native-topology-preflight](phase-5-nativ
 | --- | --- | --- | --- | --- |
 | P5-000 | Record Hub | 方案、需求、验收和风险边界冻结 | 文档互链、non-goal 和 dependency 一致 | DONE |
 | P5-001 | 四仓库 | RC/contract/migration/config baseline | [baseline manifest](phase-5-baseline-manifest.json)；commit、6 个 artifact、source/contract-migration-config digest、owner 清单固定 | DONE |
-| P5-002 | 四仓库 | Phase 4 live gap re-audit | P4-G1～G5 无 SKIPPED/PARTIAL | BLOCKED_BY_P4 |
+| P5-002 | 四仓库 | Phase 4 live gap re-audit | [re-audit](phase-5-batch0-p5-002.md)；P4-G1～G5 无 SKIPPED/PARTIAL | BLOCKED_BY_P4 |
 
 ## Batch 1：Production identity 与 control plane
 

@@ -7,3 +7,6 @@ digest 和未跟踪文件策略已写入 [`phase-5-baseline-manifest.json`](phas
 manifest 分别由 `3f009c5` 和 `2fd90c7` 提交。
 
 P5-002 明确保持 `BLOCKED_BY_P4`，必须先完成 P4-501 的 P4-G1～G5 live rotation、restore、mixed-load、rolling rollback 和 fault matrix。P5-100 之后的实现批次可并行准备静态契约和环境，但在 P4-501 清除前不得启动生产流量。
+
+P5-002 的 fail-closed re-audit 入口和 evidence schema 已补齐；当前只会输出 `BLOCKED_BY_P4`，
+不会把 Phase 4 static PASS 或普通本机服务升级成 live PASS。

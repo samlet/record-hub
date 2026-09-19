@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "phase": "5",
+  "task": "P5-002",
+  "purpose": "re-audit Phase 4 live gaps before any Phase 5 production gate",
+  "prerequisite": "P4-501",
+  "requiredCases": ["P4-G1", "P4-G2", "P4-G3", "P4-G4", "P4-G5"],
+  "forbiddenStatuses": ["SKIPPED", "PARTIAL", "UNVERIFIED", "PENDING"],
+  "failClosed": true,
+  "decisionWhenIncomplete": "BLOCKED_BY_P4",
+  "notes": [
+    "Static contract checks never replace the P4-501 live evidence.",
+    "A missing or stale P4 report blocks this task and all Phase 5 GA actions."
+  ]
+}
