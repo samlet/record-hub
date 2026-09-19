@@ -46,7 +46,7 @@
 | P3-107 | Fluxion | 增加 Inbox/Outbox 运维查询和安全 metrics | DONE | supervisor-only `/api/operations/record-hub/commands` 仅返回状态计数/backlog，不返回 ID、payload 或 secret |
 | P3-108 | Record Hub | 增加真实 Fluxion policy fixture/config | DONE | `deploy/local/p3/fluxion-project-annotate-policy.json` 固定 workload issuer/subject/audience/scope、tenant/workspace/purpose/action |
 | P3-109 | Record Hub/Fluxion | command/result 跨仓库 contract test | DONE | Kotlin/Go runtime、四仓库 hash gate 和 P3-110 live APPEND/VOID、replay、hash-conflict、version/error-redaction matrix 均通过 |
-| P3-110 | Record Hub/Fluxion | live command E2E | PARTIAL | 核心切片与 `make p3-fluxion-command-faults` 的双 worker、commit-before-ACK replay、result consumer restart 已实现；DLQ/NATS outage/backlog/跨系统同时重启仍待后续批次 |
+| P3-110 | Record Hub/Fluxion | live command E2E | PARTIAL | 核心切片与 `make p3-fluxion-command-faults` 的双 worker、commit-before-ACK replay、result consumer restart、NATS outage/backlog recovery 已实现；DLQ/跨系统同时重启仍待后续批次 |
 | P3-111 | Record Hub/Fluxion | annotation semantic compensation | PARTIAL | payload allowlist、VOID target/重复/版本/workspace/tenant 负向单测已完成；真实 DB 审计与跨项目 Gate 待 live 验收 |
 
 ## Batch 2：Fluxion → Approver 审批试点

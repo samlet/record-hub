@@ -12,7 +12,7 @@
 - 故障矩阵入口已实现：`make p3-fluxion-command-faults` 会在同一隔离拓扑中启动第二个 Fluxion worker，
   使用 Fluxion 测试故障点验证 commit-before-ACK 重放，并暂停 Record Hub result consumer 验证 durable
   result 收敛；每次运行继续生成相同格式的 evidence directory。
-- 尚未覆盖：DLQ、NATS outage/backlog recovery 和跨系统两侧同时重启；这些保持为后续批次的 `TODO`，
+- 尚未覆盖：DLQ 和跨系统两侧同时重启；NATS outage/backlog recovery 已由故障矩阵覆盖；这些保持为后续批次的 `TODO`，
   不能据此宣称 Phase 3 全部 Gate 通过。
 - 不以 fake server、内存仓库或直接写业务库替代 live Gate；脚本只使用数据库读查询做断言。
 - 后续重试条件：在本 gate 基础上加入故障注入与重启控制，继续使用

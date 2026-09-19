@@ -47,6 +47,7 @@ fault_worker_java_pid=""
 fault_worker_launcher_pid=""
 competition_worker_java_pid=""
 competition_worker_launcher_pid=""
+nats_pid=""
 pg_db="fluxion_p3_${$}"
 
 write_manifest() {
@@ -71,18 +72,18 @@ cleanup() {
       jq -n '{gate:"P3-110",status:"FAIL",note:"live gate terminated before all cases completed"}' >"$evidence_dir/results.json"
     fi
   fi
-  for pid in "${fluxion_api_java_pid:-}" "${fluxion_worker_java_pid:-}" "${fault_worker_java_pid:-}" "${competition_worker_java_pid:-}" "${record_hub_pid:-}" "${pids[@]}"; do
+  for pid in "${fluxion_api_java_pid:-}" "${fluxion_worker_java_pid:-}" "${fault_worker_java_pid:-}" "${competition_worker_java_pid:-}" "${record_hub_pid:-}" "${nats_pid:-}" "${pids[@]}"; do
     [[ -n "$pid" ]] && kill -TERM "$pid" 2>/dev/null || true
   done
   for _ in {1..100}; do
     local running=0
-    for pid in "${fluxion_api_java_pid:-}" "${fluxion_worker_java_pid:-}" "${fault_worker_java_pid:-}" "${competition_worker_java_pid:-}" "${record_hub_pid:-}" "${pids[@]}"; do
+    for pid in "${fluxion_api_java_pid:-}" "${fluxion_worker_java_pid:-}" "${fault_worker_java_pid:-}" "${competition_worker_java_pid:-}" "${record_hub_pid:-}" "${nats_pid:-}" "${pids[@]}"; do
       [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null && running=1
     done
     [[ "$running" == "0" ]] && break
     sleep 0.1
   done
-  for pid in "${fluxion_api_java_pid:-}" "${fluxion_worker_java_pid:-}" "${fault_worker_java_pid:-}" "${competition_worker_java_pid:-}" "${record_hub_pid:-}" "${pids[@]}"; do
+  for pid in "${fluxion_api_java_pid:-}" "${fluxion_worker_java_pid:-}" "${fault_worker_java_pid:-}" "${competition_worker_java_pid:-}" "${record_hub_pid:-}" "${nats_pid:-}" "${pids[@]}"; do
     [[ -n "$pid" ]] && kill -KILL "$pid" 2>/dev/null || true
     [[ -n "$pid" ]] && wait "$pid" 2>/dev/null || true
   done
@@ -136,9 +137,25 @@ done
 mongosh --quiet --host "127.0.0.1:${mongo_port}" --eval 'quit(db.hello().isWritablePrimary ? 0 : 1)' >/dev/null
 
 nats_url="nats://127.0.0.1:${nats_port}"
-nats-server -js -a 127.0.0.1 -p "$nats_port" -m "$nats_monitor_port" -sd "$runtime_root/nats" -n record-hub-p3-fluxion >"$evidence_dir/logs/nats.log" 2>&1 &
-pids+=("$!")
-wait_http "http://127.0.0.1:${nats_monitor_port}/healthz?js-enabled-only=true" NATS
+start_nats() {
+  local log_file="${1:-nats.log}"
+  nats-server -js -a 127.0.0.1 -p "$nats_port" -m "$nats_monitor_port" -sd "$runtime_root/nats" -n record-hub-p3-fluxion >"$evidence_dir/logs/$log_file" 2>&1 &
+  nats_pid="$!"
+  pids+=("$nats_pid")
+  wait_http "http://127.0.0.1:${nats_monitor_port}/healthz?js-enabled-only=true" NATS
+}
+stop_nats() {
+  [[ -n "${nats_pid:-}" ]] || return 0
+  kill -TERM "$nats_pid" 2>/dev/null || true
+  for _ in {1..100}; do
+    kill -0 "$nats_pid" 2>/dev/null || break
+    sleep 0.1
+  done
+  kill -KILL "$nats_pid" 2>/dev/null || true
+  wait "$nats_pid" 2>/dev/null || true
+  nats_pid=""
+}
+start_nats
 RECORD_HUB_NATS_URL="$nats_url" go run ./tools/nats-init >"$evidence_dir/logs/nats-init.log" 2>&1
 
 workload_issuer="http://127.0.0.1:${workload_port}/workload"
@@ -384,6 +401,7 @@ done
 
 fault_replay_operation=""
 fault_pause_operation=""
+nats_recovery_operation=""
 fault_final_version="$after_void_version"
 if [[ "$fault_matrix" == "1" ]]; then
   # Two Fluxion workers sharing the same durable consumer have already handled
@@ -492,23 +510,61 @@ if [[ "$fault_matrix" == "1" ]]; then
     sleep 0.2
   done
   [[ "$projected_version" == "$fault_final_version" ]] || exit 1
+
+  # Leave a command in OWNER_COMMANDS, restart the broker with the same
+  # JetStream store, then bring the owner worker back. This proves backlog
+  # recovery without writing a business table or recreating the topology.
+  stop_fluxion_worker "$fault_worker_launcher_pid" "$fault_worker_java_pid"
+  fault_worker_launcher_pid=""
+  fault_worker_java_pid=""
+  nats_annotation="p3-nats-recovery-${project_id}"
+  nats_key="p3-nats-recovery-${project_id}"
+  nats_payload="$(jq -cn --arg id "$nats_annotation" '{annotationId:$id,mode:"APPEND",text:"P3 NATS recovery"}')"
+  nats_http="$(submit "$nats_key" "$fault_final_version" "$nats_payload" "$runtime_root/nats-recovery.json")"
+  [[ "$nats_http" == "202" ]] || { cat "$runtime_root/nats-recovery.json" >&2; exit 1; }
+  nats_recovery_operation="$(jq -er '.operationId' "$runtime_root/nats-recovery.json")"
+  nats_status_before="$(curl --silent --show-error --fail -H "Authorization: Bearer $token" "$record_hub_url/api/v1/commands/${nats_recovery_operation}?tenantId=$FLUXION_RECORD_HUB_TENANT_ID&workspaceId=$FLUXION_RECORD_HUB_WORKSPACE_ID" | jq -r '.status')"
+  [[ "$nats_status_before" == "DISPATCHED" || "$nats_status_before" == "ACCEPTED" ]] || exit 1
+  stop_nats
+  sleep 1
+  start_nats nats-recovery.log
+  RECORD_HUB_NATS_URL="$nats_url" go run ./tools/nats-init >"$evidence_dir/logs/nats-init-recovery.log" 2>&1
+  recovered_pids="$(start_fluxion_worker fluxion-worker-nats-recovery.log)"
+  fault_worker_launcher_pid="${recovered_pids%%|*}"
+  fault_worker_java_pid="${recovered_pids#*|}"
+  nats_status=""
+  for _ in {1..300}; do
+    nats_status="$(curl --silent --show-error --fail -H "Authorization: Bearer $token" "$record_hub_url/api/v1/commands/${nats_recovery_operation}?tenantId=$FLUXION_RECORD_HUB_TENANT_ID&workspaceId=$FLUXION_RECORD_HUB_WORKSPACE_ID" | tee "$runtime_root/nats-recovery-result.json" | jq -r '.status')"
+    [[ "$nats_status" == "SUCCEEDED" || "$nats_status" == "REJECTED" || "$nats_status" == "FAILED" ]] && break
+    sleep 0.2
+  done
+  [[ "$nats_status" == "SUCCEEDED" ]] || { cat "$runtime_root/nats-recovery-result.json" >&2; exit 1; }
+  nats_events="$(psql -At -d "$pg_db" -c "select count(*) from project_events where project_id='${project_id}' and payload_ref='record-hub-annotation:${nats_annotation}'")"
+  [[ "$nats_events" == "1" ]] || exit 1
+  fault_final_version="$((fault_final_version + 1))"
+  for _ in {1..180}; do
+    projected_version="$(mongosh --quiet "$mongo_uri" --eval "const r=db.records.find({tenantId:'${FLUXION_RECORD_HUB_TENANT_ID}',workspaceId:'${FLUXION_RECORD_HUB_WORKSPACE_ID}','source.system':'fluxion','source.id':'${project_id}'}).sort({recordVersion:-1}).limit(1).next(); print(r ? r.source.version.toString() : '')" 2>/dev/null || true)"
+    [[ "$projected_version" == "$fault_final_version" ]] && break
+    sleep 0.2
+  done
+  [[ "$projected_version" == "$fault_final_version" ]] || exit 1
 fi
 
 runtime_seconds="$(( $(date +%s) - started_epoch ))"
 jq -n \
   --arg project_id "$project_id" --arg append_operation "$append_operation" --arg void_operation "$void_operation" --arg stale_operation "$stale_operation" \
-  --arg fault_replay_operation "$fault_replay_operation" --arg fault_pause_operation "$fault_pause_operation" \
+  --arg fault_replay_operation "$fault_replay_operation" --arg fault_pause_operation "$fault_pause_operation" --arg nats_recovery_operation "$nats_recovery_operation" \
   --argjson before "$before_version" --argjson append_version "$after_append_version" --argjson void_version "$after_void_version" --argjson final_version "$fault_final_version" \
   --argjson runtime_seconds "$runtime_seconds" --argjson fault_matrix "$fault_matrix" \
-  '{gate:"P3-110",cases:{append:{status:"PASS",operationId:$append_operation},duplicate:{status:"PASS",sameOperation:true},hashConflict:{status:"PASS",http:409},void:{status:"PASS",operationId:$void_operation},versionConflict:{status:"PASS",operationId:$stale_operation,error:"project version conflict"},projection:{status:"PASS",sourceVersion:$final_version},faultMatrix:(if $fault_matrix == 1 then {ownerCompetition:{status:"PASS",sharedDurable:true},crashBeforeAckReplay:{status:"PASS",operationId:$fault_replay_operation,ownerEventAppliedOnce:true,outboxConverged:true},resultConsumerPause:{status:"PASS",operationId:$fault_pause_operation,ownerPublishedWhileConsumerDown:true,replayedAfterRestart:true}} else null end)},projectId:$project_id,summaryVersion:{before:$before,afterAppend:$append_version,afterVoid:$void_version,final:$final_version},runtimeSeconds:$runtime_seconds}' \
+  '{gate:"P3-110",cases:{append:{status:"PASS",operationId:$append_operation},duplicate:{status:"PASS",sameOperation:true},hashConflict:{status:"PASS",http:409},void:{status:"PASS",operationId:$void_operation},versionConflict:{status:"PASS",operationId:$stale_operation,error:"project version conflict"},projection:{status:"PASS",sourceVersion:$final_version},faultMatrix:(if $fault_matrix == 1 then {ownerCompetition:{status:"PASS",sharedDurable:true},crashBeforeAckReplay:{status:"PASS",operationId:$fault_replay_operation,ownerEventAppliedOnce:true,outboxConverged:true},resultConsumerPause:{status:"PASS",operationId:$fault_pause_operation,ownerPublishedWhileConsumerDown:true,replayedAfterRestart:true},natsBacklogRecovery:{status:"PASS",operationId:$nats_recovery_operation,jetStreamStoreReused:true,ownerEventAppliedOnce:true}} else null end)},projectId:$project_id,summaryVersion:{before:$before,afterAppend:$append_version,afterVoid:$void_version,final:$final_version},runtimeSeconds:$runtime_seconds}' \
   >"$evidence_dir/results.json"
 jq -n --arg mongo_port "$mongo_port" --arg nats_port "$nats_port" --arg record_hub_port "$record_hub_port" --arg fluxion_port "$fluxion_port" --arg temporal_port "$temporal_port" --arg tenant "$FLUXION_RECORD_HUB_TENANT_ID" --arg workspace "$FLUXION_RECORD_HUB_WORKSPACE_ID" \
   '{mongoPort:($mongo_port|tonumber),natsPort:($nats_port|tonumber),recordHubPort:($record_hub_port|tonumber),fluxionPort:($fluxion_port|tonumber),temporalPort:($temporal_port|tonumber),tenantId:$tenant,workspaceId:$workspace,issuer:"redacted",audience:"record-hub-api",scope:"recordhub.command.submit",database:"temporary"}' \
   >"$evidence_dir/config-redacted.json"
 printf 'project_id=%s\nappend_operation=%s\nvoid_operation=%s\nversion_conflict_operation=%s\nsummary_version_before=%s\nsummary_version_after_void=%s\n' "$project_id" "$append_operation" "$void_operation" "$stale_operation" "$before_version" "$after_void_version" >"$evidence_dir/db-assertions/fluxion.txt"
 if [[ "$fault_matrix" == "1" ]]; then
-  printf 'fault_replay_operation=%s\nfault_replay_inbox=%s\nfault_replay_outbox=%s\nfault_pause_operation=%s\nfault_pause_inbox=%s\nfault_pause_outbox=%s\nsummary_version_final=%s\n' \
-    "$fault_replay_operation" "$replay_inbox_status" "$replay_outbox_status" "$fault_pause_operation" "$pause_inbox_status" "$pause_outbox_status" "$fault_final_version" \
+  printf 'fault_replay_operation=%s\nfault_replay_inbox=%s\nfault_replay_outbox=%s\nfault_pause_operation=%s\nfault_pause_inbox=%s\nfault_pause_outbox=%s\nnats_recovery_operation=%s\nnats_recovery_events=%s\nsummary_version_final=%s\n' \
+    "$fault_replay_operation" "$replay_inbox_status" "$replay_outbox_status" "$fault_pause_operation" "$pause_inbox_status" "$pause_outbox_status" "$nats_recovery_operation" "$nats_events" "$fault_final_version" \
     >>"$evidence_dir/db-assertions/fluxion.txt"
 fi
 write_manifest PASS
