@@ -2,6 +2,8 @@
 
 Phase 5 依赖 Phase 4 P4-501 live gate；在 live gate 未完成前只能进行设计、静态 contract 和环境准备，不能进入 GA 流量。
 
+Native topology 环境准备：[phase-5-native-topology-preflight](phase-5-native-topology-preflight.md)。该入口只复用 Phase 3 supervisor 做四 owner readiness，不解除 P4/P5 live gate。
+
 ## Batch 0：入口与基线
 
 | ID | 范围 | 任务 | 验收 | 状态 |

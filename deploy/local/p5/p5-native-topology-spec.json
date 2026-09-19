@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "phase": "5",
+  "task": "P5-NATIVE-TOPOLOGY",
+  "liveRequired": true,
+  "mode": "native-isolated-preflight",
+  "sourceSupervisor": "scripts/verify-p3-four-owner-topology.sh",
+  "owners": ["record-hub", "approver", "fluxion", "bids"],
+  "dependencies": [
+    "mongodb-replica-set",
+    "nats-jetstream",
+    "dex-oidc",
+    "workload-issuer",
+    "temporal",
+    "conductor",
+    "postgresql",
+    "minio"
+  ],
+  "isolatedDefaults": {
+    "mongo": 37018,
+    "nats": 14223,
+    "natsMonitor": 18223,
+    "dex": 15566,
+    "workloadIssuer": 15557,
+    "temporal": 17233,
+    "conductor": 18080,
+    "recordHub": 18081,
+    "approverApi": 18090,
+    "approverWorker": 18091,
+    "fluxion": 18092,
+    "bidsApi": 18093
+  },
+  "invariants": [
+    "dedicated-ports",
+    "temporary-databases",
+    "temporary-runtime-and-evidence",
+    "only-self-started-processes-cleaned",
+    "no-direct-business-table-writes",
+    "redacted-manifest"
+  ],
+  "notProductionEvidence": [
+    "readiness-only",
+    "single-node-native-dependencies",
+    "no-four-owner-fault-matrix",
+    "no-ga-signoff"
+  ]
+}
