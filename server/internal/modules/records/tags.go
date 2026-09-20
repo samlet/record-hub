@@ -44,13 +44,16 @@ type TagDictionary struct {
 var tagIDPattern = regexp.MustCompile(`^[a-z][a-z0-9._-]{0,63}$`)
 
 var (
-	ErrInvalidTagID       = errors.New("tag id must match ^[a-z][a-z0-9._-]{0,63}$")
-	ErrForbiddenTagPrefix = errors.New("tag id uses a forbidden prefix")
-	ErrInvalidTagScope    = errors.New("tag scope must be tenant, workspace, or table")
-	ErrTagDictionaryScope = errors.New("tag dictionary scope is inconsistent")
-	ErrUnknownTag         = errors.New("tag is not active in the controlled dictionary")
-	ErrDuplicateTag       = errors.New("tag assignment contains a duplicate")
-	ErrTagGroupConflict   = errors.New("tag assignment violates a mutually exclusive group")
+	ErrInvalidTagID                 = errors.New("tag id must match ^[a-z][a-z0-9._-]{0,63}$")
+	ErrForbiddenTagPrefix           = errors.New("tag id uses a forbidden prefix")
+	ErrInvalidTagScope              = errors.New("tag scope must be tenant, workspace, or table")
+	ErrTagDictionaryScope           = errors.New("tag dictionary scope is inconsistent")
+	ErrUnknownTag                   = errors.New("tag is not active in the controlled dictionary")
+	ErrDuplicateTag                 = errors.New("tag assignment contains a duplicate")
+	ErrTagGroupConflict             = errors.New("tag assignment violates a mutually exclusive group")
+	ErrTagDictionaryNotFound        = errors.New("tag dictionary not found")
+	ErrTagDictionaryExists          = errors.New("tag dictionary already exists")
+	ErrTagDictionaryVersionConflict = errors.New("tag dictionary revision conflict")
 )
 
 var forbiddenTagPrefixes = []string{"role.", "permission.", "secret.", "token."}

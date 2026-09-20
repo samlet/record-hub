@@ -39,11 +39,12 @@ var (
 )
 
 const (
-	workspaceCollectionName = "workspaces"
-	tableCollectionName     = "table_definitions"
-	recordCollectionName    = "records"
-	viewCollectionName      = "view_definitions"
-	indexCollectionName     = "index_definitions"
+	workspaceCollectionName     = "workspaces"
+	tableCollectionName         = "table_definitions"
+	recordCollectionName        = "records"
+	viewCollectionName          = "view_definitions"
+	indexCollectionName         = "index_definitions"
+	tagDictionaryCollectionName = "tag_dictionaries"
 )
 
 type WorkspaceRepository interface {
@@ -78,18 +79,25 @@ type IndexRepository interface {
 	ListIndexes(context.Context, string, string, string) ([]IndexDefinition, error)
 }
 
+type TagDictionaryRepository interface {
+	GetTagDictionary(context.Context, string, string, string) (TagDictionary, error)
+	ListTagDictionaries(context.Context, string) ([]TagDictionary, error)
+	SaveTagDictionary(context.Context, TagDictionary, int64) error
+}
+
 type MongoRepository struct {
-	workspaces   *mongo.Collection
-	tables       *mongo.Collection
-	records      *mongo.Collection
-	readPointers *mongo.Collection
-	views        *mongo.Collection
-	indexes      *mongo.Collection
-	clock        func() time.Time
+	workspaces      *mongo.Collection
+	tables          *mongo.Collection
+	records         *mongo.Collection
+	readPointers    *mongo.Collection
+	views           *mongo.Collection
+	indexes         *mongo.Collection
+	tagDictionaries *mongo.Collection
+	clock           func() time.Time
 }
 
 func NewMongoRepository(database *mongo.Database) *MongoRepository {
-	return &MongoRepository{workspaces: database.Collection(workspaceCollectionName), tables: database.Collection(tableCollectionName), records: database.Collection(recordCollectionName), readPointers: database.Collection(ProjectionReadPointerCollectionName), views: database.Collection(viewCollectionName), indexes: database.Collection(indexCollectionName), clock: time.Now}
+	return &MongoRepository{workspaces: database.Collection(workspaceCollectionName), tables: database.Collection(tableCollectionName), records: database.Collection(recordCollectionName), readPointers: database.Collection(ProjectionReadPointerCollectionName), views: database.Collection(viewCollectionName), indexes: database.Collection(indexCollectionName), tagDictionaries: database.Collection(tagDictionaryCollectionName), clock: time.Now}
 }
 
 func (repository *MongoRepository) EnsureIndexes(ctx context.Context) error {
@@ -133,6 +141,11 @@ func (repository *MongoRepository) EnsureIndexes(ctx context.Context) error {
 		{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "workspaceId", Value: 1}, {Key: "tableId", Value: 1}, {Key: "updatedAt", Value: -1}}, Options: options.Index().SetName("index_table_updated")},
 	}); err != nil {
 		return fmt.Errorf("create index metadata indexes: %w", err)
+	}
+	if _, err := repository.tagDictionaries.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		{Keys: bson.D{{Key: "tenantId", Value: 1}, {Key: "workspaceId", Value: 1}, {Key: "tableId", Value: 1}}, Options: options.Index().SetName("tag_dictionary_scope")},
+	}); err != nil {
+		return fmt.Errorf("create tag dictionary indexes: %w", err)
 	}
 	return nil
 }
