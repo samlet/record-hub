@@ -3,9 +3,9 @@
   "phase": "6",
   "task": "P6-600",
   "status": "BLOCKED_BY_LIVE_CAPACITY_EVIDENCE",
-  "generatedAt": "2026-09-20T08:44:21.811619Z",
+  "generatedAt": "2026-09-20T13:08:33.361547Z",
   "liveTraffic": false,
-  "sourceCommit": "4e2eee8ca3ee1ea3baf5d93b894ebd442bdcc6c8",
+  "sourceCommit": "33f8200e9aada4b826ec063641f270eb9e22ad1d",
   "static": {
     "priorCapacityHarness": true,
     "queryBudget": true,
