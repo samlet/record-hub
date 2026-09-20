@@ -1,0 +1,160 @@
+{
+  "version": 1,
+  "phase": "6",
+  "task": "P6-100",
+  "purpose": "freeze a conservative schema.org semantic vocabulary for multidimensional records",
+  "liveTraffic": false,
+  "failClosed": true,
+  "vocabulary": {
+    "name": "schema.org",
+    "baseIri": "https://schema.org/",
+    "allowlistMode": "EXPLICIT",
+    "unknownIriAction": "QUARANTINE"
+  },
+  "rootType": "https://schema.org/Thing",
+  "types": [
+    {
+      "iri": "https://schema.org/Thing",
+      "parent": null,
+      "abstract": true
+    },
+    {
+      "iri": "https://schema.org/Action",
+      "parent": "https://schema.org/Thing",
+      "abstract": false
+    },
+    {
+      "iri": "https://schema.org/TradeAction",
+      "parent": "https://schema.org/Action",
+      "abstract": false
+    },
+    {
+      "iri": "https://schema.org/CreativeWork",
+      "parent": "https://schema.org/Thing",
+      "abstract": false
+    },
+    {
+      "iri": "https://schema.org/Organization",
+      "parent": "https://schema.org/Thing",
+      "abstract": false
+    },
+    {
+      "iri": "https://schema.org/Person",
+      "parent": "https://schema.org/Thing",
+      "abstract": false
+    },
+    {
+      "iri": "https://schema.org/Project",
+      "parent": "https://schema.org/Thing",
+      "abstract": false
+    }
+  ],
+  "properties": [
+    {
+      "iri": "https://schema.org/identifier",
+      "appliesTo": ["https://schema.org/Thing"],
+      "fieldType": "string",
+      "requiredByDefault": false
+    },
+    {
+      "iri": "https://schema.org/name",
+      "appliesTo": ["https://schema.org/Thing"],
+      "fieldType": "string",
+      "requiredByDefault": false
+    },
+    {
+      "iri": "https://schema.org/description",
+      "appliesTo": ["https://schema.org/Thing"],
+      "fieldType": "string",
+      "requiredByDefault": false
+    },
+    {
+      "iri": "https://schema.org/url",
+      "appliesTo": ["https://schema.org/Thing"],
+      "fieldType": "uri",
+      "requiredByDefault": false
+    },
+    {
+      "iri": "https://schema.org/startDate",
+      "appliesTo": ["https://schema.org/Action", "https://schema.org/Project"],
+      "fieldType": "date-time",
+      "requiredByDefault": false
+    },
+    {
+      "iri": "https://schema.org/endDate",
+      "appliesTo": ["https://schema.org/Action", "https://schema.org/Project"],
+      "fieldType": "date-time",
+      "requiredByDefault": false
+    },
+    {
+      "iri": "https://schema.org/agent",
+      "appliesTo": ["https://schema.org/Action"],
+      "fieldType": "semantic-ref",
+      "requiredByDefault": false
+    },
+    {
+      "iri": "https://schema.org/provider",
+      "appliesTo": ["https://schema.org/Action", "https://schema.org/CreativeWork"],
+      "fieldType": "semantic-ref",
+      "requiredByDefault": false
+    },
+    {
+      "iri": "https://schema.org/memberOf",
+      "appliesTo": ["https://schema.org/Person"],
+      "fieldType": "semantic-ref",
+      "requiredByDefault": false
+    },
+    {
+      "iri": "https://schema.org/status",
+      "appliesTo": ["https://schema.org/Action", "https://schema.org/Project"],
+      "fieldType": "string",
+      "requiredByDefault": false
+    }
+  ],
+  "compatibility": {
+    "versioning": "MAJOR.MINOR.PATCH",
+    "sameMajorRequired": true,
+    "rules": [
+      {
+        "change": "add-optional-property",
+        "classification": "COMPATIBLE"
+      },
+      {
+        "change": "add-optional-type",
+        "classification": "COMPATIBLE"
+      },
+      {
+        "change": "remove-property",
+        "classification": "BREAKING"
+      },
+      {
+        "change": "rename-property",
+        "classification": "BREAKING"
+      },
+      {
+        "change": "narrow-field-type",
+        "classification": "BREAKING"
+      },
+      {
+        "change": "add-required-property",
+        "classification": "BREAKING"
+      },
+      {
+        "change": "change-parent",
+        "classification": "BREAKING"
+      }
+    ]
+  },
+  "constraints": {
+    "typeIriPattern": "^https://schema.org/[A-Za-z][A-Za-z0-9]*$",
+    "propertyIriPattern": "^https://schema.org/[A-Za-z][A-Za-z0-9]*$",
+    "allowedFieldTypes": ["string", "integer", "number", "boolean", "date-time", "uri", "semantic-ref"],
+    "inheritance": "explicit-parent-acyclic",
+    "unknownTypeAction": "QUARANTINE",
+    "unknownPropertyAction": "QUARANTINE"
+  },
+  "prerequisite": {
+    "phase5": "INDEPENDENT_GATE",
+    "connectorEnablement": "NOT_GRANTED"
+  }
+}

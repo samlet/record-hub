@@ -1,0 +1,194 @@
+{
+  "compatibility": {
+    "rules": [
+      {
+        "change": "add-optional-property",
+        "classification": "COMPATIBLE"
+      },
+      {
+        "change": "add-optional-type",
+        "classification": "COMPATIBLE"
+      },
+      {
+        "change": "remove-property",
+        "classification": "BREAKING"
+      },
+      {
+        "change": "rename-property",
+        "classification": "BREAKING"
+      },
+      {
+        "change": "narrow-field-type",
+        "classification": "BREAKING"
+      },
+      {
+        "change": "add-required-property",
+        "classification": "BREAKING"
+      },
+      {
+        "change": "change-parent",
+        "classification": "BREAKING"
+      }
+    ],
+    "sameMajorRequired": true,
+    "versioning": "MAJOR.MINOR.PATCH"
+  },
+  "constraints": {
+    "allowedFieldTypes": [
+      "string",
+      "integer",
+      "number",
+      "boolean",
+      "date-time",
+      "uri",
+      "semantic-ref"
+    ],
+    "inheritance": "explicit-parent-acyclic",
+    "propertyIriPattern": "^https://schema.org/[A-Za-z][A-Za-z0-9]*$",
+    "typeIriPattern": "^https://schema.org/[A-Za-z][A-Za-z0-9]*$",
+    "unknownPropertyAction": "QUARANTINE",
+    "unknownTypeAction": "QUARANTINE"
+  },
+  "generatedAt": "2026-09-20T07:49:01Z",
+  "liveTraffic": false,
+  "next": "Use only explicit registry entries; quarantine unknown IRIs and require a new version for breaking changes.",
+  "phase": "6",
+  "prerequisite": {
+    "connectorEnablement": "NOT_GRANTED",
+    "phase5": "INDEPENDENT_GATE"
+  },
+  "properties": [
+    {
+      "appliesTo": [
+        "https://schema.org/Thing"
+      ],
+      "fieldType": "string",
+      "iri": "https://schema.org/identifier",
+      "requiredByDefault": false
+    },
+    {
+      "appliesTo": [
+        "https://schema.org/Thing"
+      ],
+      "fieldType": "string",
+      "iri": "https://schema.org/name",
+      "requiredByDefault": false
+    },
+    {
+      "appliesTo": [
+        "https://schema.org/Thing"
+      ],
+      "fieldType": "string",
+      "iri": "https://schema.org/description",
+      "requiredByDefault": false
+    },
+    {
+      "appliesTo": [
+        "https://schema.org/Thing"
+      ],
+      "fieldType": "uri",
+      "iri": "https://schema.org/url",
+      "requiredByDefault": false
+    },
+    {
+      "appliesTo": [
+        "https://schema.org/Action",
+        "https://schema.org/Project"
+      ],
+      "fieldType": "date-time",
+      "iri": "https://schema.org/startDate",
+      "requiredByDefault": false
+    },
+    {
+      "appliesTo": [
+        "https://schema.org/Action",
+        "https://schema.org/Project"
+      ],
+      "fieldType": "date-time",
+      "iri": "https://schema.org/endDate",
+      "requiredByDefault": false
+    },
+    {
+      "appliesTo": [
+        "https://schema.org/Action"
+      ],
+      "fieldType": "semantic-ref",
+      "iri": "https://schema.org/agent",
+      "requiredByDefault": false
+    },
+    {
+      "appliesTo": [
+        "https://schema.org/Action",
+        "https://schema.org/CreativeWork"
+      ],
+      "fieldType": "semantic-ref",
+      "iri": "https://schema.org/provider",
+      "requiredByDefault": false
+    },
+    {
+      "appliesTo": [
+        "https://schema.org/Person"
+      ],
+      "fieldType": "semantic-ref",
+      "iri": "https://schema.org/memberOf",
+      "requiredByDefault": false
+    },
+    {
+      "appliesTo": [
+        "https://schema.org/Action",
+        "https://schema.org/Project"
+      ],
+      "fieldType": "string",
+      "iri": "https://schema.org/status",
+      "requiredByDefault": false
+    }
+  ],
+  "rootType": "https://schema.org/Thing",
+  "schemaVersion": 1,
+  "sourceCommit": "2188d318b0e5726731818e9d730f004c17671da5",
+  "status": "PASS",
+  "task": "P6-100",
+  "types": [
+    {
+      "abstract": true,
+      "iri": "https://schema.org/Thing",
+      "parent": null
+    },
+    {
+      "abstract": false,
+      "iri": "https://schema.org/Action",
+      "parent": "https://schema.org/Thing"
+    },
+    {
+      "abstract": false,
+      "iri": "https://schema.org/TradeAction",
+      "parent": "https://schema.org/Action"
+    },
+    {
+      "abstract": false,
+      "iri": "https://schema.org/CreativeWork",
+      "parent": "https://schema.org/Thing"
+    },
+    {
+      "abstract": false,
+      "iri": "https://schema.org/Organization",
+      "parent": "https://schema.org/Thing"
+    },
+    {
+      "abstract": false,
+      "iri": "https://schema.org/Person",
+      "parent": "https://schema.org/Thing"
+    },
+    {
+      "abstract": false,
+      "iri": "https://schema.org/Project",
+      "parent": "https://schema.org/Thing"
+    }
+  ],
+  "vocabulary": {
+    "allowlistMode": "EXPLICIT",
+    "baseIri": "https://schema.org/",
+    "name": "schema.org",
+    "unknownIriAction": "QUARANTINE"
+  }
+}
