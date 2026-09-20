@@ -8,6 +8,11 @@ switch，不能直接覆盖 live records，也不能删除审计或恢复证据�
 机器可读 contract 位于 [`p6-601-retention-restore-spec.json`](../deploy/local/p6/p6-601-retention-restore-spec.json)，
 验收结果位于 [`phase-6-retention-restore.json`](phase-6-retention-restore.json)。入口是 `make p6-601`。
 
+安全计划预检入口是 `make p6-601-dry-run`，输出到被忽略的
+`build/evidence/phase6/p6-601-dry-run.json`。它只验证 retention scope、版本化 policy、legal hold、
+加密/PITR、disposable restore、完整 assertion 集合和 staged CAS rebuild 边界；不会删除数据、执行
+restore、切换 live pointer 或读取 live restore evidence。
+
 已有 Phase 5 Mongo retention/PITR contract、Phase 3 backup/restore runbook、event archive、staged
 rebuild 和 audit 边界；但本 Phase 6 的隔离 restore/retention live report 尚未提供，当前为
 `BLOCKED_BY_LIVE_RESTORE_EVIDENCE`。
