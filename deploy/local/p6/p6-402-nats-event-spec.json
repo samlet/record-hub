@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "phase": "6",
+  "task": "P6-402",
+  "purpose": "freeze registry-backed NATS subject, durable replay, DLQ and backpressure boundary",
+  "liveTraffic": false,
+  "failClosed": true,
+  "subject": {"pattern": "events.<owner>.<family>.<event>.v<schemaVersion>", "registryRequired": true, "arbitraryPublish": "DENY", "unknownSubjectAction": "REJECT"},
+  "durable": {"required": true, "ackMode": "double-ack", "maxDeliver": 8, "replayMode": "bounded-archive"},
+  "dlq": {"required": true, "redactedReasonOnly": true, "operatorReplay": true},
+  "acl": {"tenantScoped": true, "publisherAllowlist": true, "consumerAllowlist": true, "wildcards": "DENY"},
+  "backpressure": {"maxInFlight": 100, "retryAfterSeconds": 5, "overloadAction": "PAUSE_AND_AUDIT"},
+  "liveEvidenceRequired": true,
+  "missingAction": "BLOCKED_BY_LIVE_EVENT_EVIDENCE",
+  "prerequisite": {"phase5": "INDEPENDENT_GATE", "connectorEnablement": "NOT_GRANTED"}
+}

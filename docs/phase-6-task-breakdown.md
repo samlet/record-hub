@@ -43,7 +43,7 @@ Phase 6 只在 Phase 5 GA 前置完成后进入 live implementation；当前先�
 | --- | --- | --- | --- | --- |
 | P6-400 | Temporal | typed snapshot/ref Activity adapter | deterministic history、retry、hash assertion；[Temporal binding](phase-6-temporal-binding.json) 缺 native history/replay evidence | BLOCKED_BY_LIVE_WORKFLOW_EVIDENCE |
 | P6-401 | Conductor | task input/output adapter | receipt polling、timeout、replay；[Conductor binding](phase-6-conductor-binding.json) 缺 native task/replay evidence | BLOCKED_BY_LIVE_WORKFLOW_EVIDENCE |
-| P6-402 | NATS | registry-backed event/replay API | subject ACL、durable、DLQ、backpressure | TODO |
+| P6-402 | NATS | registry-backed event/replay API | subject ACL、durable、DLQ、backpressure；[NATS event](phase-6-nats-event.json) 缺 native outage/replay evidence | BLOCKED_BY_LIVE_EVENT_EVIDENCE |
 | P6-403 | Record Hub | event-to-table state mapping | source pointer、gap/conflict、rebuild | TODO |
 
 ## Batch 5：自助化 control plane 与运营

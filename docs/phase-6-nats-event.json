@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "phase": "6",
+  "task": "P6-402",
+  "status": "BLOCKED_BY_LIVE_EVENT_EVIDENCE",
+  "generatedAt": "2026-09-20T08:28:45.416548Z",
+  "liveTraffic": false,
+  "sourceCommit": "40ed6cedad2f82ee3fb8b28c2854285eca7a5526",
+  "static": {
+    "natsRunner": true,
+    "dlq": true,
+    "replay": true,
+    "acl": true,
+    "backpressure": true
+  },
+  "missingStatic": [],
+  "live": {
+    "status": "BLOCKED",
+    "reason": "no immutable NATS outage/replay report supplied",
+    "report": ""
+  },
+  "subject": {
+    "pattern": "events.<owner>.<family>.<event>.v<schemaVersion>",
+    "registryRequired": true,
+    "arbitraryPublish": "DENY",
+    "unknownSubjectAction": "REJECT"
+  },
+  "durable": {
+    "required": true,
+    "ackMode": "double-ack",
+    "maxDeliver": 8,
+    "replayMode": "bounded-archive"
+  },
+  "dlq": {
+    "required": true,
+    "redactedReasonOnly": true,
+    "operatorReplay": true
+  },
+  "acl": {
+    "tenantScoped": true,
+    "publisherAllowlist": true,
+    "consumerAllowlist": true,
+    "wildcards": "DENY"
+  },
+  "backpressure": {
+    "maxInFlight": 100,
+    "retryAfterSeconds": 5,
+    "overloadAction": "PAUSE_AND_AUDIT"
+  },
+  "decision": "DO_NOT_OPEN_NATS_EVENT_TRAFFIC",
+  "prerequisite": {
+    "phase5": "INDEPENDENT_GATE",
+    "connectorEnablement": "NOT_GRANTED"
+  },
+  "next": "Run native NATS outage, durable replay, DLQ redaction and backpressure evidence."
+}
