@@ -3,9 +3,9 @@
   "phase": "6",
   "task": "P6-201",
   "status": "BLOCKED_BY_SDK_GAP",
-  "generatedAt": "2026-09-20T13:15:44.180199Z",
+  "generatedAt": "2026-09-20T13:34:37.947325Z",
   "liveTraffic": false,
-  "sourceCommit": "0ca93e9490070e99f280f3fbeffc736231d40e9d",
+  "sourceCommit": "9b2d2ac5c3f8d4c308c76f4f00f343175e6218cf",
   "mode": "SOURCE_MARKER_INVENTORY_ONLY",
   "facets": [
     "typedRef",
@@ -22,7 +22,7 @@
       "sourceFiles": 3,
       "facets": {
         "typedRef": true,
-        "commandResult": false,
+        "commandResult": true,
         "receipt": true,
         "errors": true
       }
@@ -35,22 +35,22 @@
       "sourceFiles": 1,
       "facets": {
         "typedRef": true,
-        "commandResult": false,
+        "commandResult": true,
         "receipt": true,
-        "errors": false
+        "errors": true
       }
     },
     {
       "owner": "record-hub",
       "language": "typescript",
       "path": "sdk/typescript",
-      "exists": false,
-      "sourceFiles": 0,
+      "exists": true,
+      "sourceFiles": 1,
       "facets": {
-        "typedRef": false,
-        "commandResult": false,
-        "receipt": false,
-        "errors": false
+        "typedRef": true,
+        "commandResult": true,
+        "receipt": true,
+        "errors": true
       }
     },
     {
@@ -107,48 +107,6 @@
     }
   ],
   "missing": [
-    {
-      "owner": "record-hub",
-      "language": "go",
-      "path": "sdk/go/recordhub",
-      "facet": "commandResult"
-    },
-    {
-      "owner": "record-hub",
-      "language": "java",
-      "path": "sdk/java/src/main/java",
-      "facet": "commandResult"
-    },
-    {
-      "owner": "record-hub",
-      "language": "java",
-      "path": "sdk/java/src/main/java",
-      "facet": "errors"
-    },
-    {
-      "owner": "record-hub",
-      "language": "typescript",
-      "path": "sdk/typescript",
-      "facet": "typedRef"
-    },
-    {
-      "owner": "record-hub",
-      "language": "typescript",
-      "path": "sdk/typescript",
-      "facet": "commandResult"
-    },
-    {
-      "owner": "record-hub",
-      "language": "typescript",
-      "path": "sdk/typescript",
-      "facet": "receipt"
-    },
-    {
-      "owner": "record-hub",
-      "language": "typescript",
-      "path": "sdk/typescript",
-      "facet": "errors"
-    },
     {
       "owner": "approver",
       "language": "java",
