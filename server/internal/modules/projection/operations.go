@@ -111,6 +111,9 @@ type ProjectionFreshness struct {
 	Backlog              int64      `json:"backlog"`
 	Failures             int64      `json:"failures"`
 	ErrorBudgetRemaining int64      `json:"errorBudgetRemaining"`
+	FindingCount         int64      `json:"findingCount"`
+	RecoveryAgeSeconds   float64    `json:"recoveryAgeSeconds"`
+	Stale                bool       `json:"stale"`
 	SLOBreached          bool       `json:"sloBreached"`
 }
 
@@ -131,7 +134,7 @@ func (snapshot OperationsSnapshot) Validate() error {
 	if snapshot.Inbox.Processing < 0 || snapshot.Inbox.Applied < 0 || snapshot.Inbox.Rejected < 0 || snapshot.Inbox.Failed < 0 {
 		return ErrOperationsQueryInvalid
 	}
-	if snapshot.Freshness.LastProjectedVersion < 0 || snapshot.Freshness.LagAgeSeconds < 0 || snapshot.Freshness.Backlog < 0 || snapshot.Freshness.Failures < 0 || snapshot.Freshness.ErrorBudgetRemaining < 0 {
+	if snapshot.Freshness.LastProjectedVersion < 0 || snapshot.Freshness.LagAgeSeconds < 0 || snapshot.Freshness.Backlog < 0 || snapshot.Freshness.Failures < 0 || snapshot.Freshness.ErrorBudgetRemaining < 0 || snapshot.Freshness.FindingCount < 0 || snapshot.Freshness.RecoveryAgeSeconds < 0 {
 		return ErrOperationsQueryInvalid
 	}
 	if len(snapshot.Checkpoints) > MaxOperationsLimit {
@@ -233,6 +236,13 @@ func (service *OperationsService) Snapshot(ctx context.Context, principal identi
 		}
 		service.metrics.SetGauge("record_hub_projection_lag_age_seconds", snapshot.Freshness.LagAgeSeconds, labels)
 		service.metrics.SetGauge("record_hub_projection_error_budget_remaining", float64(snapshot.Freshness.ErrorBudgetRemaining), labels)
+		service.metrics.SetGauge("record_hub_projection_finding_count", float64(snapshot.Freshness.FindingCount), labels)
+		service.metrics.SetGauge("record_hub_projection_recovery_age_seconds", snapshot.Freshness.RecoveryAgeSeconds, labels)
+		stale := 0.0
+		if snapshot.Freshness.Stale {
+			stale = 1
+		}
+		service.metrics.SetGauge("record_hub_projection_snapshot_stale", stale, labels)
 		breach := 0.0
 		if snapshot.Freshness.SLOBreached {
 			breach = 1
@@ -250,7 +260,11 @@ func (service *OperationsService) populateFreshness(snapshot *OperationsSnapshot
 		return
 	}
 	latest := snapshot.Freshness.LastProjectedAt
+	findingCount := snapshot.Inbox.Rejected + snapshot.Inbox.Failed
 	for _, checkpoint := range snapshot.Checkpoints {
+		if checkpoint.Status == CheckpointGap || checkpoint.Status == CheckpointFailed {
+			findingCount++
+		}
 		if latest == nil || checkpoint.SyncedAt.After(*latest) {
 			value := checkpoint.SyncedAt.UTC()
 			latest = &value
@@ -263,6 +277,7 @@ func (service *OperationsService) populateFreshness(snapshot *OperationsSnapshot
 	snapshot.Freshness.LastProjectedAt = latest
 	snapshot.Freshness.Backlog = snapshot.Inbox.Processing
 	snapshot.Freshness.Failures = snapshot.Inbox.Failed + snapshot.Inbox.Rejected
+	snapshot.Freshness.FindingCount = findingCount
 	snapshot.Freshness.ErrorBudgetRemaining = service.thresholds.FailureBudget - snapshot.Freshness.Failures
 	if snapshot.Freshness.ErrorBudgetRemaining < 0 {
 		snapshot.Freshness.ErrorBudgetRemaining = 0
@@ -272,6 +287,12 @@ func (service *OperationsService) populateFreshness(snapshot *OperationsSnapshot
 		if age > 0 {
 			snapshot.Freshness.LagAgeSeconds = age
 		}
+	}
+	if snapshot.Freshness.FindingCount > 0 {
+		snapshot.Freshness.RecoveryAgeSeconds = snapshot.Freshness.LagAgeSeconds
+	}
+	if age := time.Since(snapshot.GeneratedAt).Seconds(); age > 60 {
+		snapshot.Freshness.Stale = true
 	}
 	snapshot.Freshness.SLOBreached = snapshot.Freshness.Backlog >= service.thresholds.BacklogWarning || snapshot.Freshness.LagAgeSeconds >= service.thresholds.LagWarning.Seconds() || snapshot.Freshness.Failures >= service.thresholds.FailureBudget
 }

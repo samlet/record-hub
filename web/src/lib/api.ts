@@ -171,6 +171,17 @@ export type OperationsSnapshot = {
     syncedAt: string;
     status: string;
   }>;
+  freshness: {
+    lastProjectedVersion: number;
+    lagAgeSeconds: number;
+    backlog: number;
+    failures: number;
+    errorBudgetRemaining: number;
+    findingCount: number;
+    recoveryAgeSeconds: number;
+    stale: boolean;
+    sloBreached: boolean;
+  };
   generatedAt: string;
 };
 

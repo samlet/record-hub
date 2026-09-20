@@ -2253,7 +2253,20 @@ function OperationsPanel(props: {
               value={snapshot.inbox.failed}
               bad={snapshot.inbox.failed > 0}
             />
+            <Metric
+              label="Finding"
+              value={snapshot.freshness.findingCount}
+              bad={snapshot.freshness.findingCount > 0}
+            />
+            <Metric
+              label="恢复年龄(s)"
+              value={Math.round(snapshot.freshness.recoveryAgeSeconds)}
+              bad={snapshot.freshness.recoveryAgeSeconds > 60}
+            />
           </div>
+          <p className="muted">
+            finding/reconciliation: {snapshot.freshness.findingCount} · recovery age {Math.round(snapshot.freshness.recoveryAgeSeconds)}s · {snapshot.freshness.stale ? "snapshot stale" : "snapshot fresh"}
+          </p>
           <div className="subheading">
             <h3>Checkpoints</h3>
             <span className="muted">

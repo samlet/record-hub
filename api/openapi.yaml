@@ -1838,7 +1838,7 @@ components:
     ProjectionFreshness:
       type: object
       additionalProperties: false
-      required: [lastProjectedVersion, lagAgeSeconds, backlog, failures, errorBudgetRemaining, sloBreached]
+      required: [lastProjectedVersion, lagAgeSeconds, backlog, failures, errorBudgetRemaining, findingCount, recoveryAgeSeconds, stale, sloBreached]
       properties:
         lastProjectedAt:
           type: string
@@ -1860,6 +1860,14 @@ components:
         errorBudgetRemaining:
           type: integer
           minimum: 0
+        findingCount:
+          type: integer
+          minimum: 0
+        recoveryAgeSeconds:
+          type: number
+          minimum: 0
+        stale:
+          type: boolean
         sloBreached:
           type: boolean
     ProjectionRebuildScopeRequest:

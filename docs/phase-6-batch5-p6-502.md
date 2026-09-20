@@ -8,5 +8,7 @@ P6-502 固化运维观察面板的 scope 和信号：lag、backlog、retry、dea
 验收结果位于 [`phase-6-observation-dashboard.json`](phase-6-observation-dashboard.json)。入口是 `make p6-502`。
 
 当前已有 projection operations snapshot、bounded metrics、retry/DLQ、rebuild 和只读 Operations
-console；但 finding/reconciliation 指标与恢复态面板尚未形成统一实现，状态为
-`BLOCKED_BY_OBSERVABILITY_GAP`，不启用新的 dashboard/export 流量。
+console；本批已将 checkpoint GAP/FAILED 与 inbox reject/fail 汇总为 bounded findingCount，补充
+recoveryAgeSeconds、stale freshness 字段/metrics，并在 Web 运维面板展示 finding/reconciliation
+与恢复年龄。静态结果为 `PASS_STATIC`，但仍需 native recovery evidence、完整审计导出和 Phase 5
+独立门禁，不能启用新的 dashboard/export live 流量。
