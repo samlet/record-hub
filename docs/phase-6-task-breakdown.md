@@ -52,7 +52,7 @@ Phase 6 只在 Phase 5 GA 前置完成后进入 live implementation；当前先�
 | --- | --- | --- | --- | --- |
 | P6-500 | Web/API | table/schema/tag/relation console | [control-plane contract](phase-6-control-plane.json)；已有基础 API/RBAC/audit，tag dictionary 和 relation console 缺口已识别 | BLOCKED_BY_CONTROL_PLANE_GAP |
 | P6-501 | Web/API | connector onboarding workflow | [onboarding contract](phase-6-connector-onboarding.json)；registry/manifest 已存在，自助 onboarding API/console 缺失 | BLOCKED_BY_ONBOARDING_API_GAP |
-| P6-502 | Ops | observation/reconciliation dashboard | lag/backlog/retry/dead/finding/recovery | TODO |
+| P6-502 | Ops | observation/reconciliation dashboard | [observation contract](phase-6-observation-dashboard.json)；operations/retry/rebuild 基础存在，finding/reconciliation signal 缺失 | BLOCKED_BY_OBSERVABILITY_GAP |
 | P6-503 | Ops | operator runbook and rollback | stop/drain/replay/disable/rollback evidence | TODO |
 
 ## Batch 6：规模与多地域评估

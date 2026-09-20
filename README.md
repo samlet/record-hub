@@ -103,6 +103,7 @@ HTTP 契约以 [`api/openapi.yaml`](api/openapi.yaml) 为准。`make generate-cl
 - [Phase 6 Batch 4 P6-403 event-to-table](docs/phase-6-batch4-p6-403.md)
 - [Phase 6 Batch 5 P6-500 self-service control plane](docs/phase-6-batch5-p6-500.md)
 - [Phase 6 Batch 5 P6-501 connector onboarding](docs/phase-6-batch5-p6-501.md)
+- [Phase 6 Batch 5 P6-502 observation dashboard](docs/phase-6-batch5-p6-502.md)
 - [原生隔离验收拓扑](deploy/local/isolated/README.md)
 - [参考资料](docs/references.md)
 - [ADR-0001：独立仓库与事实所有权](docs/adr/0001-independent-service-and-data-ownership.md)

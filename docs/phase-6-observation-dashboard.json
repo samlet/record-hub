@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "phase": "6",
+  "task": "P6-502",
+  "status": "BLOCKED_BY_OBSERVABILITY_GAP",
+  "generatedAt": "2026-09-20T08:39:11.954235Z",
+  "liveTraffic": false,
+  "sourceCommit": "83281bef309177fafd5e6f19dd6fd80b2f6b5752",
+  "static": {
+    "operationsSnapshot": true,
+    "boundedMetrics": true,
+    "retryAndDead": true,
+    "recovery": true,
+    "scopedApi": true,
+    "operationsConsole": true,
+    "findingSignal": false,
+    "freshnessAudit": true
+  },
+  "missingStatic": [
+    "findingSignal"
+  ],
+  "scope": {
+    "required": [
+      "tenantId",
+      "workspaceId"
+    ],
+    "dimensions": [
+      "consumer",
+      "connector",
+      "schemaFamily"
+    ],
+    "unknownDimensionAction": "REJECT",
+    "crossScopeAction": "REJECT"
+  },
+  "signals": [
+    "lag",
+    "backlog",
+    "retry",
+    "dead",
+    "finding",
+    "recovery"
+  ],
+  "metrics": {
+    "required": [
+      "lagAgeSeconds",
+      "backlog",
+      "retryCount",
+      "deadCount",
+      "findingCount",
+      "recoveryAgeSeconds"
+    ],
+    "boundedLabels": [
+      "tenant",
+      "workspace",
+      "consumer",
+      "connector",
+      "schemaFamily"
+    ],
+    "rawPayloadAction": "FORBIDDEN",
+    "highCardinalityAction": "REJECT"
+  },
+  "freshness": {
+    "maxAgeSeconds": 60,
+    "staleAction": "MARK_STALE_AND_ALERT",
+    "missingSnapshotAction": "FAIL_CLOSED"
+  },
+  "alerts": {
+    "backlog": {
+      "warning": 100,
+      "critical": 1000
+    },
+    "lagAgeSeconds": {
+      "warning": 30,
+      "critical": 300
+    },
+    "deadCount": {
+      "warning": 1,
+      "critical": 10
+    },
+    "findingCount": {
+      "warning": 1,
+      "critical": 10
+    }
+  },
+  "access": {
+    "readRoles": [
+      "OPERATOR",
+      "OWNER"
+    ],
+    "mutations": "NONE",
+    "auditExport": "REQUIRED"
+  },
+  "decision": "DO_NOT_ENABLE_OBSERVATION_DASHBOARD",
+  "prerequisite": {
+    "phase5": "INDEPENDENT_GATE",
+    "connectorEnablement": "NOT_GRANTED"
+  },
+  "next": "Add finding/reconciliation counters and a scoped dashboard/export with stale-state alerts, then attach live recovery evidence."
+}
