@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "phase": "6",
+  "task": "P6-400",
+  "purpose": "freeze Temporal typed snapshot/ref Activity adapter boundary",
+  "liveTraffic": false,
+  "failClosed": true,
+  "historyAllowed": ["recordRef", "schemaId", "schemaVersion", "recordVersion", "sourceVersion", "snapshotHash", "operationId"],
+  "historyForbidden": ["rawPayload", "workflowInput", "accessToken", "privateKey", "fullSnapshotData"],
+  "transactionModes": {
+    "READ_SNAPSHOT": "immutable-snapshot",
+    "READ_LATEST": "expected-version-and-hash",
+    "COMMAND_RECEIPT": "idempotent-receipt",
+    "OWNER_APPLY_REQUIRED": "owner-only-side-effect"
+  },
+  "activity": {"timeoutRequired": true, "retryRequired": true, "idempotencyKeyRequired": true, "hashAssertionRequired": true, "workflowDeterminism": "NO_DIRECT_IO"},
+  "liveEvidenceRequired": true,
+  "missingAction": "BLOCKED_BY_LIVE_WORKFLOW_EVIDENCE",
+  "prerequisite": {"phase5": "INDEPENDENT_GATE", "connectorEnablement": "NOT_GRANTED"}
+}

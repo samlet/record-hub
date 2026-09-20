@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "phase": "6",
+  "task": "P6-400",
+  "status": "BLOCKED_BY_LIVE_WORKFLOW_EVIDENCE",
+  "generatedAt": "2026-09-20T08:24:55.989924Z",
+  "liveTraffic": false,
+  "sourceCommit": "8b5119028d0ce406ee30e1d1f60aec5af2489a62",
+  "static": {
+    "bindingService": true,
+    "goSdk": true,
+    "javaSdk": true,
+    "temporalActivity": true,
+    "replaySafety": true
+  },
+  "missingStatic": [],
+  "live": {
+    "status": "BLOCKED",
+    "reason": "no immutable Temporal history/replay report supplied",
+    "report": ""
+  },
+  "historyAllowed": [
+    "recordRef",
+    "schemaId",
+    "schemaVersion",
+    "recordVersion",
+    "sourceVersion",
+    "snapshotHash",
+    "operationId"
+  ],
+  "historyForbidden": [
+    "rawPayload",
+    "workflowInput",
+    "accessToken",
+    "privateKey",
+    "fullSnapshotData"
+  ],
+  "transactionModes": {
+    "READ_SNAPSHOT": "immutable-snapshot",
+    "READ_LATEST": "expected-version-and-hash",
+    "COMMAND_RECEIPT": "idempotent-receipt",
+    "OWNER_APPLY_REQUIRED": "owner-only-side-effect"
+  },
+  "activity": {
+    "timeoutRequired": true,
+    "retryRequired": true,
+    "idempotencyKeyRequired": true,
+    "hashAssertionRequired": true,
+    "workflowDeterminism": "NO_DIRECT_IO"
+  },
+  "decision": "DO_NOT_RELEASE_TEMPORAL_ADAPTER",
+  "prerequisite": {
+    "phase5": "INDEPENDENT_GATE",
+    "connectorEnablement": "NOT_GRANTED"
+  },
+  "next": "Run native Temporal workflow history/replay with timeout, retry, idempotency and hash assertion evidence."
+}
