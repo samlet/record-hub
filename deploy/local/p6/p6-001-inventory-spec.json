@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "phase": "6",
+  "task": "P6-001",
+  "purpose": "inventory real owner connector and schema assets before self-service expansion",
+  "owners": ["record-hub", "approver", "fluxion", "bids"],
+  "requiredFamilies": ["approvals", "commands", "summaries"],
+  "requiredFields": ["owner", "path", "kind", "schemaVersion", "sha256", "sourceCommit"],
+  "trackedOnly": true,
+  "liveTraffic": false,
+  "failClosed": true,
+  "notes": [
+    "Inventory records existing source contracts only; generated classes and build outputs are excluded.",
+    "Inventory PASS does not enable a connector or clear the Phase 5 prerequisite."
+  ]
+}
