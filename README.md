@@ -93,6 +93,7 @@ HTTP 契约以 [`api/openapi.yaml`](api/openapi.yaml) 为准。`make generate-cl
 - [Phase 6 Batch 2 P6-201 SDK parity inventory](docs/phase-6-batch2-p6-201.md)
 - [Phase 6 Batch 2 P6-202 workload identity audit](docs/phase-6-batch2-p6-202.md)
 - [Phase 6 Batch 2 P6-203 connector fault matrix](docs/phase-6-batch2-p6-203.md)
+- [Phase 6 Batch 3 P6-300 Approver projection](docs/phase-6-batch3-p6-300.md)
 - [原生隔离验收拓扑](deploy/local/isolated/README.md)
 - [参考资料](docs/references.md)
 - [ADR-0001：独立仓库与事实所有权](docs/adr/0001-independent-service-and-data-ownership.md)

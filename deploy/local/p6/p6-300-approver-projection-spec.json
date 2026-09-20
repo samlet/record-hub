@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "phase": "6",
+  "task": "P6-300",
+  "purpose": "freeze Approver Application/Process safe projection and reconciliation boundary",
+  "liveTraffic": false,
+  "failClosed": true,
+  "source": {
+    "owner": "approver",
+    "contractSchema": "urn:record-hub:summary:application:v1",
+    "eventFamily": "approver.application.summary-changed",
+    "versionField": "version",
+    "stableRefFormat": "approver:APPLICATION:id"
+  },
+  "scope": {
+    "requiredFields": ["tenantId", "workspaceId"],
+    "crossTenantAction": "REJECT",
+    "missingWorkspaceAction": "QUARANTINE"
+  },
+  "allowlist": ["applicationRef", "processRef", "title", "status", "sourceVersion", "updatedAt", "sourceEventId", "snapshotHash", "tenantId", "workspaceId"],
+  "forbidden": ["definition", "workflowInput", "variables", "attachments", "assignees", "approverComments", "rawPayload", "fullWorkflowSnapshot"],
+  "reconciliation": {
+    "versionOrder": "monotonic-contiguous",
+    "gapAction": "FINDING_AND_REPLAY",
+    "conflictAction": "QUARANTINE_AND_AUDIT",
+    "duplicateAction": "NO_OP"
+  },
+  "liveEvidenceRequired": true,
+  "missingAction": "BLOCKED_BY_LIVE_CONNECTOR",
+  "prerequisite": {
+    "phase5": "INDEPENDENT_GATE",
+    "connectorEnablement": "NOT_GRANTED"
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "phase": "6",
+  "task": "P6-300",
+  "status": "BLOCKED_BY_LIVE_CONNECTOR",
+  "generatedAt": "2026-09-20T08:14:29.016357Z",
+  "liveTraffic": false,
+  "sourceCommit": "0634ceddb244515e7cc16368a5433647a16127c3",
+  "static": {
+    "recordHubSchema": true,
+    "approverContract": true,
+    "approverOutbox": true,
+    "recordHubReconciliation": true,
+    "redactionBoundary": true
+  },
+  "missingStatic": [],
+  "live": {
+    "status": "BLOCKED",
+    "reason": "no immutable Approver native connector report supplied",
+    "report": ""
+  },
+  "source": {
+    "owner": "approver",
+    "contractSchema": "urn:record-hub:summary:application:v1",
+    "eventFamily": "approver.application.summary-changed",
+    "versionField": "version",
+    "stableRefFormat": "approver:APPLICATION:id"
+  },
+  "scope": {
+    "requiredFields": [
+      "tenantId",
+      "workspaceId"
+    ],
+    "crossTenantAction": "REJECT",
+    "missingWorkspaceAction": "QUARANTINE"
+  },
+  "allowlist": [
+    "applicationRef",
+    "processRef",
+    "title",
+    "status",
+    "sourceVersion",
+    "updatedAt",
+    "sourceEventId",
+    "snapshotHash",
+    "tenantId",
+    "workspaceId"
+  ],
+  "forbidden": [
+    "definition",
+    "workflowInput",
+    "variables",
+    "attachments",
+    "assignees",
+    "approverComments",
+    "rawPayload",
+    "fullWorkflowSnapshot"
+  ],
+  "reconciliation": {
+    "versionOrder": "monotonic-contiguous",
+    "gapAction": "FINDING_AND_REPLAY",
+    "conflictAction": "QUARANTINE_AND_AUDIT",
+    "duplicateAction": "NO_OP"
+  },
+  "decision": "DO_NOT_ENABLE_APPROVER_PROJECTION",
+  "prerequisite": {
+    "phase5": "INDEPENDENT_GATE",
+    "connectorEnablement": "NOT_GRANTED"
+  },
+  "next": "Run an isolated Approver Application/Process native projection, attach redacted live evidence, and rerun with RECORD_HUB_P6_APPROVER_LIVE_REPORT."
+}
