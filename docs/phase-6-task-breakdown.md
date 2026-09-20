@@ -59,7 +59,7 @@ Phase 6 只在 Phase 5 GA 前置完成后进入 live implementation；当前先�
 
 | ID | 范围 | 任务 | 交付物 | 状态 |
 | --- | --- | --- | --- | --- |
-| P6-600 | 四仓库 | production-like mixed load | cost、capacity、backpressure、SLO | TODO |
+| P6-600 | 四仓库 | production-like mixed load | [mixed-load contract](phase-6-mixed-load.json)；synthetic capacity 和 bounded budget 基础存在，缺四 owner live evidence | BLOCKED_BY_LIVE_CAPACITY_EVIDENCE |
 | P6-601 | 数据层 | archive/retention/restore extension | PITR、archive、rebuild、retention proof | TODO |
 | P6-602 | 架构 | multi-region decision record | active-active feasibility、RPO/RTO、成本和 go/no-go | TODO |
 

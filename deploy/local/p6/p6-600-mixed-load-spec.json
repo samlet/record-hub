@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "phase": "6",
+  "task": "P6-600",
+  "purpose": "freeze production-like mixed-load, cost, capacity and backpressure evaluation",
+  "liveTraffic": false,
+  "failClosed": true,
+  "workload": {
+    "systems": ["record-hub", "approver", "fluxion", "bids"],
+    "planes": ["records", "connector", "temporal", "conductor", "nats", "mongo"],
+    "tenantIsolation": "REQUIRED",
+    "eventRateSteps": [10, 50, 100, 250, 500],
+    "sampleLimit": 10000
+  },
+  "measurements": [
+    "requestRate",
+    "publishRate",
+    "drainRate",
+    "p50LatencyMs",
+    "p95LatencyMs",
+    "p99LatencyMs",
+    "backlogDrainSeconds",
+    "retryCount",
+    "deadCount",
+    "queryCostUnits",
+    "memoryBytes",
+    "cpuSeconds"
+  ],
+  "backpressure": {
+    "queryBudget": "REJECT_OVER_BUDGET",
+    "rateLimit": "429_RETRY_AFTER",
+    "natsPublish": "BOUNDED_AND_REJECT_ON_OVERLOAD",
+    "connector": "STOP_NEW_AND_DRAIN_IN_FLIGHT"
+  },
+  "slo": {
+    "p95LatencyMs": 2000,
+    "p99LatencyMs": 5000,
+    "maxBacklogDrainSeconds": 300,
+    "maxDeadCount": 0,
+    "errorBudgetAction": "STOP_AND_REVIEW"
+  },
+  "cost": {
+    "requiredDimensions": ["tenant", "workspace", "consumer", "operation"],
+    "rawPayloadAction": "FORBIDDEN",
+    "unboundedLabelAction": "REJECT"
+  },
+  "liveReportEnv": "RECORD_HUB_P6_MIXED_LOAD_LIVE_REPORT",
+  "missingAction": "BLOCKED_BY_LIVE_CAPACITY_EVIDENCE",
+  "prerequisite": {
+    "phase5": "INDEPENDENT_GATE",
+    "connectorEnablement": "NOT_GRANTED"
+  }
+}
