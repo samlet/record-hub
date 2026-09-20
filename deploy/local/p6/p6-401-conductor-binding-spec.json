@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "phase": "6",
+  "task": "P6-401",
+  "purpose": "freeze Conductor task input/output adapter and receipt polling boundary",
+  "liveTraffic": false,
+  "failClosed": true,
+  "taskInputAllowed": ["tenantId", "workspaceId", "recordRef", "schemaVersion", "recordVersion", "snapshotHash", "operationId", "expectedVersion"],
+  "taskOutputAllowed": ["receiptId", "operationId", "status", "sourceVersion", "recordVersion", "snapshotHash", "safeError", "updatedAt"],
+  "forbidden": ["rawPayload", "workflowInput", "accessToken", "privateKey", "sealedBid", "financialFact"],
+  "receipt": {"polling": "bounded", "timeoutAction": "RETRY_THEN_RECONCILE", "replayMode": "SAME_OPERATION_ID", "unknownStatusAction": "QUARANTINE"},
+  "sideEffectBoundary": "OWNER_TASK_ONLY",
+  "liveEvidenceRequired": true,
+  "missingAction": "BLOCKED_BY_LIVE_WORKFLOW_EVIDENCE",
+  "prerequisite": {"phase5": "INDEPENDENT_GATE", "connectorEnablement": "NOT_GRANTED"}
+}

@@ -42,7 +42,7 @@ Phase 6 只在 Phase 5 GA 前置完成后进入 live implementation；当前先�
 | ID | 范围 | 任务 | 交付物 | 状态 |
 | --- | --- | --- | --- | --- |
 | P6-400 | Temporal | typed snapshot/ref Activity adapter | deterministic history、retry、hash assertion；[Temporal binding](phase-6-temporal-binding.json) 缺 native history/replay evidence | BLOCKED_BY_LIVE_WORKFLOW_EVIDENCE |
-| P6-401 | Conductor | task input/output adapter | receipt polling、timeout、replay | TODO |
+| P6-401 | Conductor | task input/output adapter | receipt polling、timeout、replay；[Conductor binding](phase-6-conductor-binding.json) 缺 native task/replay evidence | BLOCKED_BY_LIVE_WORKFLOW_EVIDENCE |
 | P6-402 | NATS | registry-backed event/replay API | subject ACL、durable、DLQ、backpressure | TODO |
 | P6-403 | Record Hub | event-to-table state mapping | source pointer、gap/conflict、rebuild | TODO |
 

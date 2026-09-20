@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "phase": "6",
+  "task": "P6-401",
+  "status": "BLOCKED_BY_LIVE_WORKFLOW_EVIDENCE",
+  "generatedAt": "2026-09-20T08:26:40.380619Z",
+  "liveTraffic": false,
+  "sourceCommit": "c7fbdc1a2d7ceb193b616cdacd10861647b027ae",
+  "static": {
+    "conductorWorkflow": true,
+    "taskCompletion": true,
+    "recordHubReceipt": true,
+    "boundedRetry": true,
+    "redaction": true
+  },
+  "missingStatic": [],
+  "live": {
+    "status": "BLOCKED",
+    "reason": "no immutable Conductor task/replay report supplied",
+    "report": ""
+  },
+  "taskInputAllowed": [
+    "tenantId",
+    "workspaceId",
+    "recordRef",
+    "schemaVersion",
+    "recordVersion",
+    "snapshotHash",
+    "operationId",
+    "expectedVersion"
+  ],
+  "taskOutputAllowed": [
+    "receiptId",
+    "operationId",
+    "status",
+    "sourceVersion",
+    "recordVersion",
+    "snapshotHash",
+    "safeError",
+    "updatedAt"
+  ],
+  "forbidden": [
+    "rawPayload",
+    "workflowInput",
+    "accessToken",
+    "privateKey",
+    "sealedBid",
+    "financialFact"
+  ],
+  "receipt": {
+    "polling": "bounded",
+    "timeoutAction": "RETRY_THEN_RECONCILE",
+    "replayMode": "SAME_OPERATION_ID",
+    "unknownStatusAction": "QUARANTINE"
+  },
+  "sideEffectBoundary": "OWNER_TASK_ONLY",
+  "decision": "DO_NOT_RELEASE_CONDUCTOR_ADAPTER",
+  "prerequisite": {
+    "phase5": "INDEPENDENT_GATE",
+    "connectorEnablement": "NOT_GRANTED"
+  },
+  "next": "Run native Conductor task receipt completion, timeout/replay and owner-only side-effect evidence."
+}
