@@ -1,0 +1,47 @@
+{
+  "forbiddenPayloads": [
+    "token",
+    "privateKey",
+    "PII",
+    "sealedBid",
+    "quote",
+    "bankAccount",
+    "invoiceAttachment",
+    "fullWorkflowSnapshot"
+  ],
+  "gates": {
+    "failureMatrix": "REQUIRED",
+    "operatorAudit": "REQUIRED",
+    "redaction": "REQUIRED",
+    "rollback": "REQUIRED",
+    "scopeMatrix": "REQUIRED",
+    "topology": "REQUIRED"
+  },
+  "generatedAt": "2026-09-20T07:36:24Z",
+  "liveTraffic": false,
+  "next": "Attach one immutable envelope per P6 task; do not infer live PASS from this static contract.",
+  "phase": "6",
+  "prerequisite": {
+    "connectorEnablement": "NOT_GRANTED",
+    "phase5": "INDEPENDENT_GATE"
+  },
+  "requiredFields": [
+    "task",
+    "ownerSystems",
+    "sourceCommits",
+    "contractDigests",
+    "fixtureDigests",
+    "redactionScan",
+    "scopeMatrix",
+    "failureMatrix",
+    "rollback",
+    "operatorAudit",
+    "topology",
+    "generatedAt",
+    "status"
+  ],
+  "schemaVersion": 1,
+  "sourceCommit": "184e475c2bb47e15111f23a456ef404ff9e027d5",
+  "status": "PASS",
+  "task": "P6-002"
+}
