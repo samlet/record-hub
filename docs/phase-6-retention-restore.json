@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "phase": "6",
+  "task": "P6-601",
+  "status": "BLOCKED_BY_LIVE_RESTORE_EVIDENCE",
+  "generatedAt": "2026-09-20T08:45:39.149856Z",
+  "liveTraffic": false,
+  "sourceCommit": "b5c821224c4779223d3a45d60c469e6490b0fe65",
+  "static": {
+    "retentionPolicy": true,
+    "encryptedBackup": true,
+    "isolatedRestore": true,
+    "restoreAssertions": true,
+    "stagedRebuild": true,
+    "archiveScope": true,
+    "operatorAudit": true
+  },
+  "missingStatic": [],
+  "live": {
+    "status": "BLOCKED",
+    "reason": "no immutable archive/retention/PITR restore report supplied",
+    "report": ""
+  },
+  "retention": {
+    "scopes": [
+      "tenant",
+      "workspace",
+      "table",
+      "schema",
+      "record",
+      "audit",
+      "inbox",
+      "outbox",
+      "dlq"
+    ],
+    "policyVersionRequired": true,
+    "legalHold": "PRESERVE_AND_AUDIT",
+    "expiryAction": "ARCHIVE_THEN_DELETE_ONLY_AFTER_VERIFICATION",
+    "rawPayloadArchive": "OWNER_POLICY_ONLY"
+  },
+  "backup": {
+    "encryption": "REQUIRED",
+    "pitr": "REQUIRED",
+    "manifestDigest": "SHA256",
+    "restoreTarget": "DISPOSABLE_ISOLATED_SERVICE"
+  },
+  "restoreAssertions": [
+    "count",
+    "contentHash",
+    "index",
+    "schemaVersion",
+    "recordVersion",
+    "cursor",
+    "checkpoint",
+    "inbox",
+    "outbox",
+    "audit",
+    "backlog"
+  ],
+  "rebuild": {
+    "mode": "STAGED_REPLAY_THEN_CAS_POINTER_SWITCH",
+    "liveReadIsolation": "REQUIRED",
+    "sourcePointerRequired": true,
+    "operatorAuditRequired": true
+  },
+  "decision": "DO_NOT_CHANGE_RETENTION_OR_RESTORE_POLICY",
+  "prerequisite": {
+    "phase5": "INDEPENDENT_GATE",
+    "connectorEnablement": "NOT_GRANTED"
+  },
+  "next": "Run isolated encrypted backup/PITR restore, retention expiry/legal-hold checks and staged rebuild pointer verification; attach immutable evidence and rerun with RECORD_HUB_P6_RETENTION_LIVE_REPORT."
+}

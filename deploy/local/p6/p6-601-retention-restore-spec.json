@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "phase": "6",
+  "task": "P6-601",
+  "purpose": "freeze archive, retention, PITR restore and rebuild verification boundaries",
+  "liveTraffic": false,
+  "failClosed": true,
+  "retention": {
+    "scopes": ["tenant", "workspace", "table", "schema", "record", "audit", "inbox", "outbox", "dlq"],
+    "policyVersionRequired": true,
+    "legalHold": "PRESERVE_AND_AUDIT",
+    "expiryAction": "ARCHIVE_THEN_DELETE_ONLY_AFTER_VERIFICATION",
+    "rawPayloadArchive": "OWNER_POLICY_ONLY"
+  },
+  "backup": {
+    "encryption": "REQUIRED",
+    "pitr": "REQUIRED",
+    "manifestDigest": "SHA256",
+    "restoreTarget": "DISPOSABLE_ISOLATED_SERVICE"
+  },
+  "restoreAssertions": [
+    "count",
+    "contentHash",
+    "index",
+    "schemaVersion",
+    "recordVersion",
+    "cursor",
+    "checkpoint",
+    "inbox",
+    "outbox",
+    "audit",
+    "backlog"
+  ],
+  "rebuild": {
+    "mode": "STAGED_REPLAY_THEN_CAS_POINTER_SWITCH",
+    "liveReadIsolation": "REQUIRED",
+    "sourcePointerRequired": true,
+    "operatorAuditRequired": true
+  },
+  "liveReportEnv": "RECORD_HUB_P6_RETENTION_LIVE_REPORT",
+  "missingAction": "BLOCKED_BY_LIVE_RESTORE_EVIDENCE",
+  "prerequisite": {
+    "phase5": "INDEPENDENT_GATE",
+    "connectorEnablement": "NOT_GRANTED"
+  }
+}
