@@ -3,9 +3,9 @@
   "phase": "6",
   "task": "P6-CLOSURE",
   "status": "PASS_STATIC_WITH_BLOCKERS",
-  "generatedAt": "2026-09-20T13:14:42.530648Z",
+  "generatedAt": "2026-09-20T13:16:36.842712Z",
   "liveTraffic": false,
-  "sourceCommit": "08e9e78238492803616a4bf1166465246e84b496",
+  "sourceCommit": "c8c5f280944f45c05cb7746c6f86ce1c664abdbb",
   "sourceOfTruth": "docs/phase-6-task-breakdown.md",
   "counts": {
     "DONE": 7,
