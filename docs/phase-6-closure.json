@@ -1,0 +1,205 @@
+{
+  "schemaVersion": 1,
+  "phase": "6",
+  "task": "P6-CLOSURE",
+  "status": "PASS_STATIC_WITH_BLOCKERS",
+  "generatedAt": "2026-09-20T08:53:41.611238Z",
+  "liveTraffic": false,
+  "sourceCommit": "128435da03089d0c2499e92d99635672b136b410",
+  "sourceOfTruth": "docs/phase-6-task-breakdown.md",
+  "counts": {
+    "DONE": 7,
+    "BLOCKED_BY_SDK_GAP": 1,
+    "BLOCKED_BY_IDENTITY_LIFECYCLE_GAP": 1,
+    "BLOCKED_BY_LIVE_FAULT_EVIDENCE": 1,
+    "BLOCKED_BY_LIVE_CONNECTOR": 4,
+    "BLOCKED_BY_LIVE_WORKFLOW_EVIDENCE": 2,
+    "BLOCKED_BY_LIVE_EVENT_EVIDENCE": 2,
+    "BLOCKED_BY_CONTROL_PLANE_GAP": 1,
+    "BLOCKED_BY_ONBOARDING_API_GAP": 1,
+    "BLOCKED_BY_OBSERVABILITY_GAP": 1,
+    "BLOCKED_BY_LIVE_ROLLBACK_EVIDENCE": 1,
+    "BLOCKED_BY_LIVE_CAPACITY_EVIDENCE": 1,
+    "BLOCKED_BY_LIVE_RESTORE_EVIDENCE": 1,
+    "BLOCKED_BY_LIVE_MULTI_REGION_EVIDENCE": 1
+  },
+  "tasks": [
+    {
+      "task": "P6-001",
+      "breakdownStatus": "DONE",
+      "reportStatus": "PASS",
+      "file": "docs/phase-6-connector-schema-inventory.json"
+    },
+    {
+      "task": "P6-002",
+      "breakdownStatus": "DONE",
+      "reportStatus": "PASS",
+      "file": "docs/phase-6-evidence-contract.json"
+    },
+    {
+      "task": "P6-100",
+      "breakdownStatus": "DONE",
+      "reportStatus": "PASS",
+      "file": "docs/phase-6-schema-registry.json"
+    },
+    {
+      "task": "P6-101",
+      "breakdownStatus": "DONE",
+      "reportStatus": "PASS",
+      "file": "docs/phase-6-tags-contract.json"
+    },
+    {
+      "task": "P6-102",
+      "breakdownStatus": "DONE",
+      "reportStatus": "PASS",
+      "file": "docs/phase-6-relations-contract.json"
+    },
+    {
+      "task": "P6-103",
+      "breakdownStatus": "DONE",
+      "reportStatus": "PASS",
+      "file": "docs/phase-6-views-contract.json"
+    },
+    {
+      "task": "P6-200",
+      "breakdownStatus": "DONE",
+      "reportStatus": "PASS",
+      "file": "docs/phase-6-connector-registry.json"
+    },
+    {
+      "task": "P6-201",
+      "breakdownStatus": "BLOCKED_BY_SDK_GAP",
+      "reportStatus": "BLOCKED_BY_SDK_GAP",
+      "file": "docs/phase-6-sdk-parity.json"
+    },
+    {
+      "task": "P6-202",
+      "breakdownStatus": "BLOCKED_BY_IDENTITY_LIFECYCLE_GAP",
+      "reportStatus": "BLOCKED_BY_IDENTITY_LIFECYCLE_GAP",
+      "file": "docs/phase-6-workload-identity.json"
+    },
+    {
+      "task": "P6-203",
+      "breakdownStatus": "BLOCKED_BY_LIVE_FAULT_EVIDENCE",
+      "reportStatus": "BLOCKED_BY_LIVE_FAULT_EVIDENCE",
+      "file": "docs/phase-6-fault-matrix.json"
+    },
+    {
+      "task": "P6-300",
+      "breakdownStatus": "BLOCKED_BY_LIVE_CONNECTOR",
+      "reportStatus": "BLOCKED_BY_LIVE_CONNECTOR",
+      "file": "docs/phase-6-approver-projection.json"
+    },
+    {
+      "task": "P6-301",
+      "breakdownStatus": "BLOCKED_BY_LIVE_CONNECTOR",
+      "reportStatus": "BLOCKED_BY_LIVE_CONNECTOR",
+      "file": "docs/phase-6-fluxion-approval.json"
+    },
+    {
+      "task": "P6-302",
+      "breakdownStatus": "BLOCKED_BY_LIVE_CONNECTOR",
+      "reportStatus": "BLOCKED_BY_LIVE_CONNECTOR",
+      "file": "docs/phase-6-bids-approval.json"
+    },
+    {
+      "task": "P6-303",
+      "breakdownStatus": "BLOCKED_BY_LIVE_CONNECTOR",
+      "reportStatus": "BLOCKED_BY_LIVE_CONNECTOR",
+      "file": "docs/phase-6-settlement-association.json"
+    },
+    {
+      "task": "P6-400",
+      "breakdownStatus": "BLOCKED_BY_LIVE_WORKFLOW_EVIDENCE",
+      "reportStatus": "BLOCKED_BY_LIVE_WORKFLOW_EVIDENCE",
+      "file": "docs/phase-6-temporal-binding.json"
+    },
+    {
+      "task": "P6-401",
+      "breakdownStatus": "BLOCKED_BY_LIVE_WORKFLOW_EVIDENCE",
+      "reportStatus": "BLOCKED_BY_LIVE_WORKFLOW_EVIDENCE",
+      "file": "docs/phase-6-conductor-binding.json"
+    },
+    {
+      "task": "P6-402",
+      "breakdownStatus": "BLOCKED_BY_LIVE_EVENT_EVIDENCE",
+      "reportStatus": "BLOCKED_BY_LIVE_EVENT_EVIDENCE",
+      "file": "docs/phase-6-nats-event.json"
+    },
+    {
+      "task": "P6-403",
+      "breakdownStatus": "BLOCKED_BY_LIVE_EVENT_EVIDENCE",
+      "reportStatus": "BLOCKED_BY_LIVE_EVENT_EVIDENCE",
+      "file": "docs/phase-6-event-table.json"
+    },
+    {
+      "task": "P6-500",
+      "breakdownStatus": "BLOCKED_BY_CONTROL_PLANE_GAP",
+      "reportStatus": "BLOCKED_BY_CONTROL_PLANE_GAP",
+      "file": "docs/phase-6-control-plane.json"
+    },
+    {
+      "task": "P6-501",
+      "breakdownStatus": "BLOCKED_BY_ONBOARDING_API_GAP",
+      "reportStatus": "BLOCKED_BY_ONBOARDING_API_GAP",
+      "file": "docs/phase-6-connector-onboarding.json"
+    },
+    {
+      "task": "P6-502",
+      "breakdownStatus": "BLOCKED_BY_OBSERVABILITY_GAP",
+      "reportStatus": "BLOCKED_BY_OBSERVABILITY_GAP",
+      "file": "docs/phase-6-observation-dashboard.json"
+    },
+    {
+      "task": "P6-503",
+      "breakdownStatus": "BLOCKED_BY_LIVE_ROLLBACK_EVIDENCE",
+      "reportStatus": "BLOCKED_BY_LIVE_ROLLBACK_EVIDENCE",
+      "file": "docs/phase-6-operator-runbook.json"
+    },
+    {
+      "task": "P6-600",
+      "breakdownStatus": "BLOCKED_BY_LIVE_CAPACITY_EVIDENCE",
+      "reportStatus": "BLOCKED_BY_LIVE_CAPACITY_EVIDENCE",
+      "file": "docs/phase-6-mixed-load.json"
+    },
+    {
+      "task": "P6-601",
+      "breakdownStatus": "BLOCKED_BY_LIVE_RESTORE_EVIDENCE",
+      "reportStatus": "BLOCKED_BY_LIVE_RESTORE_EVIDENCE",
+      "file": "docs/phase-6-retention-restore.json"
+    },
+    {
+      "task": "P6-602",
+      "breakdownStatus": "BLOCKED_BY_LIVE_MULTI_REGION_EVIDENCE",
+      "reportStatus": "BLOCKED_BY_LIVE_MULTI_REGION_EVIDENCE",
+      "file": "docs/phase-6-multi-region.json"
+    }
+  ],
+  "blockedTasks": [
+    "P6-201",
+    "P6-202",
+    "P6-203",
+    "P6-300",
+    "P6-301",
+    "P6-302",
+    "P6-303",
+    "P6-400",
+    "P6-401",
+    "P6-402",
+    "P6-403",
+    "P6-500",
+    "P6-501",
+    "P6-502",
+    "P6-503",
+    "P6-600",
+    "P6-601",
+    "P6-602"
+  ],
+  "errors": [],
+  "decision": "DO_NOT_START_LIVE_CONNECTORS",
+  "next": [
+    "Clear the Phase 5/P6-000 prerequisite before live connector traffic.",
+    "Implement the P6-500/P6-501 control-plane gaps and SDK/identity gaps.",
+    "Provision native connector, workflow, event, capacity, restore and rollback evidence runners."
+  ]
+}

@@ -108,6 +108,7 @@ HTTP 契约以 [`api/openapi.yaml`](api/openapi.yaml) 为准。`make generate-cl
 - [Phase 6 Batch 6 P6-600 mixed load](docs/phase-6-batch6-p6-600.md)
 - [Phase 6 Batch 6 P6-601 retention and restore](docs/phase-6-batch6-p6-601.md)
 - [Phase 6 Batch 6 P6-602 multi-region decision](docs/phase-6-batch6-p6-602.md)
+- [Phase 6 static closure](docs/phase-6-closure.md)
 - [原生隔离验收拓扑](deploy/local/isolated/README.md)
 - [参考资料](docs/references.md)
 - [ADR-0001：独立仓库与事实所有权](docs/adr/0001-independent-service-and-data-ownership.md)

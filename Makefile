@@ -2,7 +2,7 @@
 
 BUILD_DIR := build
 
-.PHONY: p6-600 p6-601 p6-602
+.PHONY: p6-600 p6-601 p6-602 p6-closure
 BINARY := $(BUILD_DIR)/record-hub
 
 build:
@@ -269,6 +269,9 @@ p6-601:
 
 p6-602:
 	./scripts/verify-p6-602-multi-region.sh
+
+p6-closure:
+	./scripts/verify-p6-closure.sh
 
 p5-100:
 	./scripts/verify-p5-100-identity.sh
