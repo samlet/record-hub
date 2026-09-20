@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "phase": "6",
+  "task": "P6-200",
+  "purpose": "freeze exact connector registry lookup, lifecycle and compatibility policy",
+  "liveTraffic": false,
+  "failClosed": true,
+  "key": {
+    "fields": ["connector", "event", "schemaVersion"],
+    "match": "exact",
+    "unknownAction": "REJECT",
+    "schemaVersionMinimum": 1
+  },
+  "manifest": {
+    "requiredFields": ["connector", "event", "schemaVersion", "ownerSystem", "sdkVersion", "compatibilityMin", "compatibilityMax", "contractHash", "allowedFields", "status", "revision"],
+    "statusValues": ["DRAFT", "ENABLED", "DISABLED", "DEPRECATED"],
+    "hashAlgorithm": "sha256",
+    "revisionMode": "optimistic-cas"
+  },
+  "lifecycle": {
+    "initialStatus": "DRAFT",
+    "enableRequires": ["owner", "contractHash", "fixture", "redaction", "compatibility", "operatorAudit"],
+    "disableBehavior": "STOP_NEW_AND_DRAIN_IN_FLIGHT",
+    "deprecatedBehavior": "STOP_NEW_AND_RETAIN_READ_ONLY_EVIDENCE",
+    "revokeBehavior": "DISABLE_AND_QUARANTINE_UNKNOWN_RESULTS",
+    "allowedTransitions": [
+      ["DRAFT", "ENABLED"],
+      ["DRAFT", "DISABLED"],
+      ["ENABLED", "DISABLED"],
+      ["ENABLED", "DEPRECATED"],
+      ["DISABLED", "ENABLED"],
+      ["DISABLED", "DEPRECATED"]
+    ],
+    "staleRevisionAction": "CONFLICT"
+  },
+  "compatibility": {
+    "versionFormat": "MAJOR.MINOR.PATCH",
+    "windowInclusive": true,
+    "outsideWindowAction": "REJECT",
+    "emptyAllowedFieldsAction": "REJECT",
+    "duplicateKeyAction": "REJECT"
+  },
+  "prerequisite": {
+    "phase5": "INDEPENDENT_GATE",
+    "connectorEnablement": "NOT_GRANTED"
+  }
+}

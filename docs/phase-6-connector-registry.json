@@ -1,0 +1,127 @@
+{
+  "compatibility": {
+    "duplicateKeyAction": "REJECT",
+    "emptyAllowedFieldsAction": "REJECT",
+    "outsideWindowAction": "REJECT",
+    "versionFormat": "MAJOR.MINOR.PATCH",
+    "windowInclusive": true
+  },
+  "entries": [
+    {
+      "allowedFields": [
+        "decision",
+        "generation"
+      ],
+      "compatibilityMax": "1.9.9",
+      "compatibilityMin": "1.0.0",
+      "connector": "fluxion.approval",
+      "contractHash": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "event": "dispatch.result",
+      "ownerSystem": "approver",
+      "schemaVersion": 1,
+      "sdkVersion": "1.2.0",
+      "status": "DRAFT"
+    },
+    {
+      "allowedFields": [
+        "decision",
+        "generation"
+      ],
+      "compatibilityMax": "1.9.9",
+      "compatibilityMin": "1.0.0",
+      "connector": "bids.approval",
+      "contractHash": "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+      "event": "tender.result",
+      "ownerSystem": "approver",
+      "schemaVersion": 1,
+      "sdkVersion": "1.2.0",
+      "status": "DRAFT"
+    }
+  ],
+  "generatedAt": "2026-09-20T07:58:57Z",
+  "key": {
+    "fields": [
+      "connector",
+      "event",
+      "schemaVersion"
+    ],
+    "match": "exact",
+    "schemaVersionMinimum": 1,
+    "unknownAction": "REJECT"
+  },
+  "lifecycle": {
+    "allowedTransitions": [
+      [
+        "DRAFT",
+        "ENABLED"
+      ],
+      [
+        "DRAFT",
+        "DISABLED"
+      ],
+      [
+        "ENABLED",
+        "DISABLED"
+      ],
+      [
+        "ENABLED",
+        "DEPRECATED"
+      ],
+      [
+        "DISABLED",
+        "ENABLED"
+      ],
+      [
+        "DISABLED",
+        "DEPRECATED"
+      ]
+    ],
+    "deprecatedBehavior": "STOP_NEW_AND_RETAIN_READ_ONLY_EVIDENCE",
+    "disableBehavior": "STOP_NEW_AND_DRAIN_IN_FLIGHT",
+    "enableRequires": [
+      "owner",
+      "contractHash",
+      "fixture",
+      "redaction",
+      "compatibility",
+      "operatorAudit"
+    ],
+    "initialStatus": "DRAFT",
+    "revokeBehavior": "DISABLE_AND_QUARANTINE_UNKNOWN_RESULTS",
+    "staleRevisionAction": "CONFLICT"
+  },
+  "liveTraffic": false,
+  "manifest": {
+    "hashAlgorithm": "sha256",
+    "requiredFields": [
+      "connector",
+      "event",
+      "schemaVersion",
+      "ownerSystem",
+      "sdkVersion",
+      "compatibilityMin",
+      "compatibilityMax",
+      "contractHash",
+      "allowedFields",
+      "status",
+      "revision"
+    ],
+    "revisionMode": "optimistic-cas",
+    "statusValues": [
+      "DRAFT",
+      "ENABLED",
+      "DISABLED",
+      "DEPRECATED"
+    ]
+  },
+  "next": "Resolve only exact enabled keys inside the inclusive SDK window; disable drains in-flight work and quarantines unknown results.",
+  "phase": "6",
+  "prerequisite": {
+    "connectorEnablement": "NOT_GRANTED",
+    "phase5": "INDEPENDENT_GATE"
+  },
+  "schemaVersion": 1,
+  "sourceCommit": "7ca5265431a853934e3564403817cfa29e1b11eb",
+  "status": "PASS",
+  "task": "P6-200"
+}

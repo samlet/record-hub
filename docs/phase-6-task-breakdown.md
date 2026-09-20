@@ -23,7 +23,7 @@ Phase 6 只在 Phase 5 GA 前置完成后进入 live implementation；当前先�
 
 | ID | 范围 | 任务 | 交付物 | 状态 |
 | --- | --- | --- | --- | --- |
-| P6-200 | Record Hub | connector registry lifecycle | exact match、enable/disable、owner、compatibility | TODO |
+| P6-200 | Record Hub | connector registry lifecycle | exact match、enable/disable、owner、compatibility；[registry contract](phase-6-connector-registry.json) 已通过静态 gate | IN_PROGRESS |
 | P6-201 | 四仓库 | JVM/Go/TypeScript SDK parity | typed ref、command/result、receipt、errors | TODO |
 | P6-202 | 四仓库 | workload identity lifecycle | independent principal、rotation、drain、revoke | TODO |
 | P6-203 | 四仓库 | connector fault matrix | duplicate、late result、restart、DLQ、rollback | TODO |
