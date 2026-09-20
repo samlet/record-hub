@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "phase": "6",
+  "task": "P6-602",
+  "purpose": "freeze the multi-region feasibility decision record and go/no-go boundary",
+  "liveTraffic": false,
+  "failClosed": true,
+  "decision": {
+    "options": ["SINGLE_REGION_HA", "ACTIVE_PASSIVE_DR", "ACTIVE_ACTIVE"],
+    "default": "SINGLE_REGION_HA",
+    "goNoGo": "NO_GO_UNTIL_EVIDENCE",
+    "zeroRpoClaim": "FORBIDDEN_WITHOUT_LIVE_PROOF"
+  },
+  "requiredEvidence": [
+    "mixedLoadCapacity",
+    "mongoReplicationAndPitr",
+    "natsStreamReplicationAndReplay",
+    "ownerWorkflowFailover",
+    "rpoMeasurement",
+    "rtoMeasurement",
+    "costModel",
+    "operatorRunbook",
+    "securityAndScopeMatrix",
+    "riskOwnerSignoff"
+  ],
+  "targets": {
+    "rpoMinutes": 15,
+    "rtoMinutes": 60,
+    "measurementRequired": true,
+    "unverifiedAction": "DO_NOT_COMMIT_TO_TARGET"
+  },
+  "boundaries": {
+    "mongo": "OWNER_DATA_AND_RECORD_HUB_DATA_SEPARATE",
+    "nats": "ALLOWLISTED_STREAMS_ONLY",
+    "temporalConductor": "OWNER_FAILOVER_POLICY_REQUIRED",
+    "crossRegionXa": "NOT_ASSUMED",
+    "automaticCompensation": "NOT_ASSUMED"
+  },
+  "liveReportEnv": "RECORD_HUB_P6_MULTI_REGION_LIVE_REPORT",
+  "missingAction": "BLOCKED_BY_LIVE_MULTI_REGION_EVIDENCE",
+  "prerequisite": {
+    "phase5": "INDEPENDENT_GATE",
+    "connectorEnablement": "NOT_GRANTED"
+  }
+}

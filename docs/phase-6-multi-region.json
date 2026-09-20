@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "phase": "6",
+  "task": "P6-602",
+  "status": "BLOCKED_BY_LIVE_MULTI_REGION_EVIDENCE",
+  "generatedAt": "2026-09-20T08:47:20.902924Z",
+  "liveTraffic": false,
+  "sourceCommit": "40812abd8d1cf9c9f67ae0a437e75415007dbaf5",
+  "static": {
+    "singleRegionDefault": true,
+    "rpoRtoContract": true,
+    "capacityEvidenceBoundary": true,
+    "mongoNatsBoundary": true,
+    "workflowOwnerBoundary": true,
+    "operatorRunbook": true,
+    "noImplicitPass": true
+  },
+  "missingStatic": [],
+  "live": {
+    "status": "BLOCKED",
+    "reason": "no immutable multi-region capacity/RPO/RTO/cost/signoff report supplied",
+    "report": ""
+  },
+  "decision": {
+    "options": [
+      "SINGLE_REGION_HA",
+      "ACTIVE_PASSIVE_DR",
+      "ACTIVE_ACTIVE"
+    ],
+    "default": "SINGLE_REGION_HA",
+    "goNoGo": "NO_GO_UNTIL_EVIDENCE",
+    "zeroRpoClaim": "FORBIDDEN_WITHOUT_LIVE_PROOF"
+  },
+  "requiredEvidence": [
+    "mixedLoadCapacity",
+    "mongoReplicationAndPitr",
+    "natsStreamReplicationAndReplay",
+    "ownerWorkflowFailover",
+    "rpoMeasurement",
+    "rtoMeasurement",
+    "costModel",
+    "operatorRunbook",
+    "securityAndScopeMatrix",
+    "riskOwnerSignoff"
+  ],
+  "targets": {
+    "rpoMinutes": 15,
+    "rtoMinutes": 60,
+    "measurementRequired": true,
+    "unverifiedAction": "DO_NOT_COMMIT_TO_TARGET"
+  },
+  "boundaries": {
+    "mongo": "OWNER_DATA_AND_RECORD_HUB_DATA_SEPARATE",
+    "nats": "ALLOWLISTED_STREAMS_ONLY",
+    "temporalConductor": "OWNER_FAILOVER_POLICY_REQUIRED",
+    "crossRegionXa": "NOT_ASSUMED",
+    "automaticCompensation": "NOT_ASSUMED"
+  },
+  "goNoGo": "NO_GO",
+  "prerequisite": {
+    "phase5": "INDEPENDENT_GATE",
+    "connectorEnablement": "NOT_GRANTED"
+  },
+  "next": "Measure mixed-load capacity, RPO/RTO, failover, cost and operator recovery in an approved topology, attach owner signoff, then revisit the go/no-go decision."
+}
