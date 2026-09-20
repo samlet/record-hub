@@ -2,7 +2,7 @@
 
 BUILD_DIR := build
 
-.PHONY: p6-600 p6-601 p6-602 p6-closure p6-workflow-evidence p6-nats-event-evidence
+.PHONY: p6-600 p6-601 p6-602 p6-closure p6-workflow-evidence p6-nats-event-evidence p6-event-table-evidence
 BINARY := $(BUILD_DIR)/record-hub
 
 build:
@@ -161,6 +161,9 @@ p6-workflow-evidence:
 
 p6-nats-event-evidence:
 	./scripts/verify-p6-nats-event-evidence.sh
+
+p6-event-table-evidence:
+	./scripts/verify-p6-event-table-evidence.sh
 
 p3-nats-outage-recovery:
 	RECORD_HUB_P3_NATS_RECOVERY_LIVE=1 ./scripts/verify-p3-nats-outage-recovery.sh
