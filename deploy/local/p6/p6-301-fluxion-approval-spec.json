@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "phase": "6",
+  "task": "P6-301",
+  "purpose": "freeze Fluxion low-confidence dispatch approval connector and Temporal receipt boundary",
+  "liveTraffic": false,
+  "failClosed": true,
+  "source": {
+    "owner": "fluxion",
+    "requestSchema": "urn:record-hub:dispatch-approval-request:v1",
+    "resultSchema": "urn:record-hub:dispatch-approval-result:v1",
+    "confidenceTrigger": "below-configured-threshold"
+  },
+  "safeMetadata": ["tenantId", "workspaceId", "projectRef", "workflowRef", "dispatchGeneration", "proposalHash", "snapshotHash", "workerRef", "skill", "scheduledDate"],
+  "forbidden": ["agentPrompt", "rawWorkflowInput", "contactEmail", "phone", "secret", "fullProjectPayload"],
+  "rollout": {
+    "states": ["DISABLED", "CANARY", "ENABLED", "DRAINING"],
+    "scope": "tenant",
+    "fallback": "LOCAL_APPROVER",
+    "unknownTenantAction": "LOCAL_FALLBACK"
+  },
+  "temporalReceipt": {
+    "requiredFields": ["operationId", "externalRequestId", "dispatchGeneration", "decisionVersion", "status", "observedAt"],
+    "updateMode": "IDEMPOTENT_WORKFLOW_UPDATE",
+    "timeoutAction": "RETRY_THEN_RECONCILE"
+  },
+  "liveEvidenceRequired": true,
+  "missingAction": "BLOCKED_BY_LIVE_CONNECTOR",
+  "prerequisite": {
+    "phase5": "INDEPENDENT_GATE",
+    "connectorEnablement": "NOT_GRANTED"
+  }
+}

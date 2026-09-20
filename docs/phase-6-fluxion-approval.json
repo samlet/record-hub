@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "phase": "6",
+  "task": "P6-301",
+  "status": "BLOCKED_BY_LIVE_CONNECTOR",
+  "generatedAt": "2026-09-20T08:18:28.144714Z",
+  "liveTraffic": false,
+  "sourceCommit": "f52047114f44d852ec398575f6f35ea3f0fcc343",
+  "static": {
+    "requestContract": true,
+    "resultContract": true,
+    "outbox": true,
+    "temporalUpdate": true,
+    "localFallback": true
+  },
+  "missingStatic": [],
+  "live": {
+    "status": "BLOCKED",
+    "reason": "no immutable Fluxion native connector report supplied",
+    "report": ""
+  },
+  "source": {
+    "owner": "fluxion",
+    "requestSchema": "urn:record-hub:dispatch-approval-request:v1",
+    "resultSchema": "urn:record-hub:dispatch-approval-result:v1",
+    "confidenceTrigger": "below-configured-threshold"
+  },
+  "safeMetadata": [
+    "tenantId",
+    "workspaceId",
+    "projectRef",
+    "workflowRef",
+    "dispatchGeneration",
+    "proposalHash",
+    "snapshotHash",
+    "workerRef",
+    "skill",
+    "scheduledDate"
+  ],
+  "forbidden": [
+    "agentPrompt",
+    "rawWorkflowInput",
+    "contactEmail",
+    "phone",
+    "secret",
+    "fullProjectPayload"
+  ],
+  "rollout": {
+    "states": [
+      "DISABLED",
+      "CANARY",
+      "ENABLED",
+      "DRAINING"
+    ],
+    "scope": "tenant",
+    "fallback": "LOCAL_APPROVER",
+    "unknownTenantAction": "LOCAL_FALLBACK"
+  },
+  "temporalReceipt": {
+    "requiredFields": [
+      "operationId",
+      "externalRequestId",
+      "dispatchGeneration",
+      "decisionVersion",
+      "status",
+      "observedAt"
+    ],
+    "updateMode": "IDEMPOTENT_WORKFLOW_UPDATE",
+    "timeoutAction": "RETRY_THEN_RECONCILE"
+  },
+  "decision": "DO_NOT_ENABLE_FLUXION_APPROVAL",
+  "prerequisite": {
+    "phase5": "INDEPENDENT_GATE",
+    "connectorEnablement": "NOT_GRANTED"
+  },
+  "next": "Run tenant-canary native Fluxion approval with Temporal update receipt, local fallback and rollback evidence."
+}
