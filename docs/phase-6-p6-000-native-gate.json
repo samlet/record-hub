@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "phase": "6",
+  "task": "P6-000",
+  "gate": "native-topology",
+  "generatedAt": "2026-09-20T13:52:44Z",
+  "liveTraffic": false,
+  "topology": {
+    "status": "PASS",
+    "runner": "make p5-topology-live",
+    "evidence": "build/evidence/phase5/native-topology-20260920T135149Z-81111/p5-native-topology.json",
+    "static": {
+      "nativeToolchain": "PASS",
+      "ownerRepositories": "PASS",
+      "isolatedContract": "PASS",
+      "artifactAndMinioReadiness": "PASS",
+      "noGAOverclaim": "PASS",
+      "ownerCommitBoundary": "PASS"
+    },
+    "liveStatus": "PASS",
+    "meaning": "isolated four-owner readiness only; not P4-501 or Phase 5 GA evidence"
+  },
+  "prerequisite": {
+    "p4-501": {
+      "status": "BLOCKED",
+      "evidence": "build/evidence/phase4/p6-000/batch5-20260920T135436Z-82928/batch5.json",
+      "liveCases": {
+        "P4-G1": "SKIPPED",
+        "P4-G2": "SKIPPED",
+        "P4-G3": "SKIPPED",
+        "P4-G4": "SKIPPED",
+        "P4-G5": "SKIPPED"
+      },
+      "reason": "approved isolated rotation/restore/load/rollback harness and operator credential/artifact inputs are not installed"
+    },
+    "p5-002": {
+      "status": "BLOCKED_BY_P4",
+      "evidence": "build/evidence/phase5/p6-000/p5-002/p5-002.json"
+    },
+    "p5-500": {
+      "status": "BLOCKED",
+      "decision": "DO_NOT_CREATE_GA_CANDIDATE",
+      "evidence": "build/evidence/phase5/p6-000/p5-500/p5-500.json"
+    },
+    "p5-501": {
+      "status": "BLOCKED",
+      "decision": "DO_NOT_ROLLOUT",
+      "evidence": "build/evidence/phase5/p6-000/p5-501/p5-501.json"
+    }
+  },
+  "status": "BLOCKED_BY_P5",
+  "decision": "DO_NOT_START_P6_LIVE_CONNECTORS",
+  "next": "Complete and attach immutable P4-501 P4-G1..P4-G5 live PASS evidence, then rerun P5-002 and the Phase 5 G1..G7/signoff gates."
+}
