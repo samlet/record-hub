@@ -3,9 +3,9 @@
   "phase": "6",
   "task": "P6-202",
   "status": "PASS_STATIC",
-  "generatedAt": "2026-09-20T13:41:26.636631Z",
+  "generatedAt": "2026-09-20T13:42:13.823919Z",
   "liveTraffic": false,
-  "sourceCommit": "a2118d6df5c33ab1ab76788e7ea8e58b96a757b1",
+  "sourceCommit": "b4257f24062d142b1fc6b91ee42ea14ebb358036",
   "static": {
     "oidcBoundary": "PASS",
     "exactPolicy": "PASS",
@@ -64,5 +64,5 @@
     "phase5": "INDEPENDENT_GATE",
     "connectorEnablement": "NOT_GRANTED"
   },
-  "next": "Implement owner-scoped candidate/dual-accept/drain/revoke state and audited fixtures, then rerun this gate."
+  "next": "Run the isolated four-owner credential rotation/drain/revoke fixture with immutable audit evidence; do not enable owner credentials until the live gate passes."
 }

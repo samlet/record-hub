@@ -3,9 +3,9 @@
   "phase": "6",
   "task": "P6-CLOSURE",
   "status": "PASS_STATIC_WITH_BLOCKERS",
-  "generatedAt": "2026-09-20T13:35:03.087373Z",
+  "generatedAt": "2026-09-20T13:42:13.890698Z",
   "liveTraffic": false,
-  "sourceCommit": "3e9a486e07e446e2161617e833eefcdb38171712",
+  "sourceCommit": "b4257f24062d142b1fc6b91ee42ea14ebb358036",
   "sourceOfTruth": "docs/phase-6-task-breakdown.md",
   "counts": {
     "DONE": 7,
@@ -75,7 +75,7 @@
     {
       "task": "P6-202",
       "breakdownStatus": "BLOCKED_BY_IDENTITY_LIFECYCLE_GAP",
-      "reportStatus": "BLOCKED_BY_IDENTITY_LIFECYCLE_GAP",
+      "reportStatus": "PASS_STATIC",
       "file": "docs/phase-6-workload-identity.json"
     },
     {
