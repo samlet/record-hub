@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "phase": "6",
+  "task": "P6-201",
+  "purpose": "audit typed-ref, command/result, receipt and error parity across the four owners",
+  "liveTraffic": false,
+  "failClosed": true,
+  "mode": "SOURCE_MARKER_INVENTORY_ONLY",
+  "facets": {
+    "typedRef": ["RecordRef", "recordRef", "ProjectRef", "typed ref"],
+    "commandResult": ["CommandResult", "commandResult", "command_result"],
+    "receipt": ["Receipt", "receipt", "Idempotency", "idempotency"],
+    "errors": ["ApiError", "ErrorCode", "ContractException", "error code"]
+  },
+  "systems": [
+    {
+      "owner": "record-hub",
+      "language": "go",
+      "path": "sdk/go/recordhub",
+      "required": true
+    },
+    {
+      "owner": "record-hub",
+      "language": "java",
+      "path": "sdk/java/src/main/java",
+      "required": true
+    },
+    {
+      "owner": "record-hub",
+      "language": "typescript",
+      "path": "sdk/typescript",
+      "required": true
+    },
+    {
+      "owner": "approver",
+      "language": "java",
+      "path": "approver-application/src/main/java",
+      "required": true
+    },
+    {
+      "owner": "fluxion",
+      "language": "kotlin",
+      "path": "server/src/main/kotlin/fluxion/recordhub",
+      "required": true
+    },
+    {
+      "owner": "bids",
+      "language": "go",
+      "path": "backend/internal/recordhub",
+      "required": true
+    },
+    {
+      "owner": "bids",
+      "language": "java",
+      "path": "sdk/bids-java-sdk-core/src/main/java",
+      "required": true
+    }
+  ],
+  "missingAction": "BLOCKED_BY_SDK_GAP",
+  "prerequisite": {
+    "phase5": "INDEPENDENT_GATE",
+    "connectorEnablement": "NOT_GRANTED"
+  }
+}

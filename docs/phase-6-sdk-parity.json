@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 1,
+  "phase": "6",
+  "task": "P6-201",
+  "status": "BLOCKED_BY_SDK_GAP",
+  "generatedAt": "2026-09-20T08:04:06.623938Z",
+  "liveTraffic": false,
+  "sourceCommit": "74e418a57443fc88747828624fa7ff677b26e4fd",
+  "mode": "SOURCE_MARKER_INVENTORY_ONLY",
+  "facets": [
+    "typedRef",
+    "commandResult",
+    "receipt",
+    "errors"
+  ],
+  "systems": [
+    {
+      "owner": "record-hub",
+      "language": "go",
+      "path": "sdk/go/recordhub",
+      "exists": true,
+      "sourceFiles": 3,
+      "facets": {
+        "typedRef": true,
+        "commandResult": false,
+        "receipt": true,
+        "errors": true
+      }
+    },
+    {
+      "owner": "record-hub",
+      "language": "java",
+      "path": "sdk/java/src/main/java",
+      "exists": true,
+      "sourceFiles": 1,
+      "facets": {
+        "typedRef": true,
+        "commandResult": false,
+        "receipt": true,
+        "errors": false
+      }
+    },
+    {
+      "owner": "record-hub",
+      "language": "typescript",
+      "path": "sdk/typescript",
+      "exists": false,
+      "sourceFiles": 0,
+      "facets": {
+        "typedRef": false,
+        "commandResult": false,
+        "receipt": false,
+        "errors": false
+      }
+    },
+    {
+      "owner": "approver",
+      "language": "java",
+      "path": "approver-application/src/main/java",
+      "exists": true,
+      "sourceFiles": 169,
+      "facets": {
+        "typedRef": false,
+        "commandResult": true,
+        "receipt": true,
+        "errors": true
+      }
+    },
+    {
+      "owner": "fluxion",
+      "language": "kotlin",
+      "path": "server/src/main/kotlin/fluxion/recordhub",
+      "exists": true,
+      "sourceFiles": 9,
+      "facets": {
+        "typedRef": true,
+        "commandResult": true,
+        "receipt": true,
+        "errors": true
+      }
+    },
+    {
+      "owner": "bids",
+      "language": "go",
+      "path": "backend/internal/recordhub",
+      "exists": true,
+      "sourceFiles": 8,
+      "facets": {
+        "typedRef": true,
+        "commandResult": true,
+        "receipt": true,
+        "errors": true
+      }
+    },
+    {
+      "owner": "bids",
+      "language": "java",
+      "path": "sdk/bids-java-sdk-core/src/main/java",
+      "exists": true,
+      "sourceFiles": 67,
+      "facets": {
+        "typedRef": false,
+        "commandResult": false,
+        "receipt": true,
+        "errors": true
+      }
+    }
+  ],
+  "missing": [
+    {
+      "owner": "record-hub",
+      "language": "go",
+      "path": "sdk/go/recordhub",
+      "facet": "commandResult"
+    },
+    {
+      "owner": "record-hub",
+      "language": "java",
+      "path": "sdk/java/src/main/java",
+      "facet": "commandResult"
+    },
+    {
+      "owner": "record-hub",
+      "language": "java",
+      "path": "sdk/java/src/main/java",
+      "facet": "errors"
+    },
+    {
+      "owner": "record-hub",
+      "language": "typescript",
+      "path": "sdk/typescript",
+      "facet": "typedRef"
+    },
+    {
+      "owner": "record-hub",
+      "language": "typescript",
+      "path": "sdk/typescript",
+      "facet": "commandResult"
+    },
+    {
+      "owner": "record-hub",
+      "language": "typescript",
+      "path": "sdk/typescript",
+      "facet": "receipt"
+    },
+    {
+      "owner": "record-hub",
+      "language": "typescript",
+      "path": "sdk/typescript",
+      "facet": "errors"
+    },
+    {
+      "owner": "approver",
+      "language": "java",
+      "path": "approver-application/src/main/java",
+      "facet": "typedRef"
+    },
+    {
+      "owner": "bids",
+      "language": "java",
+      "path": "sdk/bids-java-sdk-core/src/main/java",
+      "facet": "typedRef"
+    },
+    {
+      "owner": "bids",
+      "language": "java",
+      "path": "sdk/bids-java-sdk-core/src/main/java",
+      "facet": "commandResult"
+    }
+  ],
+  "decision": "DO_NOT_RELEASE_SDK_PARITY",
+  "prerequisite": {
+    "phase5": "INDEPENDENT_GATE",
+    "connectorEnablement": "NOT_GRANTED"
+  },
+  "next": "Add the missing typed-ref/command-result/receipt/error facets in owner SDKs, then rerun this inventory and add compile/contract evidence."
+}
