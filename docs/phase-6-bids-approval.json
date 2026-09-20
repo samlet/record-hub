@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "phase": "6",
+  "task": "P6-302",
+  "status": "BLOCKED_BY_LIVE_CONNECTOR",
+  "generatedAt": "2026-09-20T08:20:59.775901Z",
+  "liveTraffic": false,
+  "sourceCommit": "6f51bf07d5c13f0532c905611c69ae42c6224058",
+  "static": {
+    "approvalContract": true,
+    "resultService": true,
+    "conductorTasks": true,
+    "outbox": true,
+    "redaction": true
+  },
+  "missingStatic": [],
+  "live": {
+    "status": "BLOCKED",
+    "reason": "no immutable Bids native Conductor report supplied",
+    "report": ""
+  },
+  "source": {
+    "owner": "bids",
+    "requestSchema": "bids.tender-publication-approval.request.v1",
+    "resultSchema": "bids.tender-publication-approval.result.v1",
+    "scopeField": "organizationId"
+  },
+  "safeMetadata": [
+    "organizationId",
+    "tenderRef",
+    "tenderName",
+    "businessType",
+    "templateVersion",
+    "workflowRef",
+    "approvalGeneration",
+    "proposalHash",
+    "sourceVersion"
+  ],
+  "forbidden": [
+    "sealedBid",
+    "quote",
+    "bankAccount",
+    "invoiceAttachment",
+    "supplierPrivateData",
+    "rawTenderPayload"
+  ],
+  "conductor": {
+    "taskRefs": [
+      "prepare_tender",
+      "tender_approval",
+      "publish_tender"
+    ],
+    "completionMode": "APPROVAL_RESULT_WITH_GENERATION_AND_EXPECTED_VERSION",
+    "publishPrecondition": "APPROVED_ONLY",
+    "timeoutAction": "RETRY_THEN_DRAIN",
+    "unknownTaskAction": "REJECT"
+  },
+  "rollout": {
+    "states": [
+      "DISABLED",
+      "CANARY",
+      "ENABLED",
+      "DRAINING"
+    ],
+    "fallback": "KEEP_TENDER_UNPUBLISHED"
+  },
+  "decision": "DO_NOT_COMPLETE_BIDS_PUBLISH_TASK",
+  "prerequisite": {
+    "phase5": "INDEPENDENT_GATE",
+    "connectorEnablement": "NOT_GRANTED"
+  },
+  "next": "Run isolated Bids Conductor approval with approved-only publish, drain and rollback evidence."
+}

@@ -34,7 +34,7 @@ Phase 6 只在 Phase 5 GA 前置完成后进入 live implementation；当前先�
 | --- | --- | --- | --- | --- |
 | P6-300 | Approver/Record Hub | Application/Process 安全投影 | allowlist schema、association、reconciliation；[Approver projection](phase-6-approver-projection.json) 缺 native live evidence | BLOCKED_BY_LIVE_CONNECTOR |
 | P6-301 | Fluxion | 低置信度派单审批 connector | tenant rollout、local fallback、Temporal update receipt；[Fluxion approval](phase-6-fluxion-approval.json) 缺 native live evidence | BLOCKED_BY_LIVE_CONNECTOR |
-| P6-302 | Bids | 招标准备发布审批 connector | safe metadata、Conductor task completion、drain | TODO |
+| P6-302 | Bids | 招标准备发布审批 connector | safe metadata、Conductor task completion、drain；[Bids approval](phase-6-bids-approval.json) 缺 native live evidence | BLOCKED_BY_LIVE_CONNECTOR |
 | P6-303 | Approver/Settlement | Settlement confirmation safe association | request/result/Apply boundary、redaction | TODO |
 
 ## Batch 4：Workflow binding 与 event bus

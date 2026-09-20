@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "phase": "6",
+  "task": "P6-302",
+  "purpose": "freeze Bids tender preparation publication approval and Conductor completion boundary",
+  "liveTraffic": false,
+  "failClosed": true,
+  "source": {"owner": "bids", "requestSchema": "bids.tender-publication-approval.request.v1", "resultSchema": "bids.tender-publication-approval.result.v1", "scopeField": "organizationId"},
+  "safeMetadata": ["organizationId", "tenderRef", "tenderName", "businessType", "templateVersion", "workflowRef", "approvalGeneration", "proposalHash", "sourceVersion"],
+  "forbidden": ["sealedBid", "quote", "bankAccount", "invoiceAttachment", "supplierPrivateData", "rawTenderPayload"],
+  "conductor": {
+    "taskRefs": ["prepare_tender", "tender_approval", "publish_tender"],
+    "completionMode": "APPROVAL_RESULT_WITH_GENERATION_AND_EXPECTED_VERSION",
+    "publishPrecondition": "APPROVED_ONLY",
+    "timeoutAction": "RETRY_THEN_DRAIN",
+    "unknownTaskAction": "REJECT"
+  },
+  "rollout": {"states": ["DISABLED", "CANARY", "ENABLED", "DRAINING"], "fallback": "KEEP_TENDER_UNPUBLISHED"},
+  "liveEvidenceRequired": true,
+  "missingAction": "BLOCKED_BY_LIVE_CONNECTOR",
+  "prerequisite": {"phase5": "INDEPENDENT_GATE", "connectorEnablement": "NOT_GRANTED"}
+}
