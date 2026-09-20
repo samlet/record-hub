@@ -3,9 +3,9 @@
   "phase": "6",
   "task": "P6-202",
   "status": "BLOCKED_BY_IDENTITY_LIFECYCLE_GAP",
-  "generatedAt": "2026-09-20T08:07:46.988787Z",
+  "generatedAt": "2026-09-20T13:15:44.296014Z",
   "liveTraffic": false,
-  "sourceCommit": "5a69a40d39e1295441a97d21bfb0b27fe0c3f66f",
+  "sourceCommit": "0ca93e9490070e99f280f3fbeffc736231d40e9d",
   "static": {
     "oidcBoundary": "PASS",
     "exactPolicy": "PASS",

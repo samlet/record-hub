@@ -3,9 +3,9 @@
   "phase": "6",
   "task": "P6-201",
   "status": "BLOCKED_BY_SDK_GAP",
-  "generatedAt": "2026-09-20T08:04:06.623938Z",
+  "generatedAt": "2026-09-20T13:15:44.180199Z",
   "liveTraffic": false,
-  "sourceCommit": "74e418a57443fc88747828624fa7ff677b26e4fd",
+  "sourceCommit": "0ca93e9490070e99f280f3fbeffc736231d40e9d",
   "mode": "SOURCE_MARKER_INVENTORY_ONLY",
   "facets": [
     "typedRef",
