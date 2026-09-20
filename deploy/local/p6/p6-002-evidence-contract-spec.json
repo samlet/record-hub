@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "phase": "6",
+  "task": "P6-002",
+  "purpose": "define immutable evidence fields for connector, schema and workflow expansion",
+  "requiredFields": [
+    "task",
+    "ownerSystems",
+    "sourceCommits",
+    "contractDigests",
+    "fixtureDigests",
+    "redactionScan",
+    "scopeMatrix",
+    "failureMatrix",
+    "rollback",
+    "operatorAudit",
+    "topology",
+    "generatedAt",
+    "status"
+  ],
+  "forbiddenStatuses": ["SKIPPED", "PARTIAL", "UNVERIFIED", "PENDING"],
+  "liveTraffic": false,
+  "failClosed": true,
+  "notes": [
+    "Evidence is an assertion envelope, not a production approval.",
+    "Sensitive payloads, tokens, PII and complete workflow snapshots are forbidden in evidence."
+  ]
+}

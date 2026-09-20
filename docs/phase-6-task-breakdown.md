@@ -8,7 +8,7 @@ Phase 6 只在 Phase 5 GA 前置完成后进入 live implementation；当前先�
 | --- | --- | --- | --- | --- |
 | P6-000 | 四仓库 | 依赖与 owner 清单 | Phase 5 PASS、owner signoff、真实 topology 前置 | BLOCKED_BY_P5 |
 | P6-001 | 四仓库 | connector/schema inventory | [inventory](phase-6-connector-schema-inventory.json)；113 项 source asset、owner/schemaVersion/SHA-256 矩阵已冻结 | DONE |
-| P6-002 | Record Hub | Phase 6 evidence contract | digest、fixture、redaction、rollback、audit 模板 | TODO |
+| P6-002 | Record Hub | Phase 6 evidence contract | [evidence contract](phase-6-evidence-contract.json)；digest、fixture、redaction、rollback、audit 模板 | IN_PROGRESS |
 
 ## Batch 1：多维表格增强
 

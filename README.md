@@ -83,6 +83,7 @@ HTTP 契约以 [`api/openapi.yaml`](api/openapi.yaml) 为准。`make generate-cl
 - [Phase 6 任务分解](docs/phase-6-task-breakdown.md)
 - [Phase 6 验收计划](docs/phase-6-acceptance-plan.md)
 - [Phase 6 Batch 0 P6-001 inventory](docs/phase-6-batch0-p6-001.md)
+- [Phase 6 Batch 0 P6-002 evidence contract](docs/phase-6-batch0-p6-002.md)
 - [原生隔离验收拓扑](deploy/local/isolated/README.md)
 - [参考资料](docs/references.md)
 - [ADR-0001：独立仓库与事实所有权](docs/adr/0001-independent-service-and-data-ownership.md)
