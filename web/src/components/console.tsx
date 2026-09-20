@@ -6,6 +6,7 @@ import {
   ApiError,
   items,
   OperationsSnapshot,
+  ControlledTag,
   RecordRelation,
   RecordItem,
   SchemaCompatibilityReport,
@@ -13,6 +14,7 @@ import {
   SchemaSummary,
   TenderApplicationAssociation,
   TableDefinition,
+  TagDictionary,
   ViewFilter,
   ViewDefinition,
   Workspace,
@@ -110,6 +112,12 @@ function parseRelationsDraft(raw: string): RecordRelation[] {
   });
 }
 
+function parseTagDictionaryDraft(raw: string): ControlledTag[] {
+  const parsed: unknown = JSON.parse(raw.trim() || "[]");
+  if (!Array.isArray(parsed)) throw new Error("标签字典必须是 JSON 数组");
+  return parsed as ControlledTag[];
+}
+
 function formFromView(view: ViewDefinition): ViewForm {
   return {
     id: view.id,
@@ -137,6 +145,8 @@ export function Console() {
   const [tables, setTables] = useState<TableDefinition[]>([]);
   const [tableId, setTableId] = useState("");
   const [records, setRecords] = useState<RecordItem[]>([]);
+  const [tagDictionary, setTagDictionary] = useState<TagDictionary | null>(null);
+  const [tagDictionaryForm, setTagDictionaryForm] = useState("[]");
   const [tableSchema, setTableSchema] = useState<SchemaDefinition | null>(null);
   const [editingRecord, setEditingRecord] = useState<RecordItem | null>(null);
   const [views, setViews] = useState<ViewDefinition[]>([]);
@@ -276,6 +286,20 @@ export function Console() {
       ),
     );
   }, [tenantId, workspaceId, tableId, viewId, authenticated, tab]);
+
+  useEffect(() => {
+    if (!tenantId || !workspaceId || !tableId || authenticated !== true || tab !== "records") {
+      setTagDictionary(null);
+      setTagDictionaryForm("[]");
+      return;
+    }
+    void run(async () => {
+      const next = items((await api.tagDictionaries(tenantId, workspaceId, tableId)).body);
+      const selected = next[next.length - 1] ?? null;
+      setTagDictionary(selected);
+      setTagDictionaryForm(JSON.stringify(selected?.entries ?? [], null, 2));
+    });
+  }, [tenantId, workspaceId, tableId, authenticated, tab]);
 
   async function run(action: () => Promise<void>) {
     setBusy(true);
@@ -532,6 +556,9 @@ export function Console() {
               setTableForm={setTableForm}
               recordForm={recordForm}
               setRecordForm={setRecordForm}
+              tagDictionary={tagDictionary}
+              tagDictionaryForm={tagDictionaryForm}
+              setTagDictionaryForm={setTagDictionaryForm}
               onTableChange={setTableId}
               onViewChange={setViewId}
               onEditView={() => {
@@ -629,6 +656,22 @@ export function Console() {
                   });
                   setRecords((current) => [created.body, ...current]);
                   setRecordForm({ id: "", tags: "", relations: "[]", data: "{}" });
+                })
+              }
+              onSaveTagDictionary={(event) =>
+                submit(event, async () => {
+                  if (!tableId) return;
+                  const saved = await api.saveTagDictionary(
+                    {
+                      tenantId,
+                      workspaceId,
+                      tableId,
+                      entries: parseTagDictionaryDraft(tagDictionaryForm),
+                    },
+                    tagDictionary?.revision,
+                  );
+                  setTagDictionary(saved.body);
+                  setTagDictionaryForm(JSON.stringify(saved.body.entries, null, 2));
                 })
               }
               editingRecord={editingRecord}
@@ -866,6 +909,9 @@ function RecordsPanel(props: {
   }) => void;
   recordForm: { id: string; tags: string; relations: string; data: string };
   setRecordForm: (value: { id: string; tags: string; relations: string; data: string }) => void;
+  tagDictionary: TagDictionary | null;
+  tagDictionaryForm: string;
+  setTagDictionaryForm: (value: string) => void;
   editingRecord: RecordItem | null;
   onEditRecord: (record: RecordItem) => void;
   onCancelEdit: () => void;
@@ -878,6 +924,7 @@ function RecordsPanel(props: {
   onCreateView: (event: FormEvent) => void;
   onCreateTable: (event: FormEvent) => void;
   onCreateRecord: (event: FormEvent) => void;
+  onSaveTagDictionary: (event: FormEvent) => void;
 }) {
   const {
     tenantId,
@@ -896,6 +943,9 @@ function RecordsPanel(props: {
     setTableForm,
     recordForm,
     setRecordForm,
+    tagDictionary,
+    tagDictionaryForm,
+    setTagDictionaryForm,
     editingRecord,
     onEditRecord,
     onCancelEdit,
@@ -908,6 +958,7 @@ function RecordsPanel(props: {
     onCreateView,
     onCreateTable,
     onCreateRecord,
+    onSaveTagDictionary,
   } = props;
 
   const selectedView = useMemo(
@@ -1086,6 +1137,24 @@ function RecordsPanel(props: {
               </button>
             )}
           </div>
+        </form>
+        <form className="inline-form" onSubmit={onSaveTagDictionary}>
+          <h3>受控标签字典</h3>
+          <p className="muted">
+            当前表格的 workspace-scope 字典；写入记录时会拒绝未知或互斥 tag。
+            {tagDictionary ? ` revision ${tagDictionary.revision}` : " 尚未配置"}
+          </p>
+          <textarea
+            className="code-input"
+            rows={7}
+            aria-label="controlled tag dictionary"
+            placeholder={'例如 [{"id":"approval.pending","label":"Pending","group":"approval-state","scope":"workspace","active":true}]'}
+            value={tagDictionaryForm}
+            onChange={(event) => setTagDictionaryForm(event.target.value)}
+          />
+          <button className="secondary-button" disabled={!tableId}>
+            保存标签字典
+          </button>
         </form>
         <form className="inline-form" onSubmit={onCreateView}>
           <div className="view-builder-heading">

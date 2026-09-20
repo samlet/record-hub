@@ -43,6 +43,22 @@ export type RecordRelation = {
   status: RelationStatus;
 };
 
+export type ControlledTag = {
+  id: string;
+  label: string;
+  group: string;
+  scope: "tenant" | "workspace" | "table";
+  active: boolean;
+};
+
+export type TagDictionary = {
+  tenantId: string;
+  workspaceId: string;
+  tableId?: string;
+  revision: number;
+  entries: ControlledTag[];
+};
+
 export type ViewDefinition = {
   id: string;
   tenantId: string;
@@ -337,6 +353,25 @@ export const api = {
     request<RecordItem>(`/api/v1/records/${encodeURIComponent(recordId)}`, {
       method: "PATCH",
       headers: { "If-Match": `"${version}"` },
+      body: JSON.stringify(input),
+    }),
+  tagDictionaries: (tenantId: string, workspaceId: string, tableId?: string) =>
+    request<{ items: TagDictionary[] }>(
+      `/api/v1/tag-dictionaries?tenantId=${encodeURIComponent(tenantId)}&workspaceId=${encodeURIComponent(workspaceId)}${tableId ? `&tableId=${encodeURIComponent(tableId)}` : ""}`,
+    ),
+  saveTagDictionary: (
+    input: {
+      tenantId: string;
+      workspaceId: string;
+      tableId?: string;
+      revision?: number;
+      entries: ControlledTag[];
+    },
+    expectedRevision?: number,
+  ) =>
+    request<TagDictionary>("/api/v1/tag-dictionaries", {
+      method: "PUT",
+      headers: expectedRevision ? { "If-Match": `"${expectedRevision}"` } : {},
       body: JSON.stringify(input),
     }),
   deleteRecord: (record: {
