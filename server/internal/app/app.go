@@ -109,6 +109,10 @@ func New(cfg config.Config, logger *slog.Logger) *App {
 		if runtime.associations != nil {
 			mux.Handle("/api/v1/associations/", runtime.associations)
 		}
+		if runtime.onboarding != nil {
+			mux.Handle("/api/v1/connectors/onboarding", runtime.onboarding)
+			mux.Handle("/api/v1/connectors/onboarding/", runtime.onboarding)
+		}
 		mux.Handle("/", resourceHandler)
 		handler := observability.HTTPMiddleware(metrics, observability.RateLimitMiddleware(limiter, mux))
 		if webMiddleware != nil {

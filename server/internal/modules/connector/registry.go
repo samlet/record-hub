@@ -32,8 +32,11 @@ type Status string
 
 const (
 	StatusDraft      Status = "DRAFT"
+	StatusInReview   Status = "IN_REVIEW"
+	StatusApproved   Status = "APPROVED"
 	StatusEnabled    Status = "ENABLED"
 	StatusDisabled   Status = "DISABLED"
+	StatusRejected   Status = "REJECTED"
 	StatusDeprecated Status = "DEPRECATED"
 )
 
@@ -98,15 +101,18 @@ func (version Version) compare(other Version) int {
 }
 
 type Manifest struct {
-	Key              Key      `json:"key"`
-	OwnerSystem      string   `json:"ownerSystem"`
-	SDKVersion       string   `json:"sdkVersion"`
-	CompatibilityMin string   `json:"compatibilityMin"`
-	CompatibilityMax string   `json:"compatibilityMax"`
-	ContractHash     string   `json:"contractHash"`
-	AllowedFields    []string `json:"allowedFields"`
-	Status           Status   `json:"status"`
-	Revision         int64    `json:"revision"`
+	Key                   Key      `json:"key"`
+	OwnerSystem           string   `json:"ownerSystem"`
+	SDKVersion            string   `json:"sdkVersion"`
+	CompatibilityMin      string   `json:"compatibilityMin"`
+	CompatibilityMax      string   `json:"compatibilityMax"`
+	ContractHash          string   `json:"contractHash"`
+	AllowedFields         []string `json:"allowedFields"`
+	FixtureDigest         string   `json:"fixtureDigest,omitempty"`
+	RedactionPolicyDigest string   `json:"redactionPolicyDigest,omitempty"`
+	SourceCommit          string   `json:"sourceCommit,omitempty"`
+	Status                Status   `json:"status"`
+	Revision              int64    `json:"revision"`
 }
 
 func (manifest Manifest) normalized() (Manifest, error) {
@@ -152,7 +158,7 @@ func (manifest Manifest) normalized() (Manifest, error) {
 		manifest.Status = StatusDraft
 	}
 	switch manifest.Status {
-	case StatusDraft, StatusEnabled, StatusDisabled, StatusDeprecated:
+	case StatusDraft, StatusInReview, StatusApproved, StatusEnabled, StatusDisabled, StatusRejected, StatusDeprecated:
 	default:
 		return Manifest{}, fmt.Errorf("%w: unknown status", ErrInvalidManifest)
 	}

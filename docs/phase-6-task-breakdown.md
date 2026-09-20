@@ -51,7 +51,7 @@ Phase 6 只在 Phase 5 GA 前置完成后进入 live implementation；当前先�
 | ID | 范围 | 任务 | 交付物 | 状态 |
 | --- | --- | --- | --- | --- |
 | P6-500 | Web/API | table/schema/tag/relation console | [control-plane contract](phase-6-control-plane.json)；tag dictionary Mongo/CAS API、RBAC、assignment 校验、relation/tag console、bounded redacted export receipt 已接入，仍需完整 live role/negative/browser matrix 与 Phase 5 gate | BLOCKED_BY_CONTROL_PLANE_GAP |
-| P6-501 | Web/API | connector onboarding workflow | [onboarding contract](phase-6-connector-onboarding.json)；registry/manifest 已存在，自助 onboarding API/console 缺失 | BLOCKED_BY_ONBOARDING_API_GAP |
+| P6-501 | Web/API | connector onboarding workflow | [onboarding contract](phase-6-connector-onboarding.json)；scoped upload/list、CAS review/approval API、evidence audit 和 Web console 已接入，当前 store 为进程内实现，live enable 仍受门禁 | BLOCKED_BY_ONBOARDING_API_GAP |
 | P6-502 | Ops | observation/reconciliation dashboard | [observation contract](phase-6-observation-dashboard.json)；operations/retry/rebuild 基础存在，finding/reconciliation signal 缺失 | BLOCKED_BY_OBSERVABILITY_GAP |
 | P6-503 | Ops | operator runbook and rollback | [operator runbook contract](phase-6-operator-runbook.json)；静态 procedure 已固化，缺 native rollback drill evidence | BLOCKED_BY_LIVE_ROLLBACK_EVIDENCE |
 

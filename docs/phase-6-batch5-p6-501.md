@@ -8,6 +8,8 @@ contract/fixture/redaction/source commit digest；提交者、独立 reviewer �
 机器可读 contract 位于 [`p6-501-connector-onboarding-spec.json`](../deploy/local/p6/p6-501-connector-onboarding-spec.json)，
 验收结果位于 [`phase-6-connector-onboarding.json`](phase-6-connector-onboarding.json)。入口是 `make p6-501`。
 
-当前静态 inventory 确认 registry、manifest、exact-key lifecycle 和 evidence contract 已存在；
-但 scoped onboarding API 与 console review/approval 入口尚未实现，故状态为
-`BLOCKED_BY_ONBOARDING_API_GAP`，不允许启用 self-service connector，也不改变 P6-000 前置门禁。
+当前已补齐 scoped onboarding upload/list API、DRAFT→IN_REVIEW→APPROVED→ENABLED 的 CAS
+状态机、独立 reviewer/owner approver、证据校验、immutable audit，以及 Web review/approval
+console；`make p6-501` 静态结果为 `PASS_STATIC`。实现仍使用本地进程内 onboarding store，未
+提供生产持久化/多副本协调，也未解除 P6-000、Phase 5 或 connector live enable gate，因此不
+允许真实 connector 流量。

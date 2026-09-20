@@ -15,6 +15,7 @@ tags:
   - name: Projection Catalog
   - name: Operations
   - name: Associations
+  - name: Connectors
   - name: Bindings
   - name: Commands
 paths:
@@ -459,6 +460,57 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TagDictionary"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/v1/connectors/onboarding:
+    get:
+      tags: [Connectors]
+      operationId: listConnectorOnboarding
+      summary: List scoped connector onboarding records for independent review
+      parameters:
+        - $ref: "#/components/parameters/TenantIdQuery"
+        - $ref: "#/components/parameters/WorkspaceIdQuery"
+      responses:
+        "200":
+          description: Redacted onboarding metadata.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ConnectorOnboardingRecord"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Connectors]
+      operationId: uploadConnectorOnboarding
+      summary: Upload an owner-scoped connector manifest as DRAFT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorOnboardingUploadRequest"
+      responses:
+        "201":
+          description: Draft onboarding record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorOnboardingRecord"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -2166,6 +2218,42 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TagDictionary"
+    ConnectorOnboardingUploadRequest:
+      type: object
+      additionalProperties: false
+      required: [tenantId, workspaceId, connector, event, schemaVersion, ownerSystem, sdkVersion, compatibilityMin, compatibilityMax, contractHash, allowedFields, fixtureDigest, redactionPolicyDigest, sourceCommit]
+      properties:
+        tenantId: {type: string, minLength: 1, maxLength: 128}
+        workspaceId: {type: string, minLength: 1, maxLength: 128}
+        connector: {type: string, pattern: "^[a-z][a-z0-9.-]{0,63}$"}
+        event: {type: string, pattern: "^[a-z][a-z0-9.-]{0,63}$"}
+        schemaVersion: {type: integer, minimum: 1}
+        ownerSystem: {type: string, pattern: "^[a-z][a-z0-9.-]{0,63}$"}
+        sdkVersion: {type: string, pattern: "^[0-9]+\\.[0-9]+\\.[0-9]+$"}
+        compatibilityMin: {type: string, pattern: "^[0-9]+\\.[0-9]+\\.[0-9]+$"}
+        compatibilityMax: {type: string, pattern: "^[0-9]+\\.[0-9]+\\.[0-9]+$"}
+        contractHash: {type: string, pattern: "^sha256:[a-f0-9]{64}$"}
+        allowedFields: {type: array, minItems: 1, items: {type: string}}
+        fixtureDigest: {type: string, pattern: "^sha256:[a-f0-9]{64}$"}
+        redactionPolicyDigest: {type: string, pattern: "^sha256:[a-f0-9]{64}$"}
+        sourceCommit: {type: string, pattern: "^[a-f0-9]{7,64}$"}
+    ConnectorOnboardingRecord:
+      type: object
+      additionalProperties: false
+      required: [tenantId, workspaceId, manifest, evidence, submitter, createdAt, updatedAt]
+      properties:
+        tenantId: {type: string}
+        workspaceId: {type: string}
+        manifest:
+          type: object
+          additionalProperties: true
+        evidence:
+          type: object
+          additionalProperties: true
+        submitter:
+          $ref: "#/components/schemas/IdentityKey"
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
     ViewCreateRequest:
       type: object
       additionalProperties: false

@@ -50,6 +50,9 @@ const (
 	ActionRelationWrite      Action = "relation.write"
 	ActionExportRead         Action = "export.read"
 	ActionAuditRead          Action = "audit.read"
+	ActionConnectorOnboard   Action = "connector.onboard"
+	ActionConnectorReview    Action = "connector.review"
+	ActionConnectorApprove   Action = "connector.approve"
 	// Projection writes are reserved for the event projector and are never
 	// granted by a human workspace role.
 	ActionProjectionWrite Action = "projection.write"
@@ -103,7 +106,7 @@ func roleAllows(role Role, action Action) bool {
 		return action != ActionProjectionWrite && knownAction(action)
 	case RoleOperator:
 		switch action {
-		case ActionWorkspaceRead, ActionSchemaRead, ActionRecordRead, ActionViewRead, ActionOperationsRead, ActionProjectionManage, ActionTagRead, ActionRelationRead, ActionExportRead, ActionAuditRead:
+		case ActionWorkspaceRead, ActionSchemaRead, ActionRecordRead, ActionViewRead, ActionOperationsRead, ActionProjectionManage, ActionTagRead, ActionRelationRead, ActionExportRead, ActionAuditRead, ActionConnectorReview:
 			return true
 		}
 	case RoleEditor:
@@ -124,7 +127,7 @@ func knownAction(action Action) bool {
 	switch action {
 	case ActionWorkspaceRead, ActionWorkspaceManage, ActionMembershipManage, ActionSchemaRead, ActionSchemaManage,
 		ActionRecordRead, ActionRecordWrite, ActionViewRead, ActionViewWrite, ActionOperationsRead, ActionProjectionManage, ActionProjectionWrite,
-		ActionTagRead, ActionTagAssign, ActionTagDictionaryWrite, ActionRelationRead, ActionRelationWrite, ActionExportRead, ActionAuditRead:
+		ActionTagRead, ActionTagAssign, ActionTagDictionaryWrite, ActionRelationRead, ActionRelationWrite, ActionExportRead, ActionAuditRead, ActionConnectorOnboard, ActionConnectorReview, ActionConnectorApprove:
 		return true
 	default:
 		return false

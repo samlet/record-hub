@@ -16,6 +16,7 @@ import (
 	"github.com/samlet/record-hub/server/internal/modules/audit"
 	"github.com/samlet/record-hub/server/internal/modules/binding"
 	"github.com/samlet/record-hub/server/internal/modules/commands"
+	"github.com/samlet/record-hub/server/internal/modules/connector"
 	"github.com/samlet/record-hub/server/internal/modules/identity"
 	"github.com/samlet/record-hub/server/internal/modules/projection"
 	"github.com/samlet/record-hub/server/internal/modules/records"
@@ -37,6 +38,7 @@ type runtimeDependencies struct {
 	commandOps   http.Handler
 	operations   http.Handler
 	associations http.Handler
+	onboarding   http.Handler
 	rebuild      http.Handler
 	feed         http.Handler
 	workers      []Service
@@ -161,6 +163,7 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 	generationBuilder := projection.NewMappingGenerationBuilder(catalogRepo, schemaRepo)
 	rebuildService := projection.NewProjectionRebuildService(rebuildRepo, generationBuilder, generations, authorizer, rebuildReceipts, auditWriter).WithReplayDependencies(eventArchive, readPointers)
 	deps.records = records.NewHTTPHandler(recordService)
+	deps.onboarding = connector.NewOnboardingHTTPHandler(connector.NewOnboardingService(authorizer, auditWriter))
 	deps.schema = schema.NewHTTPHandler(schemaService, migrationService)
 	deps.catalog = projection.NewCatalogHTTPHandler(catalogService)
 	deps.binding = binding.NewHTTPHandler(bindingService)

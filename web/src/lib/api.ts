@@ -59,6 +59,40 @@ export type TagDictionary = {
   entries: ControlledTag[];
 };
 
+export type ConnectorOnboardingRecord = {
+  tenantId: string;
+  workspaceId: string;
+  manifest: {
+    key: { connector: string; event: string; schemaVersion: number };
+    ownerSystem: string;
+    sdkVersion: string;
+    compatibilityMin: string;
+    compatibilityMax: string;
+    contractHash: string;
+    allowedFields: string[];
+    fixtureDigest: string;
+    redactionPolicyDigest: string;
+    sourceCommit: string;
+    status: "DRAFT" | "IN_REVIEW" | "APPROVED" | "ENABLED" | "DISABLED" | "REJECTED" | "DEPRECATED";
+    revision: number;
+  };
+  evidence: {
+    fixtureDigest: string;
+    redactionPolicyDigest: string;
+    sourceCommit: string;
+    compatibilityPass: boolean;
+    fixturePass: boolean;
+    redactionPass: boolean;
+    operatorAudit: boolean;
+    ownerSignoff: boolean;
+    reviewer?: string;
+    approver?: string;
+  };
+  submitter: { issuer: string; subject: string };
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type ViewDefinition = {
   id: string;
   tenantId: string;
@@ -374,6 +408,30 @@ export const api = {
       headers: expectedRevision ? { "If-Match": `"${expectedRevision}"` } : {},
       body: JSON.stringify(input),
     }),
+  connectorOnboarding: (tenantId: string, workspaceId: string) =>
+    request<{ items: ConnectorOnboardingRecord[] }>(
+      `/api/v1/connectors/onboarding?tenantId=${encodeURIComponent(tenantId)}&workspaceId=${encodeURIComponent(workspaceId)}`,
+    ),
+  uploadConnectorOnboarding: (input: Record<string, unknown>) =>
+    request<ConnectorOnboardingRecord>("/api/v1/connectors/onboarding", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  connectorOnboardingTransition: (
+    record: ConnectorOnboardingRecord,
+    transition: "submit" | "review" | "enable" | "disable",
+    body?: { approved?: boolean },
+  ) => {
+    const key = record.manifest.key;
+    return request<ConnectorOnboardingRecord>(
+      `/api/v1/connectors/onboarding/${encodeURIComponent(key.connector)}/${encodeURIComponent(key.event)}/${key.schemaVersion}/${transition}?tenantId=${encodeURIComponent(record.tenantId)}&workspaceId=${encodeURIComponent(record.workspaceId)}`,
+      {
+        method: "POST",
+        headers: { "If-Match": `"${record.manifest.revision}"` },
+        body: JSON.stringify(body ?? {}),
+      },
+    );
+  },
   deleteRecord: (record: {
     id: string;
     recordVersion: number;

@@ -5,6 +5,7 @@ import {
   api,
   ApiError,
   items,
+  ConnectorOnboardingRecord,
   OperationsSnapshot,
   ControlledTag,
   RecordRelation,
@@ -26,7 +27,7 @@ import {
   writeSchemaFields,
 } from "../lib/schema-fields";
 
-type Tab = "records" | "schema" | "operations" | "approvals";
+type Tab = "records" | "schema" | "operations" | "approvals" | "onboarding";
 const consumerOptions = [
   ["record-hub-approver-projection-v1", "Approver"],
   ["record-hub-fluxion-projection-v1", "Fluxion"],
@@ -35,6 +36,25 @@ const consumerOptions = [
 
 const initialSchema =
   '{\n  "$schema": "https://json-schema.org/draft/2020-12/schema",\n  "type": "object",\n  "properties": {},\n  "additionalProperties": true\n}';
+
+const initialOnboardingDraft = JSON.stringify(
+  {
+    connector: "fluxion.approval",
+    event: "dispatch.result",
+    schemaVersion: 1,
+    ownerSystem: "approver",
+    sdkVersion: "1.2.0",
+    compatibilityMin: "1.0.0",
+    compatibilityMax: "1.9.9",
+    contractHash: "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    allowedFields: ["decision", "generation"],
+    fixtureDigest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    redactionPolicyDigest: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    sourceCommit: "0123456789abcdef01234567",
+  },
+  null,
+  2,
+);
 
 type ViewFilterDraft = {
   field: string;
@@ -157,6 +177,7 @@ export function Console() {
   const [consumer, setConsumer] = useState(consumerOptions[0][0]);
   const [operations, setOperations] = useState<OperationsSnapshot | null>(null);
   const [associations, setAssociations] = useState<TenderApplicationAssociation[]>([]);
+  const [onboardingRecords, setOnboardingRecords] = useState<ConnectorOnboardingRecord[]>([]);
   const [schema, setSchema] = useState<SchemaDefinition | null>(null);
   const [schemas, setSchemas] = useState<SchemaSummary[]>([]);
   const [busy, setBusy] = useState(false);
@@ -182,6 +203,7 @@ export function Console() {
     data: initialSchema,
     semanticTypes: "",
   });
+  const [onboardingForm, setOnboardingForm] = useState(initialOnboardingDraft);
 
   const selectedWorkspace = useMemo(
     () => workspaces.find((item) => item.id === workspaceId),
@@ -381,6 +403,15 @@ export function Console() {
   }, [tab, authenticated, tenantId, workspaceId]);
 
   useEffect(() => {
+    if (tab !== "onboarding" || authenticated !== true || !tenantId || !workspaceId) return;
+    void run(async () =>
+      setOnboardingRecords(
+        items((await api.connectorOnboarding(tenantId, workspaceId)).body),
+      ),
+    );
+  }, [tab, authenticated, tenantId, workspaceId]);
+
+  useEffect(() => {
     if (tab !== "schema" || authenticated !== true || !tenantId || !workspaceId)
       return;
     void run(refreshSchemas);
@@ -536,6 +567,12 @@ export function Console() {
               onClick={() => setTab("approvals")}
             >
               审批关联
+            </button>
+            <button
+              className={tab === "onboarding" ? "active" : ""}
+              onClick={() => setTab("onboarding")}
+            >
+              Connector onboarding review
             </button>
           </nav>
           {tab === "records" && (
@@ -826,9 +863,144 @@ export function Console() {
           {tab === "approvals" && (
             <ApprovalAssociationsPanel associations={associations} />
           )}{" "}
+          {tab === "onboarding" && (
+            <OnboardingPanel
+              records={onboardingRecords}
+              form={onboardingForm}
+              setForm={setOnboardingForm}
+              onUpload={(event) =>
+                submit(event, async () => {
+                  const input = JSON.parse(onboardingForm) as Record<string, unknown>;
+                  const uploaded = await api.uploadConnectorOnboarding({
+                    ...input,
+                    tenantId,
+                    workspaceId,
+                  });
+                  setOnboardingRecords((current) => [...current, uploaded.body]);
+                  setOnboardingForm(initialOnboardingDraft);
+                })
+              }
+              onTransition={(record, transition, body) =>
+                void run(async () => {
+                  const updated = await api.connectorOnboardingTransition(record, transition, body);
+                  setOnboardingRecords((current) =>
+                    current.map((item) =>
+                      item.manifest.key.connector === record.manifest.key.connector &&
+                      item.manifest.key.event === record.manifest.key.event &&
+                      item.manifest.key.schemaVersion === record.manifest.key.schemaVersion
+                        ? updated.body
+                        : item,
+                    ),
+                  );
+                })
+              }
+            />
+          )}{" "}
         </div>
       </section>
     </main>
+  );
+}
+
+function OnboardingPanel({
+  records,
+  form,
+  setForm,
+  onUpload,
+  onTransition,
+}: {
+  records: ConnectorOnboardingRecord[];
+  form: string;
+  setForm: (value: string) => void;
+  onUpload: (event: FormEvent) => void;
+  onTransition: (
+    record: ConnectorOnboardingRecord,
+    transition: "submit" | "review" | "enable" | "disable",
+    body?: { approved?: boolean },
+  ) => void;
+}) {
+  return (
+    <div className="panel">
+      <div className="panel-heading">
+        <div>
+          <h2>Connector onboarding review</h2>
+          <p className="muted">
+            上传 manifest 后按 DRAFT → IN_REVIEW → APPROVED → ENABLED 进行独立审查；所有状态转换使用 revision CAS。
+          </p>
+        </div>
+        <span className="scope-chip">Owner submit · Operator review</span>
+      </div>
+      <div className="form-grid">
+        <form className="inline-form" onSubmit={onUpload}>
+          <h3>上传 connector manifest</h3>
+          <textarea
+            className="code-input"
+            rows={18}
+            aria-label="connector onboarding manifest"
+            value={form}
+            onChange={(event) => setForm(event.target.value)}
+          />
+          <button className="secondary-button">提交 DRAFT</button>
+        </form>
+        <div className="inline-form">
+          <h3>Review / approval queue</h3>
+          {records.length === 0 ? (
+            <p className="muted">当前工作区没有 onboarding 记录。</p>
+          ) : (
+            <div className="list">
+              {records.map((record) => (
+                <div className="list-row" key={`${record.manifest.key.connector}:${record.manifest.key.event}:${record.manifest.key.schemaVersion}`}>
+                  <strong>
+                    {record.manifest.key.connector} / {record.manifest.key.event} · {record.manifest.status}
+                  </strong>
+                  <small>
+                    revision {record.manifest.revision} · owner {record.manifest.ownerSystem}
+                  </small>
+                  <div className="button-row">
+                    {record.manifest.status === "DRAFT" && (
+                      <button className="ghost-button" type="button" onClick={() => onTransition(record, "submit")}>
+                        提交 review
+                      </button>
+                    )}
+                    {record.manifest.status === "IN_REVIEW" && (
+                      <>
+                        <button className="ghost-button" type="button" onClick={() => onTransition(record, "review", { approved: true })}>
+                          Operator approve
+                        </button>
+                        <button className="ghost-button danger-button" type="button" onClick={() => onTransition(record, "review", { approved: false })}>
+                          Reject
+                        </button>
+                      </>
+                    )}
+                    {record.manifest.status === "APPROVED" &&
+                      record.evidence.compatibilityPass &&
+                      record.evidence.fixturePass &&
+                      record.evidence.redactionPass &&
+                      record.evidence.operatorAudit && (
+                      <button className="ghost-button" type="button" onClick={() => onTransition(record, "enable")}>
+                        Owner enable
+                      </button>
+                    )}
+                    {record.manifest.status === "APPROVED" &&
+                      !(
+                        record.evidence.compatibilityPass &&
+                        record.evidence.fixturePass &&
+                        record.evidence.redactionPass &&
+                        record.evidence.operatorAudit
+                      ) && <small className="muted">等待 compatibility/fixture/redaction/operator evidence</small>}
+                    {record.manifest.status === "ENABLED" && (
+                      <button className="ghost-button danger-button" type="button" onClick={() => onTransition(record, "disable")}>
+                        Disable / drain
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
