@@ -1,4 +1,4 @@
-.PHONY: build test lint web-check openapi-lint generate-clients dependency-scan sbom secret-scan mongo-up mongo-smoke mongo-down schema-persistence-smoke records-persistence-smoke projection-persistence-smoke nats-up nats-init nats-smoke nats-permissions-smoke nats-down dex-env dex-up dex-smoke m5-runtime-smoke m7-native-restart m7-native-nats-recovery m8-happy-path m8-failure-path m8-local-smoke m8-native-smoke p2-workload-identity-smoke p2-isolated-core p2-engine-foundation p2-mapping-recovery p2-rebuild-cas p2-rebuild-replay p2-slo-baseline p2-realtime-feed p2-command-contract p2-command-result p3-contract-gate p3-fluxion-command-live p3-fluxion-command-faults p3-fixtures p3-four-owner-topology p3-workflow-e2e p3-nats-outage-recovery p3-process-restart-ack-loss p3-credential-rotation p3-backup-restore p3-capacity-baseline p3-upgrade-rollback p3-phase3-report p4-baseline p4-contract-inventory p4-evidence-contract p4-fixtures p4-batch1 p4-batch2 p4-batch3 p4-batch4 p4-release-candidate p4-batch5 p5-001 p5-002 p5-100 p5-101 p5-102 p5-200 p5-201 p5-202 p5-203 p5-300 p5-301 p5-302 p5-303 p5-400 p5-401 p5-402 p5-403 p5-500 p5-501 p5-topology p5-topology-live p6-001 p6-002 p6-100 p6-101 p6-102 p6-103 p6-200 p6-201 p6-202 check ci clean
+.PHONY: build test lint web-check openapi-lint generate-clients dependency-scan sbom secret-scan mongo-up mongo-smoke mongo-down schema-persistence-smoke records-persistence-smoke projection-persistence-smoke nats-up nats-init nats-smoke nats-permissions-smoke nats-down dex-env dex-up dex-smoke m5-runtime-smoke m7-native-restart m7-native-nats-recovery m8-happy-path m8-failure-path m8-local-smoke m8-native-smoke p2-workload-identity-smoke p2-isolated-core p2-engine-foundation p2-mapping-recovery p2-rebuild-cas p2-rebuild-replay p2-slo-baseline p2-realtime-feed p2-command-contract p2-command-result p3-contract-gate p3-fluxion-command-live p3-fluxion-command-faults p3-fixtures p3-four-owner-topology p3-workflow-e2e p3-nats-outage-recovery p3-process-restart-ack-loss p3-credential-rotation p3-backup-restore p3-capacity-baseline p3-upgrade-rollback p3-phase3-report p4-baseline p4-contract-inventory p4-evidence-contract p4-fixtures p4-batch1 p4-batch2 p4-batch3 p4-batch4 p4-release-candidate p4-batch5 p5-001 p5-002 p5-100 p5-101 p5-102 p5-200 p5-201 p5-202 p5-203 p5-300 p5-301 p5-302 p5-303 p5-400 p5-401 p5-402 p5-403 p5-500 p5-501 p5-topology p5-topology-live p6-001 p6-002 p6-100 p6-101 p6-102 p6-103 p6-200 p6-201 p6-202 p6-203 check ci clean
 
 BUILD_DIR := build
 BINARY := $(BUILD_DIR)/record-hub
@@ -219,6 +219,9 @@ p6-201:
 
 p6-202:
 	./scripts/verify-p6-202-workload-identity.sh
+
+p6-203:
+	./scripts/verify-p6-203-fault-matrix.sh
 
 p5-100:
 	./scripts/verify-p5-100-identity.sh

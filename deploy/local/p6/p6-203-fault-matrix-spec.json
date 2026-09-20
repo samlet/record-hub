@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "phase": "6",
+  "task": "P6-203",
+  "purpose": "freeze connector duplicate, late-result, restart, relay-outage, DLQ and rollback matrix",
+  "liveTraffic": false,
+  "failClosed": true,
+  "cases": [
+    "duplicate",
+    "late-result",
+    "owner-restart",
+    "result-relay-outage",
+    "dlq",
+    "rollback"
+  ],
+  "requiredEvidenceFields": ["case", "owner", "fixtureDigest", "sourceCommit", "observed", "expected", "redaction", "operatorAudit", "rollback", "liveStatus"],
+  "liveEvidenceRequired": true,
+  "missingAction": "BLOCKED_BY_LIVE_FAULT_EVIDENCE",
+  "failActions": {
+    "duplicate": "NO_DUPLICATE_SIDE_EFFECT",
+    "late-result": "QUARANTINE_OR_RECONCILE",
+    "owner-restart": "RESUME_WITH_SAME_OPERATION",
+    "result-relay-outage": "RETRY_THEN_DLQ",
+    "dlq": "REDACT_AND_OPERATOR_AUDIT",
+    "rollback": "DISABLE_NEW_TRAFFIC_AND_RESTORE_FALLBACK"
+  },
+  "prerequisite": {
+    "phase5": "INDEPENDENT_GATE",
+    "connectorEnablement": "NOT_GRANTED"
+  }
+}

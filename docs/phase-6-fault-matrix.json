@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "phase": "6",
+  "task": "P6-203",
+  "status": "BLOCKED_BY_LIVE_FAULT_EVIDENCE",
+  "generatedAt": "2026-09-20T08:10:58.519579Z",
+  "liveTraffic": false,
+  "sourceCommit": "155f185144b3f14823bef16aaa6c1acdde286b3d",
+  "cases": [
+    "duplicate",
+    "late-result",
+    "owner-restart",
+    "result-relay-outage",
+    "dlq",
+    "rollback"
+  ],
+  "static": {
+    "duplicate": "PASS",
+    "late-result": "PASS",
+    "owner-restart": "PASS",
+    "result-relay-outage": "PASS",
+    "dlq": "PASS",
+    "rollback": "PASS"
+  },
+  "missingStatic": [],
+  "live": {
+    "status": "BLOCKED",
+    "reason": "no immutable live fault report supplied",
+    "report": "",
+    "cases": []
+  },
+  "requiredEvidenceFields": [
+    "case",
+    "owner",
+    "fixtureDigest",
+    "sourceCommit",
+    "observed",
+    "expected",
+    "redaction",
+    "operatorAudit",
+    "rollback",
+    "liveStatus"
+  ],
+  "decision": "DO_NOT_ENABLE_CONNECTORS",
+  "prerequisite": {
+    "phase5": "INDEPENDENT_GATE",
+    "connectorEnablement": "NOT_GRANTED"
+  },
+  "next": "Run each case in isolated native owner topology, attach redacted evidence and operator rollback audit, then rerun with RECORD_HUB_P6_FAULT_REPORT."
+}
