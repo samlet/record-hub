@@ -3,9 +3,9 @@
   "phase": "6",
   "task": "P6-601",
   "status": "BLOCKED_BY_LIVE_RESTORE_EVIDENCE",
-  "generatedAt": "2026-09-20T08:45:39.149856Z",
+  "generatedAt": "2026-09-20T13:11:06.865153Z",
   "liveTraffic": false,
-  "sourceCommit": "b5c821224c4779223d3a45d60c469e6490b0fe65",
+  "sourceCommit": "c2bee74953152f838bd641892b701df836b410f5",
   "static": {
     "retentionPolicy": true,
     "encryptedBackup": true,
