@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "phase": "6",
+  "task": "P6-403",
+  "status": "BLOCKED_BY_LIVE_EVENT_EVIDENCE",
+  "generatedAt": "2026-09-20T08:31:24.026934Z",
+  "liveTraffic": false,
+  "sourceCommit": "24417a8570e607a8d0998cbb9ba461cec8353d23",
+  "static": {
+    "mappingRegistry": true,
+    "sourcePointer": true,
+    "gapConflict": true,
+    "rebuild": true,
+    "audit": true
+  },
+  "missingStatic": [],
+  "live": {
+    "status": "BLOCKED",
+    "reason": "no immutable event replay/rebuild report supplied",
+    "report": ""
+  },
+  "mapping": {
+    "registryRequired": true,
+    "sourcePointerRequired": true,
+    "targetTableRequired": true,
+    "fieldAllowlistRequired": true,
+    "unknownMappingAction": "REJECT"
+  },
+  "state": {
+    "sourceVersionMonotonic": true,
+    "duplicateAction": "NO_OP",
+    "gapAction": "FINDING_AND_REPLAY",
+    "conflictAction": "QUARANTINE_AND_AUDIT",
+    "hashMismatchAction": "QUARANTINE"
+  },
+  "rebuild": {
+    "mode": "STAGED_REPLAY_THEN_POINTER_SWITCH",
+    "liveReadPointerSwitch": "CAS",
+    "rawPayloadExport": "FORBIDDEN",
+    "operatorAuditRequired": true
+  },
+  "decision": "DO_NOT_ENABLE_EVENT_TABLE_MAPPING",
+  "prerequisite": {
+    "phase5": "INDEPENDENT_GATE",
+    "connectorEnablement": "NOT_GRANTED"
+  },
+  "next": "Run native event gap/conflict/hash replay and staged rebuild pointer switch with operator audit."
+}

@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "phase": "6",
+  "task": "P6-403",
+  "purpose": "freeze event-to-table state mapping, pointer, gap/conflict and rebuild boundary",
+  "liveTraffic": false,
+  "failClosed": true,
+  "mapping": {"registryRequired": true, "sourcePointerRequired": true, "targetTableRequired": true, "fieldAllowlistRequired": true, "unknownMappingAction": "REJECT"},
+  "state": {"sourceVersionMonotonic": true, "duplicateAction": "NO_OP", "gapAction": "FINDING_AND_REPLAY", "conflictAction": "QUARANTINE_AND_AUDIT", "hashMismatchAction": "QUARANTINE"},
+  "rebuild": {"mode": "STAGED_REPLAY_THEN_POINTER_SWITCH", "liveReadPointerSwitch": "CAS", "rawPayloadExport": "FORBIDDEN", "operatorAuditRequired": true},
+  "liveEvidenceRequired": true,
+  "missingAction": "BLOCKED_BY_LIVE_EVENT_EVIDENCE",
+  "prerequisite": {"phase5": "INDEPENDENT_GATE", "connectorEnablement": "NOT_GRANTED"}
+}

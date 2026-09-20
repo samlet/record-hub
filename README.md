@@ -100,6 +100,7 @@ HTTP 契约以 [`api/openapi.yaml`](api/openapi.yaml) 为准。`make generate-cl
 - [Phase 6 Batch 4 P6-400 Temporal binding](docs/phase-6-batch4-p6-400.md)
 - [Phase 6 Batch 4 P6-401 Conductor binding](docs/phase-6-batch4-p6-401.md)
 - [Phase 6 Batch 4 P6-402 NATS event/replay](docs/phase-6-batch4-p6-402.md)
+- [Phase 6 Batch 4 P6-403 event-to-table](docs/phase-6-batch4-p6-403.md)
 - [原生隔离验收拓扑](deploy/local/isolated/README.md)
 - [参考资料](docs/references.md)
 - [ADR-0001：独立仓库与事实所有权](docs/adr/0001-independent-service-and-data-ownership.md)
