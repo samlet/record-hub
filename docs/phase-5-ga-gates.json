@@ -1,0 +1,162 @@
+{
+  "schemaVersion": 1,
+  "phase": "5",
+  "task": "P5-GATES",
+  "generatedAt": "2026-09-20T14:23:55.576517Z",
+  "liveTraffic": false,
+  "sourceCommit": "001e9affcd4962925e0038aa754c476314464df5",
+  "p4_501": {
+    "status": "BLOCKED",
+    "report": "build/evidence/phase4/p4-501-native-run/run-20260920T141905Z-90925/p4-501.json"
+  },
+  "gates": [
+    {
+      "id": "P5-G1",
+      "staticStatus": "PASS",
+      "liveStatus": "SKIPPED",
+      "tasks": [
+        {
+          "task": "p5-100",
+          "report": "build/evidence/phase5/p5-100-20260920T142103Z-92446/p5-100.json",
+          "staticStatus": "PASS",
+          "liveStatus": "SKIPPED"
+        },
+        {
+          "task": "p5-101",
+          "report": "build/evidence/phase5/p5-101-20260920T142103Z-92462/p5-101.json",
+          "staticStatus": "PASS",
+          "liveStatus": "SKIPPED"
+        }
+      ]
+    },
+    {
+      "id": "P5-G2",
+      "staticStatus": "PASS",
+      "liveStatus": "SKIPPED",
+      "tasks": [
+        {
+          "task": "p5-101",
+          "report": "build/evidence/phase5/p5-101-20260920T142103Z-92462/p5-101.json",
+          "staticStatus": "PASS",
+          "liveStatus": "SKIPPED"
+        },
+        {
+          "task": "p5-102",
+          "report": "build/evidence/phase5/p5-102-20260920T142103Z-92477/p5-102.json",
+          "staticStatus": "PASS",
+          "liveStatus": "SKIPPED"
+        }
+      ]
+    },
+    {
+      "id": "P5-G3",
+      "staticStatus": "PASS",
+      "liveStatus": "SKIPPED",
+      "tasks": [
+        {
+          "task": "p5-200",
+          "report": "build/evidence/phase5/p5-200-20260920T142103Z-92494/p5-200.json",
+          "staticStatus": "PASS",
+          "liveStatus": "SKIPPED"
+        },
+        {
+          "task": "p5-201",
+          "report": "build/evidence/phase5/p5-201-20260920T142103Z-92534/p5-201.json",
+          "staticStatus": "PASS",
+          "liveStatus": "SKIPPED"
+        }
+      ]
+    },
+    {
+      "id": "P5-G4",
+      "staticStatus": "PASS",
+      "liveStatus": "SKIPPED",
+      "tasks": [
+        {
+          "task": "p5-202",
+          "report": "build/evidence/phase5/p5-202-20260920T142104Z-92572/p5-202.json",
+          "staticStatus": "PASS",
+          "liveStatus": "SKIPPED"
+        },
+        {
+          "task": "p5-203",
+          "report": "build/evidence/phase5/p5-203-20260920T142104Z-92606/p5-203.json",
+          "staticStatus": "PASS",
+          "liveStatus": "SKIPPED"
+        }
+      ]
+    },
+    {
+      "id": "P5-G5",
+      "staticStatus": "PASS",
+      "liveStatus": "SKIPPED",
+      "tasks": [
+        {
+          "task": "p5-300",
+          "report": "build/evidence/phase5/p5-300-20260920T142104Z-92637/p5-300.json",
+          "staticStatus": "PASS",
+          "liveStatus": "SKIPPED"
+        },
+        {
+          "task": "p5-301",
+          "report": "build/evidence/phase5/p5-301-20260920T142105Z-92678/p5-301.json",
+          "staticStatus": "PASS",
+          "liveStatus": "SKIPPED"
+        },
+        {
+          "task": "p5-302",
+          "report": "build/evidence/phase5/p5-302-20260920T142105Z-92725/p5-302.json",
+          "staticStatus": "PASS",
+          "liveStatus": "SKIPPED"
+        },
+        {
+          "task": "p5-303",
+          "report": "build/evidence/phase5/p5-303-20260920T142106Z-92770/p5-303.json",
+          "staticStatus": "PASS",
+          "liveStatus": "SKIPPED"
+        }
+      ]
+    },
+    {
+      "id": "P5-G6",
+      "staticStatus": "PASS",
+      "liveStatus": "SKIPPED",
+      "tasks": [
+        {
+          "task": "p5-400",
+          "report": "build/evidence/phase5/p5-400-20260920T142106Z-92823/p5-400.json",
+          "staticStatus": "PASS",
+          "liveStatus": "SKIPPED"
+        }
+      ]
+    },
+    {
+      "id": "P5-G7",
+      "staticStatus": "PASS",
+      "liveStatus": "SKIPPED",
+      "tasks": [
+        {
+          "task": "p5-401",
+          "report": "build/evidence/phase5/p5-401-20260920T142107Z-92870/p5-401.json",
+          "staticStatus": "PASS",
+          "liveStatus": "SKIPPED"
+        },
+        {
+          "task": "p5-402",
+          "report": "build/evidence/phase5/p5-402-20260920T142107Z-92910/p5-402.json",
+          "staticStatus": "PASS",
+          "liveStatus": "SKIPPED"
+        },
+        {
+          "task": "p5-403",
+          "report": "build/evidence/phase5/p5-403-20260920T142107Z-92946/p5-403.json",
+          "staticStatus": "PASS",
+          "liveStatus": "SKIPPED"
+        }
+      ]
+    }
+  ],
+  "status": "BLOCKED_BY_P4_501",
+  "decision": "DO_NOT_START_PRODUCTION_GA",
+  "next": "Complete P4-501 G1..G5 live PASS and rerun all Phase 5 gate reports; no SKIPPED/PARTIAL status may be inherited."
+}
