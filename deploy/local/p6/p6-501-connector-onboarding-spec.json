@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "phase": "6",
+  "task": "P6-501",
+  "purpose": "freeze contract upload, review, compatibility and approval workflow for connectors",
+  "liveTraffic": false,
+  "failClosed": true,
+  "identity": {
+    "submitter": "OWNER",
+    "reviewer": "OPERATOR",
+    "approver": "OWNER",
+    "ownerSignoffRequired": true,
+    "independentReviewRequired": true
+  },
+  "manifest": {
+    "exactKey": ["connector", "event", "schemaVersion"],
+    "requiredFields": [
+      "connector",
+      "event",
+      "schemaVersion",
+      "ownerSystem",
+      "sdkVersion",
+      "compatibilityMin",
+      "compatibilityMax",
+      "contractHash",
+      "allowedFields",
+      "fixtureDigest",
+      "redactionPolicyDigest",
+      "sourceCommit",
+      "status",
+      "revision"
+    ],
+    "hashAlgorithm": "sha256",
+    "unknownFieldAction": "REJECT",
+    "duplicateKeyAction": "REJECT"
+  },
+  "lifecycle": {
+    "states": ["DRAFT", "IN_REVIEW", "APPROVED", "ENABLED", "DISABLED", "REJECTED", "DEPRECATED"],
+    "transitions": [
+      ["DRAFT", "IN_REVIEW"],
+      ["IN_REVIEW", "APPROVED"],
+      ["IN_REVIEW", "REJECTED"],
+      ["APPROVED", "ENABLED"],
+      ["ENABLED", "DISABLED"],
+      ["ENABLED", "DEPRECATED"],
+      ["DISABLED", "ENABLED"],
+      ["DISABLED", "DEPRECATED"]
+    ],
+    "casRequired": true,
+    "enableRequires": ["ownerSignoff", "reviewApproval", "compatibilityPass", "fixturePass", "redactionPass", "operatorAudit"],
+    "disableBehavior": "STOP_NEW_AND_DRAIN_IN_FLIGHT",
+    "unknownTransitionAction": "REJECT"
+  },
+  "compatibility": {
+    "exactRegistryLookup": true,
+    "versionFormat": "MAJOR.MINOR.PATCH",
+    "windowInclusive": true,
+    "outsideWindowAction": "REJECT",
+    "breakingChangeAction": "REVIEW_REQUIRED"
+  },
+  "evidence": {
+    "requiredFields": ["sourceCommit", "contractDigest", "fixtureDigest", "redactionDigest", "reviewer", "approver", "occurredAt"],
+    "rawPayloadAction": "FORBIDDEN",
+    "auditAction": "APPEND_IMMUTABLE"
+  },
+  "missingAction": "BLOCKED_BY_ONBOARDING_API_GAP",
+  "prerequisite": {
+    "phase5": "INDEPENDENT_GATE",
+    "connectorEnablement": "NOT_GRANTED"
+  }
+}

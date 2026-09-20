@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "phase": "6",
+  "task": "P6-501",
+  "status": "BLOCKED_BY_ONBOARDING_API_GAP",
+  "generatedAt": "2026-09-20T08:37:33.820446Z",
+  "liveTraffic": false,
+  "sourceCommit": "6712e2d74b8609f16b3e8f04ebdefd123c7f5f6c",
+  "static": {
+    "registryImplementation": true,
+    "manifestInventory": true,
+    "exactKeyLifecycle": true,
+    "evidenceContract": true,
+    "uploadApi": false,
+    "onboardingConsole": false,
+    "approvalAudit": true
+  },
+  "missingStatic": [
+    "uploadApi",
+    "onboardingConsole"
+  ],
+  "identity": {
+    "submitter": "OWNER",
+    "reviewer": "OPERATOR",
+    "approver": "OWNER",
+    "ownerSignoffRequired": true,
+    "independentReviewRequired": true
+  },
+  "manifest": {
+    "exactKey": [
+      "connector",
+      "event",
+      "schemaVersion"
+    ],
+    "requiredFields": [
+      "connector",
+      "event",
+      "schemaVersion",
+      "ownerSystem",
+      "sdkVersion",
+      "compatibilityMin",
+      "compatibilityMax",
+      "contractHash",
+      "allowedFields",
+      "fixtureDigest",
+      "redactionPolicyDigest",
+      "sourceCommit",
+      "status",
+      "revision"
+    ],
+    "hashAlgorithm": "sha256",
+    "unknownFieldAction": "REJECT",
+    "duplicateKeyAction": "REJECT"
+  },
+  "lifecycle": {
+    "states": [
+      "DRAFT",
+      "IN_REVIEW",
+      "APPROVED",
+      "ENABLED",
+      "DISABLED",
+      "REJECTED",
+      "DEPRECATED"
+    ],
+    "transitions": [
+      [
+        "DRAFT",
+        "IN_REVIEW"
+      ],
+      [
+        "IN_REVIEW",
+        "APPROVED"
+      ],
+      [
+        "IN_REVIEW",
+        "REJECTED"
+      ],
+      [
+        "APPROVED",
+        "ENABLED"
+      ],
+      [
+        "ENABLED",
+        "DISABLED"
+      ],
+      [
+        "ENABLED",
+        "DEPRECATED"
+      ],
+      [
+        "DISABLED",
+        "ENABLED"
+      ],
+      [
+        "DISABLED",
+        "DEPRECATED"
+      ]
+    ],
+    "casRequired": true,
+    "enableRequires": [
+      "ownerSignoff",
+      "reviewApproval",
+      "compatibilityPass",
+      "fixturePass",
+      "redactionPass",
+      "operatorAudit"
+    ],
+    "disableBehavior": "STOP_NEW_AND_DRAIN_IN_FLIGHT",
+    "unknownTransitionAction": "REJECT"
+  },
+  "compatibility": {
+    "exactRegistryLookup": true,
+    "versionFormat": "MAJOR.MINOR.PATCH",
+    "windowInclusive": true,
+    "outsideWindowAction": "REJECT",
+    "breakingChangeAction": "REVIEW_REQUIRED"
+  },
+  "evidence": {
+    "requiredFields": [
+      "sourceCommit",
+      "contractDigest",
+      "fixtureDigest",
+      "redactionDigest",
+      "reviewer",
+      "approver",
+      "occurredAt"
+    ],
+    "rawPayloadAction": "FORBIDDEN",
+    "auditAction": "APPEND_IMMUTABLE"
+  },
+  "decision": "DO_NOT_ENABLE_SELF_SERVICE_ONBOARDING",
+  "prerequisite": {
+    "phase5": "INDEPENDENT_GATE",
+    "connectorEnablement": "NOT_GRANTED"
+  },
+  "next": "Implement scoped connector onboarding API/console with upload validation, independent review, owner approval, CAS lifecycle and immutable redacted evidence."
+}
