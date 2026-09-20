@@ -6,6 +6,7 @@ import {
   ApiError,
   items,
   OperationsSnapshot,
+  RecordRelation,
   RecordItem,
   SchemaCompatibilityReport,
   SchemaDefinition,
@@ -71,6 +72,44 @@ function filterValueDraft(value: unknown): string {
   return typeof value === "string" ? value : (JSON.stringify(value) ?? "");
 }
 
+function parseRelationsDraft(raw: string): RecordRelation[] {
+  const trimmed = raw.trim();
+  if (!trimmed) return [];
+  const parsed: unknown = JSON.parse(trimmed);
+  if (!Array.isArray(parsed)) {
+    throw new Error("关系必须是 JSON 数组");
+  }
+  return parsed.map((item, index) => {
+    if (!item || typeof item !== "object") {
+      throw new Error(`关系 ${index + 1} 必须是对象`);
+    }
+    const relation = item as Partial<RecordRelation>;
+    const target = relation.target;
+    if (
+      !target ||
+      typeof target !== "object" ||
+      !target.system ||
+      !target.type ||
+      !target.id ||
+      !relation.relationType
+    ) {
+      throw new Error(`关系 ${index + 1} 缺少 target 或 relationType`);
+    }
+    return {
+      target: {
+        system: String(target.system).trim(),
+        type: String(target.type).trim(),
+        id: String(target.id).trim(),
+      },
+      relationType: String(relation.relationType).trim(),
+      ...(relation.resolvedRecordId
+        ? { resolvedRecordId: String(relation.resolvedRecordId).trim() }
+        : {}),
+      status: relation.status ?? "CURRENT",
+    };
+  });
+}
+
 function formFromView(view: ViewDefinition): ViewForm {
   return {
     id: view.id,
@@ -123,6 +162,7 @@ export function Console() {
   const [recordForm, setRecordForm] = useState({
     id: "",
     tags: "",
+    relations: "[]",
     data: "{}",
   });
   const [schemaForm, setSchemaForm] = useState({
@@ -246,6 +286,8 @@ export function Console() {
       setError(
         caught instanceof ApiError
           ? caught.message
+          : caught instanceof Error
+            ? caught.message
           : "请求失败，请检查 Record Hub API",
       );
     } finally {
@@ -582,10 +624,11 @@ export function Console() {
                       .split(",")
                       .map((tag) => tag.trim())
                       .filter(Boolean),
+                    relations: parseRelationsDraft(recordForm.relations),
                     data: JSON.parse(recordForm.data),
                   });
                   setRecords((current) => [created.body, ...current]);
-                  setRecordForm({ id: "", tags: "", data: "{}" });
+                  setRecordForm({ id: "", tags: "", relations: "[]", data: "{}" });
                 })
               }
               editingRecord={editingRecord}
@@ -594,12 +637,13 @@ export function Console() {
                 setRecordForm({
                   id: record.id,
                   tags: record.tags.join(", "),
+                  relations: JSON.stringify(record.relations ?? [], null, 2),
                   data: JSON.stringify(record.data, null, 2),
                 });
               }}
               onCancelEdit={() => {
                 setEditingRecord(null);
-                setRecordForm({ id: "", tags: "", data: "{}" });
+                setRecordForm({ id: "", tags: "", relations: "[]", data: "{}" });
               }}
               onUpdateRecord={(event) =>
                 submit(event, async () => {
@@ -616,6 +660,7 @@ export function Console() {
                         .split(",")
                         .map((tag) => tag.trim())
                         .filter(Boolean),
+                      relations: parseRelationsDraft(recordForm.relations),
                       data: JSON.parse(recordForm.data),
                     },
                   );
@@ -625,7 +670,7 @@ export function Console() {
                     ),
                   );
                   setEditingRecord(null);
-                  setRecordForm({ id: "", tags: "", data: "{}" });
+                  setRecordForm({ id: "", tags: "", relations: "[]", data: "{}" });
                 })
               }
               onDeleteRecord={(record) =>
@@ -819,8 +864,8 @@ function RecordsPanel(props: {
     schemaId: string;
     schemaVersion: string;
   }) => void;
-  recordForm: { id: string; tags: string; data: string };
-  setRecordForm: (value: { id: string; tags: string; data: string }) => void;
+  recordForm: { id: string; tags: string; relations: string; data: string };
+  setRecordForm: (value: { id: string; tags: string; relations: string; data: string }) => void;
   editingRecord: RecordItem | null;
   onEditRecord: (record: RecordItem) => void;
   onCancelEdit: () => void;
@@ -1007,6 +1052,16 @@ function RecordsPanel(props: {
             value={recordForm.tags}
             onChange={(event) =>
               setRecordForm({ ...recordForm, tags: event.target.value })
+            }
+          />
+          <textarea
+            className="code-input"
+            rows={4}
+            aria-label="typed relations"
+            placeholder={'relations（JSON 数组，如 [{"target":{"system":"fluxion","type":"PROJECT","id":"p-1"},"relationType":"tracks"}]）'}
+            value={recordForm.relations}
+            onChange={(event) =>
+              setRecordForm({ ...recordForm, relations: event.target.value })
             }
           />
           <textarea
@@ -1366,6 +1421,7 @@ function RecordGrid({
                 <th key={column}>{column}</th>
               ))}
               <th>标签</th>
+              <th>关系</th>
               <th>版本</th>
               <th>投影状态</th>
               <th>更新时间</th>
@@ -1399,6 +1455,21 @@ function RecordGrid({
                       {tag}
                     </span>
                   ))}
+                </td>
+                <td>
+                  {record.relations?.length ? (
+                    <details>
+                      <summary>{record.relations.length} 条 typed relation</summary>
+                      {record.relations.map((relation, index) => (
+                        <small key={`${relation.relationType}-${index}`}>
+                          <code>{relation.relationType}</code> → {relation.target.system}/
+                          {relation.target.type}/{relation.target.id} ({relation.status})
+                        </small>
+                      ))}
+                    </details>
+                  ) : (
+                    <span className="muted">—</span>
+                  )}
                 </td>
                 <td>{record.recordVersion}</td>
                 <td>

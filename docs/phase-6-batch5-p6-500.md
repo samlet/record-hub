@@ -10,7 +10,7 @@ P6-500 固化 Web/API control plane 的边界：表格、schema、受控 tag、t
 
 当前静态 inventory 确认已有 workspace/table/schema/record/view API、typed relation 数据模型、
 RBAC 和 audit 基础；受控 tag dictionary 的 ID、敏感前缀、层级 scope、互斥 group 和 assignment
-校验已固化在 `server/internal/modules/records/tags.go`。但 dictionary Mongo/API 接入和 relation
-专用 console 仍未实现，故报告仍为 `BLOCKED_BY_CONTROL_PLANE_GAP`，禁止启用新的自助化
-mutation/export 流量。补齐缺口后还必须提供 API/UI role matrix、跨 scope negative matrix 和
-redacted export receipt 才能进入 live gate。
+校验已固化在 `server/internal/modules/records/tags.go`，记录 console 也已提供 typed relation
+JSON 编辑、写入和关系状态速查。dictionary 的 Mongo/API 接入、API/UI role matrix、跨 scope
+negative matrix 和 redacted export receipt 仍未完成，因此静态报告虽为 `PASS_STATIC`，仍禁止
+启用新的自助化 mutation/export live 流量，必须等 control-plane live gate 与 Phase 5 独立门禁。

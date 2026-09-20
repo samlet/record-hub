@@ -27,10 +27,20 @@ export type RecordItem = {
   schemaVersion: number;
   recordVersion: number;
   tags: string[];
+  relations: RecordRelation[];
   data: Record<string, unknown>;
   projection?: { lastEventId: string; syncedAt: string; status: string };
   source?: { system: string; type: string; id: string; version: number };
   updatedAt: string;
+};
+
+export type RelationStatus = "CURRENT" | "BROKEN" | "FORBIDDEN";
+
+export type RecordRelation = {
+  target: { system: string; type: string; id: string };
+  relationType: string;
+  resolvedRecordId?: string;
+  status: RelationStatus;
 };
 
 export type ViewDefinition = {
@@ -304,6 +314,7 @@ export const api = {
       id: string;
       data: Record<string, unknown>;
       tags: string[];
+      relations?: RecordRelation[];
     },
   ) =>
     request<RecordItem>(
@@ -320,6 +331,7 @@ export const api = {
       id: string;
       data: Record<string, unknown>;
       tags: string[];
+      relations?: RecordRelation[];
     },
   ) =>
     request<RecordItem>(`/api/v1/records/${encodeURIComponent(recordId)}`, {
