@@ -38,7 +38,7 @@
       "occurredAt"
     ]
   },
-  "generatedAt": "2026-09-20T07:56:31Z",
+  "generatedAt": "2026-09-20T07:57:02Z",
   "liveTraffic": false,
   "next": "Allow only bounded, signed-cursor views; reject over-budget/unindexed queries and audit all redacted exports.",
   "pagination": {
@@ -62,7 +62,7 @@
     "scope": "tenant-workspace"
   },
   "schemaVersion": 1,
-  "sourceCommit": "25dd9a134d10b2184fd97c4a6418cb86bd642b77",
+  "sourceCommit": "cd5010526ec8c96abfff1c3528037953516d950b",
   "status": "PASS",
   "task": "P6-103",
   "view": {
