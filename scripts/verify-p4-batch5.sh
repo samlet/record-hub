@@ -22,6 +22,11 @@ for case_id in P4-G1 P4-G2 P4-G3 P4-G4 P4-G5; do printf 'PASS\n' >"$evidence_dir
 live_requested="${RECORD_HUB_P4_BATCH5_LIVE:-0}"
 live_status="SKIPPED"
 live_reason="requires isolated four-owner topology, operator credentials, old/new artifacts, and explicit evidence root"
+p4g1_live="SKIPPED"
+p4g2_live="SKIPPED"
+p4g3_live="SKIPPED"
+p4g4_live="SKIPPED"
+p4g5_live="SKIPPED"
 required=(
   RECORD_HUB_P4_TOPOLOGY_FILE
   RECORD_HUB_P4_EVIDENCE_ROOT
@@ -32,7 +37,17 @@ required=(
 missing=()
 for name in "${required[@]}"; do [[ -n "${!name:-}" ]] || missing+=("$name"); done
 if [[ "$live_requested" == "1" && "${#missing[@]}" == "0" ]]; then
-  live_reason="runner integration is not installed in this workspace; execute the approved isolated rotation/restore/load/rollback harness and attach evidence"
+  native_report="${RECORD_HUB_P4_NATIVE_REPORT:-}"
+  if [[ -n "$native_report" && -f "$native_report" ]] && jq -e '.gate == "P4-501" and (.cases | length) == 5' "$native_report" >/dev/null 2>&1; then
+    live_reason="native P4-501 report attached; each case status is imported without upgrading SKIPPED/PARTIAL"
+    p4g1_live="$(jq -r '.cases[] | select(.id == "P4-G1") | .liveStatus' "$native_report")"
+    p4g2_live="$(jq -r '.cases[] | select(.id == "P4-G2") | .liveStatus' "$native_report")"
+    p4g3_live="$(jq -r '.cases[] | select(.id == "P4-G3") | .liveStatus' "$native_report")"
+    p4g4_live="$(jq -r '.cases[] | select(.id == "P4-G4") | .liveStatus' "$native_report")"
+    p4g5_live="$(jq -r '.cases[] | select(.id == "P4-G5") | .liveStatus' "$native_report")"
+  else
+    live_reason="run make p4-501-native first, then attach its immutable p4-501.json through RECORD_HUB_P4_NATIVE_REPORT"
+  fi
 fi
 printf '%s\n' "${missing[@]:-}" | sed '/^$/d' >"$evidence_dir/live/missing-prerequisites.txt"
 
@@ -42,7 +57,8 @@ jq -S -n \
   --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg evidenceDir "$evidence_dir" --arg overall "$overall" \
   --arg liveRequested "$live_requested" --arg liveStatus "$live_status" --arg liveReason "$live_reason" \
   --arg c500 "$(static_value P4-500-manifest)" \
-  '{gate:"P4-501",status:$overall,generatedAt:$generatedAt,spec:"deploy/local/p4/p4-batch5-spec.json",evidenceDir:$evidenceDir,liveRequested:($liveRequested=="1"),cases:[{id:"P4-G1",staticStatus:"PASS",liveStatus:$liveStatus,liveReason:$liveReason},{id:"P4-G2",staticStatus:"PASS",liveStatus:$liveStatus,liveReason:$liveReason},{id:"P4-G3",staticStatus:"PASS",liveStatus:$liveStatus,liveReason:$liveReason},{id:"P4-G4",staticStatus:"PASS",liveStatus:$liveStatus,liveReason:$liveReason},{id:"P4-G5",staticStatus:"PASS",liveStatus:$liveStatus,liveReason:$liveReason}],releaseCandidateManifest:$c500,missingPrerequisitesFile:(($evidenceDir)+"/live/missing-prerequisites.txt"),retry:"Provision all required isolated services/credentials and install the live harness; rerun with RECORD_HUB_P4_BATCH5_LIVE=1. P4-501 cannot pass while any live case is SKIPPED."}' \
+  --arg p4g1 "$p4g1_live" --arg p4g2 "$p4g2_live" --arg p4g3 "$p4g3_live" --arg p4g4 "$p4g4_live" --arg p4g5 "$p4g5_live" \
+  '{gate:"P4-501",status:$overall,generatedAt:$generatedAt,spec:"deploy/local/p4/p4-batch5-spec.json",evidenceDir:$evidenceDir,liveRequested:($liveRequested=="1"),cases:[{id:"P4-G1",staticStatus:"PASS",liveStatus:$p4g1,liveReason:$liveReason},{id:"P4-G2",staticStatus:"PASS",liveStatus:$p4g2,liveReason:$liveReason},{id:"P4-G3",staticStatus:"PASS",liveStatus:$p4g3,liveReason:$liveReason},{id:"P4-G4",staticStatus:"PASS",liveStatus:$p4g4,liveReason:$liveReason},{id:"P4-G5",staticStatus:"PASS",liveStatus:$p4g5,liveReason:$liveReason}],releaseCandidateManifest:$c500,missingPrerequisitesFile:(($evidenceDir)+"/live/missing-prerequisites.txt"),retry:"Provision all required isolated services/credentials and attach the native p4-501.json through RECORD_HUB_P4_NATIVE_REPORT; P4-501 cannot pass while any live case is SKIPPED."}' \
   | tee "$evidence_dir/batch5.json"
 cp "$evidence_dir/batch5.json" "$evidence_dir/phase-4-batch5.json"
 echo "P4 Batch 5 report: $evidence_dir/batch5.json"
