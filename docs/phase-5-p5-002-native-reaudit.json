@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "phase": "5",
+  "task": "P5-002",
+  "generatedAt": "2026-09-20T14:24:24Z",
+  "evidence": "build/evidence/phase5/p5-002-after-native/p5-002.json",
+  "p4Report": "build/evidence/phase4/p4-501-native-run/run-20260920T141905Z-90925/p4-501.json",
+  "static": {
+    "phase4Contract": "PASS",
+    "failClosedContract": "PASS",
+    "ownerBoundary": "PASS"
+  },
+  "liveStatus": "BLOCKED",
+  "reason": "P4-G1..G5 are all SKIPPED; native topology readiness is not a substitute for case evidence",
+  "status": "BLOCKED_BY_P4",
+  "decision": "DO_NOT_CLEAR_P4_BLOCKER",
+  "next": "Attach immutable PASS reports for all P4-501 cases, then rerun P5-002."
+}
