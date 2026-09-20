@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "phase": "6",
+  "task": "P6-503",
+  "status": "BLOCKED_BY_LIVE_ROLLBACK_EVIDENCE",
+  "generatedAt": "2026-09-20T08:40:49.415210Z",
+  "liveTraffic": false,
+  "sourceCommit": "019b4f3c237b786e6de57bef22417c367be181e6",
+  "static": {
+    "recoveryRunbook": true,
+    "stopDrainRollback": true,
+    "connectorDisable": true,
+    "rebuildBoundary": true,
+    "auditBoundary": true,
+    "safeEvidence": true
+  },
+  "missingStatic": [],
+  "live": {
+    "status": "BLOCKED",
+    "reason": "no immutable stop/drain/replay/disable/rollback drill report supplied",
+    "report": ""
+  },
+  "operator": {
+    "roles": [
+      "OPERATOR",
+      "OWNER"
+    ],
+    "scope": [
+      "tenantId",
+      "workspaceId",
+      "connector"
+    ],
+    "auditRequired": true,
+    "unknownScopeAction": "REJECT"
+  },
+  "procedure": [
+    "STOP_NEW",
+    "CAPTURE_SAFE_EVIDENCE",
+    "DRAIN_IN_FLIGHT",
+    "DISABLE_CONNECTOR",
+    "REPLAY_ORIGINAL_ID",
+    "RECONCILE_RECEIPTS_AND_FINDINGS",
+    "ROLLBACK_ARTIFACT",
+    "READ_ONLY_SMOKE",
+    "RESUME_SCOPED_TRAFFIC"
+  ],
+  "stopConditions": [
+    "cross_scope_access",
+    "duplicate_terminal_side_effect",
+    "raw_sensitive_payload_observed",
+    "unbounded_backlog_or_dlq",
+    "hash_checkpoint_mismatch",
+    "rollback_artifact_unavailable"
+  ],
+  "replay": {
+    "identity": [
+      "eventId",
+      "operationId",
+      "externalRequestId"
+    ],
+    "newIdAction": "REJECT",
+    "sourceOfTruth": "OWNER_OUTBOX_OR_RETAINED_STREAM",
+    "rawPayloadConstruction": "FORBIDDEN"
+  },
+  "rollback": {
+    "artifactDigestRequired": true,
+    "oldWorkerRetention": "REQUIRED",
+    "deleteInboxOutboxReceiptFindingAudit": false,
+    "postRollbackReconciliation": "REQUIRED"
+  },
+  "evidence": {
+    "immutable": true,
+    "requiredFields": [
+      "incidentId",
+      "actor",
+      "scope",
+      "oldArtifactDigest",
+      "newArtifactDigest",
+      "action",
+      "checkpoint",
+      "backlog",
+      "findingIds",
+      "occurredAt"
+    ],
+    "forbiddenFields": [
+      "accessToken",
+      "privateKey",
+      "PII",
+      "sealedBid",
+      "quote",
+      "bankAccount",
+      "invoiceAttachment",
+      "rawPayload",
+      "fullWorkflowSnapshot"
+    ]
+  },
+  "decision": "DO_NOT_ENABLE_OPERATOR_ROLLBACK_AUTOMATION",
+  "prerequisite": {
+    "phase5": "INDEPENDENT_GATE",
+    "connectorEnablement": "NOT_GRANTED"
+  },
+  "next": "Run the isolated native stop/drain/replay/disable/rollback drill, attach immutable redacted evidence and rerun with RECORD_HUB_P6_RUNBOOK_LIVE_REPORT."
+}
