@@ -12,5 +12,7 @@ P6-500 固化 Web/API control plane 的边界：表格、schema、受控 tag、t
 RBAC 和 audit 基础；受控 tag dictionary 的 ID、敏感前缀、层级 scope、互斥 group 和 assignment
 校验已固化在 `server/internal/modules/records/tags.go`，记录 console 也已提供 typed relation
 JSON 编辑、写入和关系状态速查；tag dictionary 已有 workspace-scoped Mongo/CAS API 和 console
-编辑入口。API/UI role matrix、跨 scope negative matrix 和 redacted export receipt 仍未完成，因此静态报告虽为 `PASS_STATIC`，仍禁止
-启用新的自助化 mutation/export live 流量，必须等 control-plane live gate 与 Phase 5 独立门禁。
+编辑入口；`GET /api/v1/tables/{tableId}/export` 已提供 published-view-only 的 JSONL/CSV
+redacted export 和 audit receipt。API/UI role matrix 与跨 scope negative matrix 已有基础测试，仍
+需要在部署环境完成完整浏览器/API矩阵、审计导出验收和 Phase 5 独立门禁，因此静态报告虽为
+`PASS_STATIC`，仍禁止启用新的自助化 mutation/export live 流量。
