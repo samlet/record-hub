@@ -49,7 +49,7 @@
     "unknownPropertyAction": "QUARANTINE",
     "unknownTypeAction": "QUARANTINE"
   },
-  "generatedAt": "2026-09-20T07:49:01Z",
+  "generatedAt": "2026-09-20T08:32:17Z",
   "liveTraffic": false,
   "next": "Use only explicit registry entries; quarantine unknown IRIs and require a new version for breaking changes.",
   "phase": "6",
@@ -145,7 +145,7 @@
   ],
   "rootType": "https://schema.org/Thing",
   "schemaVersion": 1,
-  "sourceCommit": "2188d318b0e5726731818e9d730f004c17671da5",
+  "sourceCommit": "9fecca83358c6878a826959d447e13f506731d17",
   "status": "PASS",
   "task": "P6-100",
   "types": [
