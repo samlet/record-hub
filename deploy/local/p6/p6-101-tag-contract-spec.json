@@ -1,0 +1,114 @@
+{
+  "version": 1,
+  "phase": "6",
+  "task": "P6-101",
+  "purpose": "freeze a scoped controlled tag dictionary with mutual exclusion and audit boundaries",
+  "liveTraffic": false,
+  "failClosed": true,
+  "scope": {
+    "levels": ["tenant", "workspace", "table"],
+    "inheritance": "tenant-to-workspace-to-table",
+    "crossTenantAssignment": "DENY",
+    "unknownTagAction": "QUARANTINE"
+  },
+  "tagId": {
+    "pattern": "^[a-z][a-z0-9._-]{0,63}$",
+    "caseSensitive": false,
+    "normalization": "lowercase"
+  },
+  "dictionary": [
+    {
+      "id": "approval.pending",
+      "label": "待审批",
+      "group": "approval-state",
+      "scope": "tenant",
+      "active": true
+    },
+    {
+      "id": "approval.approved",
+      "label": "已批准",
+      "group": "approval-state",
+      "scope": "tenant",
+      "active": true
+    },
+    {
+      "id": "approval.rejected",
+      "label": "已拒绝",
+      "group": "approval-state",
+      "scope": "tenant",
+      "active": true
+    },
+    {
+      "id": "workflow.blocked",
+      "label": "流程阻塞",
+      "group": "workflow-state",
+      "scope": "workspace",
+      "active": true
+    },
+    {
+      "id": "workflow.in-flight",
+      "label": "流程进行中",
+      "group": "workflow-state",
+      "scope": "workspace",
+      "active": true
+    },
+    {
+      "id": "workflow.completed",
+      "label": "流程完成",
+      "group": "workflow-state",
+      "scope": "workspace",
+      "active": true
+    },
+    {
+      "id": "data.redacted",
+      "label": "数据已脱敏",
+      "group": "data-safety",
+      "scope": "table",
+      "active": true
+    }
+  ],
+  "mutualExclusion": [
+    {
+      "group": "approval-state",
+      "mode": "at-most-one-active"
+    },
+    {
+      "group": "workflow-state",
+      "mode": "at-most-one-active"
+    }
+  ],
+  "apiOperations": [
+    "dictionary.read",
+    "dictionary.propose",
+    "dictionary.approve",
+    "tag.assign",
+    "tag.unassign",
+    "tag.quarantine"
+  ],
+  "audit": {
+    "requiredFields": [
+      "eventId",
+      "action",
+      "actor",
+      "scope",
+      "target",
+      "before",
+      "after",
+      "reason",
+      "correlationId",
+      "occurredAt"
+    ],
+    "actions": ["create", "update", "deactivate", "assign", "unassign", "quarantine"],
+    "immutable": true,
+    "redactFields": ["accessToken", "refreshToken", "privateKey", "secret", "rawPayload"]
+  },
+  "security": {
+    "tagsAreNot": ["authorization", "authentication", "workflow-fact", "financial-fact"],
+    "forbiddenTagPrefixes": ["role.", "permission.", "secret.", "token."],
+    "unknownAssignmentAction": "QUARANTINE"
+  },
+  "prerequisite": {
+    "phase5": "INDEPENDENT_GATE",
+    "connectorEnablement": "NOT_GRANTED"
+  }
+}

@@ -1,0 +1,143 @@
+{
+  "apiOperations": [
+    "dictionary.read",
+    "dictionary.propose",
+    "dictionary.approve",
+    "tag.assign",
+    "tag.unassign",
+    "tag.quarantine"
+  ],
+  "audit": {
+    "actions": [
+      "create",
+      "update",
+      "deactivate",
+      "assign",
+      "unassign",
+      "quarantine"
+    ],
+    "immutable": true,
+    "redactFields": [
+      "accessToken",
+      "refreshToken",
+      "privateKey",
+      "secret",
+      "rawPayload"
+    ],
+    "requiredFields": [
+      "eventId",
+      "action",
+      "actor",
+      "scope",
+      "target",
+      "before",
+      "after",
+      "reason",
+      "correlationId",
+      "occurredAt"
+    ]
+  },
+  "dictionary": [
+    {
+      "active": true,
+      "group": "approval-state",
+      "id": "approval.pending",
+      "label": "待审批",
+      "scope": "tenant"
+    },
+    {
+      "active": true,
+      "group": "approval-state",
+      "id": "approval.approved",
+      "label": "已批准",
+      "scope": "tenant"
+    },
+    {
+      "active": true,
+      "group": "approval-state",
+      "id": "approval.rejected",
+      "label": "已拒绝",
+      "scope": "tenant"
+    },
+    {
+      "active": true,
+      "group": "workflow-state",
+      "id": "workflow.blocked",
+      "label": "流程阻塞",
+      "scope": "workspace"
+    },
+    {
+      "active": true,
+      "group": "workflow-state",
+      "id": "workflow.in-flight",
+      "label": "流程进行中",
+      "scope": "workspace"
+    },
+    {
+      "active": true,
+      "group": "workflow-state",
+      "id": "workflow.completed",
+      "label": "流程完成",
+      "scope": "workspace"
+    },
+    {
+      "active": true,
+      "group": "data-safety",
+      "id": "data.redacted",
+      "label": "数据已脱敏",
+      "scope": "table"
+    }
+  ],
+  "generatedAt": "2026-09-20T07:51:29Z",
+  "liveTraffic": false,
+  "mutualExclusion": [
+    {
+      "group": "approval-state",
+      "mode": "at-most-one-active"
+    },
+    {
+      "group": "workflow-state",
+      "mode": "at-most-one-active"
+    }
+  ],
+  "next": "Only dictionary-approved tags may be assigned; quarantine unknown or cross-tenant assignments and retain immutable audit evidence.",
+  "phase": "6",
+  "prerequisite": {
+    "connectorEnablement": "NOT_GRANTED",
+    "phase5": "INDEPENDENT_GATE"
+  },
+  "schemaVersion": 1,
+  "scope": {
+    "crossTenantAssignment": "DENY",
+    "inheritance": "tenant-to-workspace-to-table",
+    "levels": [
+      "tenant",
+      "workspace",
+      "table"
+    ],
+    "unknownTagAction": "QUARANTINE"
+  },
+  "security": {
+    "forbiddenTagPrefixes": [
+      "role.",
+      "permission.",
+      "secret.",
+      "token."
+    ],
+    "tagsAreNot": [
+      "authorization",
+      "authentication",
+      "workflow-fact",
+      "financial-fact"
+    ],
+    "unknownAssignmentAction": "QUARANTINE"
+  },
+  "sourceCommit": "ae37617623d9a85323975c4caf1f408fd5f4b3a0",
+  "status": "PASS",
+  "tagId": {
+    "caseSensitive": false,
+    "normalization": "lowercase",
+    "pattern": "^[a-z][a-z0-9._-]{0,63}$"
+  },
+  "task": "P6-101"
+}
