@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "phase": "6",
+  "task": "P6-103",
+  "purpose": "freeze bounded views, query cost controls and redacted export behavior",
+  "liveTraffic": false,
+  "failClosed": true,
+  "view": {
+    "idPattern": "^[a-z][a-z0-9._-]{0,127}$",
+    "filterOperators": ["eq", "neq", "in", "prefix", "exists", "gte", "lte"],
+    "sortDirections": ["asc", "desc"],
+    "maxFilterDepth": 4,
+    "maxSortFields": 4,
+    "stableTieBreaker": "_id",
+    "unknownFieldAction": "REJECT",
+    "unindexedQueryAction": "REJECT"
+  },
+  "pagination": {
+    "cursor": "opaque-signed",
+    "defaultPageSize": 50,
+    "maxPageSize": 100,
+    "stableOrderRequired": true,
+    "cursorScope": "tenant-workspace-table-view"
+  },
+  "cost": {
+    "maxEstimatedUnits": 1000,
+    "maxExecutionMillis": 2000,
+    "maxRowsScanned": 10000,
+    "maxConcurrentQueriesPerWorkspace": 8,
+    "overBudgetAction": "REJECT"
+  },
+  "rateLimit": {
+    "scope": "tenant-workspace",
+    "requestsPerMinute": 600,
+    "burst": 60,
+    "exportRequestsPerMinute": 12,
+    "backpressureStatus": 429,
+    "retryAfterSeconds": 5
+  },
+  "export": {
+    "formats": ["jsonl", "csv"],
+    "maxRows": 10000,
+    "maxBytes": 10485760,
+    "allowedFieldSource": "published-schema-and-view",
+    "redaction": "DROP_AND_AUDIT",
+    "forbiddenFields": ["rawPayload", "workflowInput", "accessToken", "refreshToken", "privateKey", "secret", "sealedBid", "quote", "bankAccount", "invoiceAttachment"],
+    "requiredAuditFields": ["exportId", "actor", "scope", "viewId", "fieldSet", "rowCount", "redactedFields", "occurredAt"]
+  },
+  "prerequisite": {
+    "phase5": "INDEPENDENT_GATE",
+    "connectorEnablement": "NOT_GRANTED"
+  }
+}

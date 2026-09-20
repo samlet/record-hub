@@ -1,0 +1,89 @@
+{
+  "cost": {
+    "maxConcurrentQueriesPerWorkspace": 8,
+    "maxEstimatedUnits": 1000,
+    "maxExecutionMillis": 2000,
+    "maxRowsScanned": 10000,
+    "overBudgetAction": "REJECT"
+  },
+  "export": {
+    "allowedFieldSource": "published-schema-and-view",
+    "forbiddenFields": [
+      "rawPayload",
+      "workflowInput",
+      "accessToken",
+      "refreshToken",
+      "privateKey",
+      "secret",
+      "sealedBid",
+      "quote",
+      "bankAccount",
+      "invoiceAttachment"
+    ],
+    "formats": [
+      "jsonl",
+      "csv"
+    ],
+    "maxBytes": 10485760,
+    "maxRows": 10000,
+    "redaction": "DROP_AND_AUDIT",
+    "requiredAuditFields": [
+      "exportId",
+      "actor",
+      "scope",
+      "viewId",
+      "fieldSet",
+      "rowCount",
+      "redactedFields",
+      "occurredAt"
+    ]
+  },
+  "generatedAt": "2026-09-20T07:56:31Z",
+  "liveTraffic": false,
+  "next": "Allow only bounded, signed-cursor views; reject over-budget/unindexed queries and audit all redacted exports.",
+  "pagination": {
+    "cursor": "opaque-signed",
+    "cursorScope": "tenant-workspace-table-view",
+    "defaultPageSize": 50,
+    "maxPageSize": 100,
+    "stableOrderRequired": true
+  },
+  "phase": "6",
+  "prerequisite": {
+    "connectorEnablement": "NOT_GRANTED",
+    "phase5": "INDEPENDENT_GATE"
+  },
+  "rateLimit": {
+    "backpressureStatus": 429,
+    "burst": 60,
+    "exportRequestsPerMinute": 12,
+    "requestsPerMinute": 600,
+    "retryAfterSeconds": 5,
+    "scope": "tenant-workspace"
+  },
+  "schemaVersion": 1,
+  "sourceCommit": "25dd9a134d10b2184fd97c4a6418cb86bd642b77",
+  "status": "PASS",
+  "task": "P6-103",
+  "view": {
+    "filterOperators": [
+      "eq",
+      "neq",
+      "in",
+      "prefix",
+      "exists",
+      "gte",
+      "lte"
+    ],
+    "idPattern": "^[a-z][a-z0-9._-]{0,127}$",
+    "maxFilterDepth": 4,
+    "maxSortFields": 4,
+    "sortDirections": [
+      "asc",
+      "desc"
+    ],
+    "stableTieBreaker": "_id",
+    "unindexedQueryAction": "REJECT",
+    "unknownFieldAction": "REJECT"
+  }
+}
