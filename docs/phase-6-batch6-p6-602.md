@@ -8,6 +8,11 @@ P6-602 固化 multi-region 的决策边界：默认仍是 single-region HA；act
 机器可读 contract 位于 [`p6-602-multi-region-spec.json`](../deploy/local/p6/p6-602-multi-region-spec.json)，
 验收结果位于 [`phase-6-multi-region.json`](phase-6-multi-region.json)。入口是 `make p6-602`。
 
+安全决策预检入口是 `make p6-602-dry-run`，输出到被忽略的
+`build/evidence/phase6/p6-602-dry-run.json`。它只验证 single-region 默认、evidence go/no-go、RPO/RTO
+目标、zero-RPO/cross-region XA/自动补偿禁用和 owner/data-plane 边界；不会改变拓扑、执行 failover
+或把任何 live evidence 提升为 PASS。
+
 现有 Phase 5/6 文档已明确 single-region 默认、RPO/RTO 目标和 owner/data-plane 边界；但实际多地域
 容量、故障切换、成本和签字 evidence 尚未提供，当前为 `BLOCKED_BY_LIVE_MULTI_REGION_EVIDENCE`，
 go/no-go 保持 `NO_GO`。
