@@ -415,6 +415,58 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+  /api/v1/tag-dictionaries:
+    get:
+      tags: [Records]
+      operationId: listTagDictionaries
+      summary: List controlled tag dictionaries applicable to a workspace/table
+      parameters:
+        - $ref: "#/components/parameters/TenantIdQuery"
+        - $ref: "#/components/parameters/WorkspaceIdQuery"
+        - $ref: "#/components/parameters/TableIdQuery"
+      responses:
+        "200":
+          description: Scoped controlled tag dictionaries.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TagDictionaryList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    put:
+      tags: [Records]
+      operationId: saveTagDictionary
+      summary: Create or CAS-update a workspace-scoped controlled tag dictionary
+      parameters:
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TagDictionaryRequest"
+      responses:
+        "200":
+          description: Dictionary saved.
+          headers:
+            ETag:
+              $ref: "#/components/headers/RecordVersionETag"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TagDictionary"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
   /api/v1/workspaces/{workspaceId}/tables:
     parameters:
       - $ref: "#/components/parameters/WorkspaceId"
@@ -1998,6 +2050,78 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TableDefinition"
+    TagDictionaryRequest:
+      type: object
+      additionalProperties: false
+      required: [tenantId, workspaceId, entries]
+      properties:
+        tenantId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        workspaceId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        tableId:
+          type: string
+          maxLength: 128
+        revision:
+          type: integer
+          minimum: 1
+        entries:
+          type: array
+          maxItems: 256
+          items:
+            $ref: "#/components/schemas/ControlledTag"
+    ControlledTag:
+      type: object
+      additionalProperties: false
+      required: [id, label, group, scope, active]
+      properties:
+        id:
+          type: string
+          pattern: "^[a-z][a-z0-9._-]{0,63}$"
+        label:
+          type: string
+          minLength: 1
+          maxLength: 128
+        group:
+          type: string
+          minLength: 1
+          maxLength: 128
+        scope:
+          type: string
+          enum: [tenant, workspace, table]
+        active:
+          type: boolean
+    TagDictionary:
+      type: object
+      additionalProperties: false
+      required: [tenantId, workspaceId, revision, entries]
+      properties:
+        tenantId:
+          type: string
+        workspaceId:
+          type: string
+        tableId:
+          type: string
+        revision:
+          type: integer
+          minimum: 1
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/ControlledTag"
+    TagDictionaryList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TagDictionary"
     ViewCreateRequest:
       type: object
       additionalProperties: false

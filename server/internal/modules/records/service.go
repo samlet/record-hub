@@ -23,19 +23,20 @@ type SchemaReader interface {
 }
 
 type Service struct {
-	workspaces  WorkspaceRepository
-	tables      TableRepository
-	schemas     SchemaReader
-	authorizer  *identity.Authorizer
-	clock       func() time.Time
-	records     RecordRepository
-	receipts    RecordReceiptStore
-	audit       audit.Writer
-	views       ViewRepository
-	indexes     IndexRepository
-	metrics     *observability.Registry
-	queryBudget observability.QueryBudget
-	feed        *RecordFeed
+	workspaces      WorkspaceRepository
+	tables          TableRepository
+	schemas         SchemaReader
+	authorizer      *identity.Authorizer
+	clock           func() time.Time
+	records         RecordRepository
+	receipts        RecordReceiptStore
+	audit           audit.Writer
+	views           ViewRepository
+	indexes         IndexRepository
+	tagDictionaries TagDictionaryRepository
+	metrics         *observability.Registry
+	queryBudget     observability.QueryBudget
+	feed            *RecordFeed
 }
 
 func NewService(workspaces WorkspaceRepository, tables TableRepository, schemas SchemaReader, authorizer *identity.Authorizer) *Service {
@@ -60,6 +61,16 @@ func (service *Service) WithViewRepository(views ViewRepository) *Service {
 func (service *Service) WithIndexRepository(indexes IndexRepository) *Service {
 	if service != nil {
 		service.indexes = indexes
+	}
+	return service
+}
+
+// WithTagDictionaryRepository enables controlled tag lookup and persistence.
+// A nil repository keeps backwards-compatible free-form tags for deployments
+// that have not opted into the control-plane dictionary yet.
+func (service *Service) WithTagDictionaryRepository(repository TagDictionaryRepository) *Service {
+	if service != nil {
+		service.tagDictionaries = repository
 	}
 	return service
 }
@@ -136,6 +147,136 @@ type TableInput struct {
 	SchemaID      string
 	SchemaVersion int64
 	SourcePolicy  *SourcePolicy
+}
+
+type TagDictionaryInput struct {
+	TenantID    string
+	WorkspaceID string
+	TableID     string
+	Revision    int64
+	Entries     []ControlledTag
+}
+
+func (service *Service) ListTagDictionaries(ctx context.Context, principal identity.Principal, tenantID, workspaceID, tableID string) ([]TagDictionary, error) {
+	if err := service.authorize(ctx, principal, tenantID, workspaceID, identity.ActionTagRead); err != nil {
+		return nil, err
+	}
+	if service.tagDictionaries == nil {
+		return []TagDictionary{}, nil
+	}
+	dictionaries, err := service.tagDictionaries.ListTagDictionaries(ctx, tenantID)
+	if err != nil && !errors.Is(err, ErrTagDictionaryNotFound) {
+		return nil, err
+	}
+	result := make([]TagDictionary, 0, len(dictionaries))
+	for _, dictionary := range dictionaries {
+		if dictionary.WorkspaceID != "" && dictionary.WorkspaceID != workspaceID {
+			continue
+		}
+		if dictionary.TableID != "" && dictionary.TableID != tableID {
+			continue
+		}
+		result = append(result, dictionary)
+	}
+	sort.Slice(result, func(left, right int) bool {
+		return tagDictionarySpecificity(result[left]) < tagDictionarySpecificity(result[right])
+	})
+	return result, nil
+}
+
+func (service *Service) SaveTagDictionary(ctx context.Context, principal identity.Principal, input TagDictionaryInput, expectedRevision int64) (TagDictionary, error) {
+	if err := service.authorize(ctx, principal, input.TenantID, input.WorkspaceID, identity.ActionTagDictionaryWrite); err != nil {
+		return TagDictionary{}, err
+	}
+	if service.tagDictionaries == nil || service.audit == nil {
+		return TagDictionary{}, identity.ErrForbidden
+	}
+	if strings.TrimSpace(input.TenantID) == "" || strings.TrimSpace(input.WorkspaceID) == "" {
+		return TagDictionary{}, ErrTagDictionaryScope
+	}
+	if expectedRevision < 0 {
+		return TagDictionary{}, ErrTagDictionaryVersionConflict
+	}
+	revision := expectedRevision + 1
+	if expectedRevision == 0 && input.Revision > 0 {
+		revision = input.Revision
+	}
+	dictionary := TagDictionary{TenantID: strings.TrimSpace(input.TenantID), WorkspaceID: strings.TrimSpace(input.WorkspaceID), TableID: strings.TrimSpace(input.TableID), Revision: revision, Entries: append([]ControlledTag(nil), input.Entries...)}
+	if err := dictionary.Validate(); err != nil {
+		return TagDictionary{}, err
+	}
+	before, beforeErr := service.tagDictionaries.GetTagDictionary(ctx, dictionary.TenantID, dictionary.WorkspaceID, dictionary.TableID)
+	if beforeErr != nil && !errors.Is(beforeErr, ErrTagDictionaryNotFound) {
+		return TagDictionary{}, beforeErr
+	}
+	if err := service.tagDictionaries.SaveTagDictionary(ctx, dictionary, expectedRevision); err != nil {
+		return TagDictionary{}, err
+	}
+	entry := audit.Entry{TenantID: dictionary.TenantID, WorkspaceID: dictionary.WorkspaceID, Action: "tag.dictionary.write", Actor: principal.IdentityKey(), ResourceType: "tag_dictionary", ResourceID: tagDictionaryScopeKey(dictionary.TenantID, dictionary.WorkspaceID, dictionary.TableID), ResourceVersion: dictionary.Revision, BeforeHash: hashTagDictionary(before), AfterHash: hashTagDictionary(dictionary), CreatedAt: service.clock().UTC()}
+	if err := service.audit.Append(ctx, entry); err != nil {
+		return TagDictionary{}, fmt.Errorf("append tag dictionary audit: %w", err)
+	}
+	return dictionary, nil
+}
+
+func (service *Service) resolveTagDictionary(ctx context.Context, tenantID, workspaceID, tableID string) (TagDictionary, error) {
+	if service.tagDictionaries == nil {
+		return TagDictionary{}, ErrTagDictionaryNotFound
+	}
+	dictionaries, err := service.tagDictionaries.ListTagDictionaries(ctx, tenantID)
+	if err != nil {
+		return TagDictionary{}, err
+	}
+	resolved := TagDictionary{TenantID: tenantID, WorkspaceID: workspaceID, TableID: tableID, Revision: 1}
+	byID := make(map[string]ControlledTag)
+	found := false
+	sort.Slice(dictionaries, func(left, right int) bool {
+		return tagDictionarySpecificity(dictionaries[left]) < tagDictionarySpecificity(dictionaries[right])
+	})
+	for _, dictionary := range dictionaries {
+		if dictionary.WorkspaceID != "" && dictionary.WorkspaceID != workspaceID {
+			continue
+		}
+		if dictionary.TableID != "" && dictionary.TableID != tableID {
+			continue
+		}
+		found = true
+		if dictionary.Revision > resolved.Revision {
+			resolved.Revision = dictionary.Revision
+		}
+		for _, entry := range dictionary.Entries {
+			normalized, normalizeErr := entry.Normalize()
+			if normalizeErr != nil {
+				return TagDictionary{}, normalizeErr
+			}
+			byID[normalized.ID] = normalized
+		}
+	}
+	if !found {
+		return TagDictionary{}, ErrTagDictionaryNotFound
+	}
+	resolved.Entries = make([]ControlledTag, 0, len(byID))
+	for _, entry := range byID {
+		resolved.Entries = append(resolved.Entries, entry)
+	}
+	sort.Slice(resolved.Entries, func(left, right int) bool { return resolved.Entries[left].ID < resolved.Entries[right].ID })
+	return resolved, nil
+}
+
+func tagDictionarySpecificity(dictionary TagDictionary) int {
+	if dictionary.TableID != "" {
+		return 2
+	}
+	if dictionary.WorkspaceID != "" {
+		return 1
+	}
+	return 0
+}
+
+func hashTagDictionary(dictionary TagDictionary) string {
+	data, _ := bson.Marshal(dictionary)
+	digest := sha256.Sum256(data)
+	return "sha256:" + hex.EncodeToString(digest[:])
 }
 
 func (service *Service) CreateTable(ctx context.Context, principal identity.Principal, input TableInput) (TableDefinition, error) {
@@ -495,7 +636,7 @@ func (service *Service) CreateRecord(ctx context.Context, principal identity.Pri
 	if err != nil {
 		return Record{}, err
 	}
-	tags, err := normalizeTags(input.Tags)
+	tags, err := service.normalizeRecordTags(ctx, input.TenantID, input.WorkspaceID, input.TableID, input.Tags)
 	if err != nil {
 		return Record{}, err
 	}
@@ -562,7 +703,7 @@ func (service *Service) UpdateRecord(ctx context.Context, principal identity.Pri
 	if err != nil {
 		return Record{}, err
 	}
-	tags, err := normalizeTags(input.Tags)
+	tags, err := service.normalizeRecordTags(ctx, input.TenantID, input.WorkspaceID, input.TableID, input.Tags)
 	if err != nil {
 		return Record{}, err
 	}
@@ -724,6 +865,21 @@ func (service *Service) completeRecord(ctx context.Context, tenantID, workspaceI
 		return Record{}, fmt.Errorf("save record receipt: %w", err)
 	}
 	return record, nil
+}
+
+func (service *Service) normalizeRecordTags(ctx context.Context, tenantID, workspaceID, tableID string, tags []string) ([]string, error) {
+	normalized, err := normalizeTags(tags)
+	if err != nil || service.tagDictionaries == nil {
+		return normalized, err
+	}
+	dictionary, err := service.resolveTagDictionary(ctx, tenantID, workspaceID, tableID)
+	if errors.Is(err, ErrTagDictionaryNotFound) {
+		return normalized, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return dictionary.ValidateAssignments(tenantID, workspaceID, tableID, normalized)
 }
 
 func normalizeTags(tags []string) ([]string, error) {

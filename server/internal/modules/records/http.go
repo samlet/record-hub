@@ -42,6 +42,11 @@ type IndexHTTPService interface {
 	ListIndexes(context.Context, identity.Principal, string, string, string) ([]IndexDefinition, error)
 }
 
+type TagDictionaryHTTPService interface {
+	ListTagDictionaries(context.Context, identity.Principal, string, string, string) ([]TagDictionary, error)
+	SaveTagDictionary(context.Context, identity.Principal, TagDictionaryInput, int64) (TagDictionary, error)
+}
+
 type HTTPService interface {
 	MutationService
 	RecordHTTPService
@@ -71,6 +76,8 @@ func NewHTTPHandler(service MutationService) http.Handler {
 	mux.HandleFunc("GET /api/v1/tables/{tableID}/records", handler.listRecords)
 	mux.HandleFunc("POST /api/v1/tables/{tableID}/indexes", handler.createIndex)
 	mux.HandleFunc("GET /api/v1/tables/{tableID}/indexes", handler.listIndexes)
+	mux.HandleFunc("GET /api/v1/tag-dictionaries", handler.listTagDictionaries)
+	mux.HandleFunc("PUT /api/v1/tag-dictionaries", handler.saveTagDictionary)
 	return mux
 }
 
@@ -116,6 +123,70 @@ type indexRequest struct {
 	ID          string         `json:"id"`
 	Field       string         `json:"field"`
 	Direction   IndexDirection `json:"direction"`
+}
+
+type tagDictionaryRequest struct {
+	TenantID    string          `json:"tenantId"`
+	WorkspaceID string          `json:"workspaceId"`
+	TableID     string          `json:"tableId"`
+	Revision    int64           `json:"revision"`
+	Entries     []ControlledTag `json:"entries"`
+}
+
+func (handler *HTTPHandler) listTagDictionaries(writer http.ResponseWriter, request *http.Request) {
+	principal, ok := identity.PrincipalFromContext(request.Context())
+	if !ok {
+		writeError(writer, http.StatusUnauthorized, "AUTHENTICATION_REQUIRED", "Authentication is required.")
+		return
+	}
+	service, ok := handler.tagDictionaryService(writer)
+	if !ok {
+		return
+	}
+	tenantID := request.URL.Query().Get("tenantId")
+	workspaceID := request.URL.Query().Get("workspaceId")
+	if tenantID == "" || workspaceID == "" {
+		writeError(writer, http.StatusBadRequest, "INVALID_REQUEST", "tenantId and workspaceId are required.")
+		return
+	}
+	dictionaries, err := service.ListTagDictionaries(request.Context(), principal, tenantID, workspaceID, request.URL.Query().Get("tableId"))
+	if err != nil {
+		writeRecordsError(writer, err)
+		return
+	}
+	writeJSON(writer, http.StatusOK, map[string]interface{}{"items": dictionaries})
+}
+
+func (handler *HTTPHandler) saveTagDictionary(writer http.ResponseWriter, request *http.Request) {
+	principal, ok := identity.PrincipalFromContext(request.Context())
+	if !ok {
+		writeError(writer, http.StatusUnauthorized, "AUTHENTICATION_REQUIRED", "Authentication is required.")
+		return
+	}
+	service, ok := handler.tagDictionaryService(writer)
+	if !ok {
+		return
+	}
+	var input tagDictionaryRequest
+	if !decodeJSON(writer, request, &input) {
+		return
+	}
+	expectedRevision := int64(0)
+	if value := strings.TrimSpace(request.Header.Get("If-Match")); value != "" {
+		parsed, valid := parseRecordIfMatch(value)
+		if !valid {
+			writeError(writer, http.StatusBadRequest, "INVALID_REQUEST", "If-Match must contain a positive dictionary revision.")
+			return
+		}
+		expectedRevision = parsed
+	}
+	dictionary, err := service.SaveTagDictionary(request.Context(), principal, TagDictionaryInput{TenantID: input.TenantID, WorkspaceID: input.WorkspaceID, TableID: input.TableID, Revision: input.Revision, Entries: input.Entries}, expectedRevision)
+	if err != nil {
+		writeRecordsError(writer, err)
+		return
+	}
+	writer.Header().Set("ETag", strconv.Quote(strconv.FormatInt(dictionary.Revision, 10)))
+	writeJSON(writer, http.StatusOK, dictionary)
 }
 
 func (handler *HTTPHandler) createWorkspace(writer http.ResponseWriter, request *http.Request) {
@@ -496,6 +567,15 @@ func (handler *HTTPHandler) indexService(writer http.ResponseWriter) (IndexHTTPS
 	return service, true
 }
 
+func (handler *HTTPHandler) tagDictionaryService(writer http.ResponseWriter) (TagDictionaryHTTPService, bool) {
+	service, ok := handler.service.(TagDictionaryHTTPService)
+	if !ok || service == nil {
+		writeError(writer, http.StatusNotImplemented, "TAG_DICTIONARY_API_UNAVAILABLE", "The tag dictionary API is not configured.")
+		return nil, false
+	}
+	return service, true
+}
+
 func parseRecordIfMatch(value string) (int64, bool) {
 	value = strings.TrimSpace(value)
 	if len(value) >= 2 && value[0] == '"' && value[len(value)-1] == '"' {
@@ -602,6 +682,16 @@ func writeRecordsError(writer http.ResponseWriter, err error) {
 		writeError(writer, http.StatusNotFound, "INDEX_NOT_FOUND", "The index was not found.")
 	case errors.Is(err, ErrIndexFieldNotAllowed):
 		writeError(writer, http.StatusBadRequest, "INDEX_FIELD_NOT_ALLOWED", "The index field is not an allowed published schema property.")
+	case errors.Is(err, ErrTagDictionaryNotFound):
+		writeError(writer, http.StatusNotFound, "TAG_DICTIONARY_NOT_FOUND", "The tag dictionary was not found.")
+	case errors.Is(err, ErrTagDictionaryExists):
+		writeError(writer, http.StatusConflict, "TAG_DICTIONARY_ALREADY_EXISTS", "The tag dictionary already exists.")
+	case errors.Is(err, ErrTagDictionaryVersionConflict):
+		writeError(writer, http.StatusConflict, "TAG_DICTIONARY_VERSION_CONFLICT", "The tag dictionary revision is stale.")
+	case errors.Is(err, ErrUnknownTag):
+		writeError(writer, http.StatusBadRequest, "UNKNOWN_TAG", "The record tag is not active in the controlled dictionary.")
+	case errors.Is(err, ErrTagGroupConflict):
+		writeError(writer, http.StatusBadRequest, "TAG_GROUP_CONFLICT", "The record tags contain mutually exclusive entries.")
 	case errors.Is(err, ErrInvalidCursor):
 		writeError(writer, http.StatusBadRequest, "INVALID_CURSOR", "The record cursor is invalid or expired.")
 	case errors.Is(err, ErrQueryCostExceeded):

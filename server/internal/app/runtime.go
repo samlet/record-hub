@@ -113,7 +113,7 @@ func newRuntime(cfg config.Config, metrics *observability.Registry, logger *slog
 	schemaService := schema.NewService(schemaRepo, authorizer, schemaReceipts, auditWriter)
 	migrationService := schema.NewMigrationService(schemaRepo, schemaRepo, authorizer, migrationReceipts, auditWriter)
 	catalogService := projection.NewCatalogService(catalogRepo, catalogRepo, schemaRepo, authorizer, catalogReceipts, auditWriter)
-	recordService := records.NewRecordService(recordRepo, recordRepo, schemaRepo, authorizer, recordRepo, recordReceipts, auditWriter).WithViewRepository(recordRepo).WithIndexRepository(recordRepo).WithMetrics(metrics).WithQueryBudget(observability.QueryBudget{MaxPageRows: cfg.QueryBudget.MaxPageRows, MaxResponseBytes: cfg.QueryBudget.MaxResponseBytes, MaxDuration: cfg.QueryBudget.MaxDuration}).WithFeed(feed)
+	recordService := records.NewRecordService(recordRepo, recordRepo, schemaRepo, authorizer, recordRepo, recordReceipts, auditWriter).WithViewRepository(recordRepo).WithIndexRepository(recordRepo).WithTagDictionaryRepository(recordRepo).WithMetrics(metrics).WithQueryBudget(observability.QueryBudget{MaxPageRows: cfg.QueryBudget.MaxPageRows, MaxResponseBytes: cfg.QueryBudget.MaxResponseBytes, MaxDuration: cfg.QueryBudget.MaxDuration}).WithFeed(feed)
 	snapshotStore := binding.NewMongoSnapshotStore(database)
 	var bindingMachineAuthorizer binding.PolicyAuthorizer
 	if len(cfg.BindingMachinePolicies) > 0 {
