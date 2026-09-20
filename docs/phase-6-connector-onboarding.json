@@ -2,23 +2,20 @@
   "schemaVersion": 1,
   "phase": "6",
   "task": "P6-501",
-  "status": "BLOCKED_BY_ONBOARDING_API_GAP",
-  "generatedAt": "2026-09-20T08:37:33.820446Z",
+  "status": "PASS_STATIC",
+  "generatedAt": "2026-09-20T12:52:28.741694Z",
   "liveTraffic": false,
-  "sourceCommit": "6712e2d74b8609f16b3e8f04ebdefd123c7f5f6c",
+  "sourceCommit": "6e3575765293cfb564fbe0324e2fb754c3610a70",
   "static": {
     "registryImplementation": true,
     "manifestInventory": true,
     "exactKeyLifecycle": true,
     "evidenceContract": true,
-    "uploadApi": false,
-    "onboardingConsole": false,
+    "uploadApi": true,
+    "onboardingConsole": true,
     "approvalAudit": true
   },
-  "missingStatic": [
-    "uploadApi",
-    "onboardingConsole"
-  ],
+  "missingStatic": [],
   "identity": {
     "submitter": "OWNER",
     "reviewer": "OPERATOR",
@@ -128,7 +125,7 @@
     "rawPayloadAction": "FORBIDDEN",
     "auditAction": "APPEND_IMMUTABLE"
   },
-  "decision": "DO_NOT_ENABLE_SELF_SERVICE_ONBOARDING",
+  "decision": "STATIC_ONBOARDING_READY_FOR_RELEASE_GATE",
   "prerequisite": {
     "phase5": "INDEPENDENT_GATE",
     "connectorEnablement": "NOT_GRANTED"

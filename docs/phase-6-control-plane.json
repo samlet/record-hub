@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "phase": "6",
   "task": "P6-500",
-  "status": "BLOCKED_BY_CONTROL_PLANE_GAP",
-  "generatedAt": "2026-09-20T08:35:30.169606Z",
+  "status": "PASS_STATIC",
+  "generatedAt": "2026-09-20T12:52:28.639159Z",
   "liveTraffic": false,
-  "sourceCommit": "1ab9f46e96aa876f664e2fac39343ac184956cac",
+  "sourceCommit": "6e3575765293cfb564fbe0324e2fb754c3610a70",
   "static": {
     "rbac": true,
     "scope": true,
@@ -13,14 +13,11 @@
     "tableSchemaApi": true,
     "recordViewConsole": true,
     "typedRelationApi": true,
-    "tagDictionary": false,
-    "relationConsole": false,
+    "tagDictionary": true,
+    "relationConsole": true,
     "redaction": true
   },
-  "missingStatic": [
-    "tagDictionary",
-    "relationConsole"
-  ],
+  "missingStatic": [],
   "scope": {
     "required": [
       "tenantId",
@@ -143,7 +140,7 @@
     ],
     "receiptRequired": true
   },
-  "decision": "DO_NOT_ENABLE_CONTROL_PLANE",
+  "decision": "STATIC_CONTROL_PLANE_READY_FOR_RELEASE_GATE",
   "prerequisite": {
     "phase5": "INDEPENDENT_GATE",
     "connectorEnablement": "NOT_GRANTED"
