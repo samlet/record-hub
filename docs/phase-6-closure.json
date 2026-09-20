@@ -3,9 +3,9 @@
   "phase": "6",
   "task": "P6-CLOSURE",
   "status": "PASS_STATIC_WITH_BLOCKERS",
-  "generatedAt": "2026-09-20T08:53:41.611238Z",
+  "generatedAt": "2026-09-20T13:14:42.530648Z",
   "liveTraffic": false,
-  "sourceCommit": "128435da03089d0c2499e92d99635672b136b410",
+  "sourceCommit": "08e9e78238492803616a4bf1166465246e84b496",
   "sourceOfTruth": "docs/phase-6-task-breakdown.md",
   "counts": {
     "DONE": 7,
@@ -135,19 +135,19 @@
     {
       "task": "P6-500",
       "breakdownStatus": "BLOCKED_BY_CONTROL_PLANE_GAP",
-      "reportStatus": "BLOCKED_BY_CONTROL_PLANE_GAP",
+      "reportStatus": "PASS_STATIC",
       "file": "docs/phase-6-control-plane.json"
     },
     {
       "task": "P6-501",
       "breakdownStatus": "BLOCKED_BY_ONBOARDING_API_GAP",
-      "reportStatus": "BLOCKED_BY_ONBOARDING_API_GAP",
+      "reportStatus": "PASS_STATIC",
       "file": "docs/phase-6-connector-onboarding.json"
     },
     {
       "task": "P6-502",
       "breakdownStatus": "BLOCKED_BY_OBSERVABILITY_GAP",
-      "reportStatus": "BLOCKED_BY_OBSERVABILITY_GAP",
+      "reportStatus": "PASS_STATIC",
       "file": "docs/phase-6-observation-dashboard.json"
     },
     {
