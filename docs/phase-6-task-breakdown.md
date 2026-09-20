@@ -25,7 +25,7 @@ Phase 6 只在 Phase 5 GA 前置完成后进入 live implementation；当前先�
 | --- | --- | --- | --- | --- |
 | P6-200 | Record Hub | connector registry lifecycle | exact match、enable/disable、owner、compatibility；[registry contract](phase-6-connector-registry.json) 已冻结 | DONE |
 | P6-201 | 四仓库 | JVM/Go/TypeScript SDK parity | typed ref、command/result、receipt、errors；[parity inventory](phase-6-sdk-parity.json) 已盘点，存在 SDK 缺口 | BLOCKED_BY_SDK_GAP |
-| P6-202 | 四仓库 | workload identity lifecycle | independent principal、rotation、drain、revoke | TODO |
+| P6-202 | 四仓库 | workload identity lifecycle | independent principal、rotation、drain、revoke；[identity audit](phase-6-workload-identity.json) 显示 rotation 状态机缺口 | BLOCKED_BY_IDENTITY_LIFECYCLE_GAP |
 | P6-203 | 四仓库 | connector fault matrix | duplicate、late result、restart、DLQ、rollback | TODO |
 
 ## Batch 3：Approver、Fluxion、Bids 真实切片

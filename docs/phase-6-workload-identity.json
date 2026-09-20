@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "phase": "6",
+  "task": "P6-202",
+  "status": "BLOCKED_BY_IDENTITY_LIFECYCLE_GAP",
+  "generatedAt": "2026-09-20T08:07:46.988787Z",
+  "liveTraffic": false,
+  "sourceCommit": "5a69a40d39e1295441a97d21bfb0b27fe0c3f66f",
+  "static": {
+    "oidcBoundary": "PASS",
+    "exactPolicy": "PASS",
+    "scopedPolicy": "PASS",
+    "rotationImplementation": "FAIL"
+  },
+  "missing": [
+    "rotationImplementation"
+  ],
+  "decision": "DO_NOT_ROTATE_OR_ENABLE_OWNER_CREDENTIALS",
+  "principalPolicy": {
+    "owners": [
+      "approver",
+      "fluxion",
+      "bids",
+      "settlement"
+    ],
+    "identityKey": [
+      "issuer",
+      "subject"
+    ],
+    "audienceRequired": true,
+    "exactScopeRequired": true,
+    "wildcards": "DENY",
+    "crossOwnerReuse": "DENY"
+  },
+  "lifecyclePolicy": {
+    "states": [
+      "ACTIVE",
+      "CANDIDATE",
+      "DRAINING",
+      "REVOKED"
+    ],
+    "rotation": [
+      "CREATE_CANDIDATE",
+      "DUAL_ACCEPT",
+      "DRAIN_OLD",
+      "REVOKE_OLD"
+    ],
+    "inFlightPolicy": "DRAIN_BEFORE_REVOKE",
+    "emergencyRevoke": "AUDITED_STOP",
+    "unknownPrincipalAction": "REJECT"
+  },
+  "auditPolicy": {
+    "requiredFields": [
+      "eventId",
+      "owner",
+      "oldPrincipalHash",
+      "newPrincipalHash",
+      "state",
+      "actor",
+      "reason",
+      "occurredAt"
+    ],
+    "secretHandling": "HASH_ONLY"
+  },
+  "prerequisite": {
+    "phase5": "INDEPENDENT_GATE",
+    "connectorEnablement": "NOT_GRANTED"
+  },
+  "next": "Implement owner-scoped candidate/dual-accept/drain/revoke state and audited fixtures, then rerun this gate."
+}
