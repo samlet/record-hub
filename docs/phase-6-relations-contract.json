@@ -25,7 +25,7 @@
       "QUARANTINED"
     ]
   },
-  "generatedAt": "2026-09-20T07:54:06Z",
+  "generatedAt": "2026-09-20T07:54:38Z",
   "liveTraffic": false,
   "next": "Persist only typed refs and safe summaries; record gaps/conflicts as findings and quarantine forbidden or unverifiable relations.",
   "phase": "6",
@@ -96,7 +96,7 @@
       "observedAt"
     ]
   },
-  "sourceCommit": "e59a71b468b20fc58b0644c4d1c74f546f4d7aeb",
+  "sourceCommit": "640ed492246085256166ddc5befc010366f60088",
   "status": "PASS",
   "task": "P6-102",
   "typedRef": {
