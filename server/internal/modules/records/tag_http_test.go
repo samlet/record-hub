@@ -70,4 +70,25 @@ func TestTagDictionaryHTTPUsesOwnerCASAndScopedRead(t *testing.T) {
 	}
 }
 
+func TestTagDictionaryHTTPRoleAndScopeMatrix(t *testing.T) {
+	viewer := identity.Principal{Kind: identity.PrincipalUser, Issuer: "https://issuer.example", Subject: "viewer"}
+	store := &memoryTagDictionaryRepository{values: map[string]TagDictionary{
+		tagDictionaryScopeKey("tenant-1", "workspace-1", ""): {TenantID: "tenant-1", WorkspaceID: "workspace-1", Revision: 1, Entries: []ControlledTag{{ID: "approval.pending", Label: "Pending", Group: "approval-state", Scope: TagScopeWorkspace, Active: true}}},
+	}}
+	tables := &memoryTableRepository{values: make(map[string]TableDefinition)}
+	viewerHandler := NewHTTPHandler(NewRecordService(nil, tables, memorySchemaReader{}, identity.NewAuthorizer(serviceMembershipReader{membership: identity.WorkspaceMembership{TenantID: "tenant-1", WorkspaceID: "workspace-1", Identity: viewer.IdentityKey(), Role: identity.RoleViewer, Status: identity.MembershipActive}}), &memoryRecordRepository{values: make(map[string]Record)}, &memoryRecordReceipts{values: make(map[string]RecordReceipt)}, &memoryRecordAudit{}).WithTagDictionaryRepository(store))
+	read := doRecordsRequest(viewerHandler, &viewer, http.MethodGet, "/api/v1/tag-dictionaries?tenantId=tenant-1&workspaceId=workspace-1", "")
+	if read.Code != http.StatusOK {
+		t.Fatalf("viewer dictionary read status=%d body=%s", read.Code, read.Body.String())
+	}
+	write := doRecordsRequest(viewerHandler, &viewer, http.MethodPut, "/api/v1/tag-dictionaries", `{"tenantId":"tenant-1","workspaceId":"workspace-1","entries":[]}`)
+	if write.Code != http.StatusForbidden {
+		t.Fatalf("viewer dictionary write status=%d body=%s", write.Code, write.Body.String())
+	}
+	crossScope := doRecordsRequest(viewerHandler, &viewer, http.MethodGet, "/api/v1/tag-dictionaries?tenantId=tenant-1&workspaceId=workspace-2", "")
+	if crossScope.Code != http.StatusForbidden {
+		t.Fatalf("cross-scope dictionary read status=%d body=%s", crossScope.Code, crossScope.Body.String())
+	}
+}
+
 func containsBody(body, value string) bool { return len(body) > 0 && strings.Contains(body, value) }
