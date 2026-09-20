@@ -1,0 +1,1056 @@
+{
+  "schemaVersion": 1,
+  "phase": "6",
+  "task": "P6-001",
+  "status": "PASS",
+  "generatedAt": "2026-09-20T07:34:01.736092Z",
+  "trackedOnly": true,
+  "liveTraffic": false,
+  "owners": [
+    "approver",
+    "bids",
+    "fluxion",
+    "record-hub"
+  ],
+  "families": [
+    "approvals",
+    "bindings",
+    "commands",
+    "connectors",
+    "eventenvelope",
+    "evidence",
+    "root",
+    "settlement",
+    "summaries"
+  ],
+  "entries": [
+    {
+      "owner": "record-hub",
+      "path": "contracts/approvals/dispatch-approval-request-v1.schema.json",
+      "family": "approvals",
+      "kind": "schema",
+      "schemaVersion": "urn:record-hub:dispatch-approval-request:v1",
+      "sha256": "sha256:2f87c58552b18cd144f0ee648840ff8c02833ead2247364b7d71e22cba973ddc",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/approvals/dispatch-approval-result-v1.schema.json",
+      "family": "approvals",
+      "kind": "schema",
+      "schemaVersion": "urn:record-hub:dispatch-approval-result:v1",
+      "sha256": "sha256:cbc624b1b2e786cd70e5e3005f3a084a36aaf98ca9abd0d5cbba0d60a6e2dcab",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/approvals/error-codes.json",
+      "family": "approvals",
+      "kind": "schema",
+      "schemaVersion": "1",
+      "sha256": "sha256:3b55ad8f12f72fada8be8141bae5e29bddfa5b13a79bfc25b3a3501148594983",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/approvals/manifest.json",
+      "family": "approvals",
+      "kind": "manifest",
+      "schemaVersion": "1",
+      "sha256": "sha256:35e77592410d087498eec0dc01facf96a37bb27f67c54029320eae32db6744b7",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/approvals/testdata/invalid/dispatch-approval-request-v1-unknown-field.json",
+      "family": "approvals",
+      "kind": "fixture",
+      "schemaVersion": "1",
+      "sha256": "sha256:633e2dbf4f0a17de671eb13b443d2bcd30441e3bf5b0e470487b6e7ad163716e",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/approvals/testdata/invalid/dispatch-approval-result-v1-decision.json",
+      "family": "approvals",
+      "kind": "fixture",
+      "schemaVersion": "1",
+      "sha256": "sha256:9bf716ca7d99770063ddd7201a114c0df718fcd67e4ee85ee04d0e6776d22b99",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/approvals/testdata/valid/dispatch-approval-request-v1.json",
+      "family": "approvals",
+      "kind": "fixture",
+      "schemaVersion": "1",
+      "sha256": "sha256:2e9638ee11b09aa0dfe5ea20f9925c52d0a34bcabd1e4ab804b49c769dd890ae",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/approvals/testdata/valid/dispatch-approval-result-v1.json",
+      "family": "approvals",
+      "kind": "fixture",
+      "schemaVersion": "1",
+      "sha256": "sha256:c54b48a3c6d176f8fd56e3c366fec021951e529789a597f7cc592aee22efacf2",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/bindings/snapshot-hash-v1.json",
+      "family": "bindings",
+      "kind": "schema",
+      "schemaVersion": "1",
+      "sha256": "sha256:f435f4160351b820ab18b89ffdd1e9076ec84bfa16089841bd1c9b9fdbec708b",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/commands/command-envelope-v1.schema.json",
+      "family": "commands",
+      "kind": "schema",
+      "schemaVersion": "urn:record-hub:command-envelope:v1",
+      "sha256": "sha256:3f738746784be6837cc30609c551189b3a44aa5c74a44c9e4d498a36188314d3",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/commands/error-codes.json",
+      "family": "commands",
+      "kind": "schema",
+      "schemaVersion": "1",
+      "sha256": "sha256:f013861c8700c02644fc2f86a8765625ddba00f944090fd421b7f325df96086f",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/commands/manifest.json",
+      "family": "commands",
+      "kind": "manifest",
+      "schemaVersion": "1",
+      "sha256": "sha256:f3ea00dc946f849d01091a0c74c283ea5212da4f78e805a6df2137df3241d9e4",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/commands/result-envelope-v1.schema.json",
+      "family": "commands",
+      "kind": "schema",
+      "schemaVersion": "urn:record-hub:result-envelope:v1",
+      "sha256": "sha256:ce0171d9ac2b549f0d4813cdf207a451d3f8c265f512da819e90e6655480bbf0",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/commands/testdata/invalid/command-envelope-v1-unknown-field.json",
+      "family": "commands",
+      "kind": "fixture",
+      "schemaVersion": "UNSPECIFIED",
+      "sha256": "sha256:830f23369f8e9bc8c6b37368b112a063b71688cf452640fea7ee70c827c40db5",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/commands/testdata/invalid/result-envelope-v1-status.json",
+      "family": "commands",
+      "kind": "fixture",
+      "schemaVersion": "UNSPECIFIED",
+      "sha256": "sha256:1e5c3dc7e24bd69038afe296d4602728ab3a9dd599b4e3483898f34f7db64d98",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/commands/testdata/valid/command-envelope-v1.json",
+      "family": "commands",
+      "kind": "fixture",
+      "schemaVersion": "UNSPECIFIED",
+      "sha256": "sha256:ecaab9c439034ca326a39d10dd11ace930f5e29727b787d9247ccb58fe423215",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/commands/testdata/valid/result-envelope-v1.json",
+      "family": "commands",
+      "kind": "fixture",
+      "schemaVersion": "UNSPECIFIED",
+      "sha256": "sha256:25d6a7845bdf8ded73c297db890bee9ebde2f2d85f3852147f882f1bf6a257b6",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/connectors/manifest.json",
+      "family": "connectors",
+      "kind": "manifest",
+      "schemaVersion": "1",
+      "sha256": "sha256:c25aeef6be1cd20899ffc6b30c62a5fa4e1e870100765a94923211e4dbeb622d",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/eventenvelope/event-envelope-v1.schema.json",
+      "family": "eventenvelope",
+      "kind": "schema",
+      "schemaVersion": "urn:record-hub:contract:event-envelope:v1",
+      "sha256": "sha256:e7a0780e4804e5e171f2338c75ff31a69bd6e41941b2c41a952d1c4a78e96e73",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/eventenvelope/testdata/invalid/event-envelope-v1-missing-event-id.json",
+      "family": "eventenvelope",
+      "kind": "fixture",
+      "schemaVersion": "1",
+      "sha256": "sha256:256215c2ff5c4ad692f29d1824821cf0a0d34cf9e48d9854c9858d82d85e5138",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/eventenvelope/testdata/invalid/event-envelope-v1-non-utc-time.json",
+      "family": "eventenvelope",
+      "kind": "fixture",
+      "schemaVersion": "1",
+      "sha256": "sha256:0a86b6aff74d7341f962c5e5b1e8a84100158de8e1c999b4ac1114d632ea0253",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/eventenvelope/testdata/invalid/event-envelope-v1-unknown-field.json",
+      "family": "eventenvelope",
+      "kind": "fixture",
+      "schemaVersion": "1",
+      "sha256": "sha256:a292079865ddf27e5bb381163ca46817f2629440ee9ed1e702ef00c0dee263d2",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/eventenvelope/testdata/invalid/event-envelope-v1-unsupported-version.json",
+      "family": "eventenvelope",
+      "kind": "fixture",
+      "schemaVersion": "2",
+      "sha256": "sha256:757a7e4479789f52c209c50af820d3bdb7aa0147f64ae3195d68cccd1a7501b0",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/eventenvelope/testdata/valid/event-envelope-v1.json",
+      "family": "eventenvelope",
+      "kind": "fixture",
+      "schemaVersion": "1",
+      "sha256": "sha256:6fc11d1d6e5817938b4e19b8f0af47552837fd0e92d4e821e53c5591f7e865b1",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/evidence/manifest.json",
+      "family": "evidence",
+      "kind": "manifest",
+      "schemaVersion": "1",
+      "sha256": "sha256:7187027922c62399a72ebc80de84bbb9f98abfd965b6985113afcf544550e885",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/evidence/phase4-evidence-manifest-v1.schema.json",
+      "family": "evidence",
+      "kind": "schema",
+      "schemaVersion": "urn:record-hub:phase4-evidence-manifest:v1",
+      "sha256": "sha256:4a93098d61a4d46f0fe76ca69d3b42a7f4548d3754420d568fed4d1e5c43bca3",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/evidence/testdata/invalid/phase4-evidence-manifest-v1-status.json",
+      "family": "evidence",
+      "kind": "fixture",
+      "schemaVersion": "1",
+      "sha256": "sha256:b2fd9a0cb6358cee7ca99efe1dfd89ea1eb2c091cf995155b171af2605ea1686",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/evidence/testdata/valid/phase4-evidence-manifest-v1.json",
+      "family": "evidence",
+      "kind": "fixture",
+      "schemaVersion": "1",
+      "sha256": "sha256:ab4e34d47b50ef7a7c309187a078437d30b48625e29ecbe1cd695f2bf58c4084",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/settlement/confirmation/v1/apply-evidence.schema.json",
+      "family": "settlement",
+      "kind": "schema",
+      "schemaVersion": "urn:record-hub:settlement:apply-evidence:v1",
+      "sha256": "sha256:86161436b016bed30a9727a6467f19ceb897b2c95febb78ee56a81e03dc19903",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/settlement/confirmation/v1/examples/settlement-confirmation-request.json",
+      "family": "settlement",
+      "kind": "schema",
+      "schemaVersion": "1",
+      "sha256": "sha256:68830ba9db7f16d4059ef7eaaba645a40eaac6d68f0bb9504cb6e23cf432e65a",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/settlement/confirmation/v1/examples/settlement-confirmation-result-approved.json",
+      "family": "settlement",
+      "kind": "schema",
+      "schemaVersion": "1",
+      "sha256": "sha256:4835aeee8f368af9f1909494157b0fb0c6e7faa28eb257f7baa7b8a5cf755b64",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/settlement/confirmation/v1/examples/settlement-confirmation-result-rejected.json",
+      "family": "settlement",
+      "kind": "schema",
+      "schemaVersion": "1",
+      "sha256": "sha256:69724bf43877f016457f11b0d7bb0cb9a2e2f3029ce852426fb019734f601f27",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/settlement/confirmation/v1/settlement-confirmation-request.schema.json",
+      "family": "settlement",
+      "kind": "schema",
+      "schemaVersion": "urn:scs:settlement:confirmation-request:v1",
+      "sha256": "sha256:a1c4cf881df92770c97fcf9eb69dda01732d508abeba98e9d826990fcf75edae",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/settlement/confirmation/v1/settlement-confirmation-result.schema.json",
+      "family": "settlement",
+      "kind": "schema",
+      "schemaVersion": "urn:scs:settlement:confirmation-result:v1",
+      "sha256": "sha256:70f2b6b7e2bdd8bb18d28b778d0412c1f4495c22203f932ad22384983a44e33c",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/settlement/manifest.json",
+      "family": "settlement",
+      "kind": "manifest",
+      "schemaVersion": "1",
+      "sha256": "sha256:6c401794d5b9eb4c0c6ffd6fd440a987a5611902379cb9a1ab8425bb095b8f38",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/summaries/application-summary-v1.schema.json",
+      "family": "summaries",
+      "kind": "schema",
+      "schemaVersion": "urn:record-hub:summary:application:v1",
+      "sha256": "sha256:c7c269943d0d84c090a00c1c624fa5f08c1e994df82016c8dd26ba3d16f621ae",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/summaries/approval-summary-v1.schema.json",
+      "family": "summaries",
+      "kind": "schema",
+      "schemaVersion": "urn:record-hub:summary:approval:v1",
+      "sha256": "sha256:89a735be5cacc2a09ff24c88f4b76965096507faeb30a9cd9d3106622d250b5b",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/summaries/manifest.json",
+      "family": "summaries",
+      "kind": "manifest",
+      "schemaVersion": "1",
+      "sha256": "sha256:ac8d556495312dee26799e9cd8ca5dee6da5f578684837dc8f734d9b36ac60ed",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/summaries/project-summary-v1.schema.json",
+      "family": "summaries",
+      "kind": "schema",
+      "schemaVersion": "urn:record-hub:summary:project:v1",
+      "sha256": "sha256:311dbb7d1c9b3841cacd0ada034fba1077c494841b24baaca18a19ffe196a398",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/summaries/tender-summary-v1.schema.json",
+      "family": "summaries",
+      "kind": "schema",
+      "schemaVersion": "urn:record-hub:summary:tender:v1",
+      "sha256": "sha256:024524fa5b60f8a8deac700bf19745c121f450439532ba22d7ab0f882cad1fff",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/summaries/testdata/valid/application-summary-v1.json",
+      "family": "summaries",
+      "kind": "fixture",
+      "schemaVersion": "7",
+      "sha256": "sha256:0959107cfa960ddea958a334d694698bd714a8000c3e5d98c0ba89d7b97c0838",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/summaries/testdata/valid/approval-summary-v1.json",
+      "family": "summaries",
+      "kind": "fixture",
+      "schemaVersion": "1",
+      "sha256": "sha256:eb70f4cd4ba93460d1053c802ec2fe2933ded8db13e980d3625e8a8264dda880",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/summaries/testdata/valid/project-summary-v1.json",
+      "family": "summaries",
+      "kind": "fixture",
+      "schemaVersion": "3",
+      "sha256": "sha256:46fb037ce84ab9e4265502d4fc647de699c8f0b39161ef3cd46d867c9d285a5d",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "record-hub",
+      "path": "contracts/summaries/testdata/valid/tender-summary-v1.json",
+      "family": "summaries",
+      "kind": "fixture",
+      "schemaVersion": "4",
+      "sha256": "sha256:97b10d40291c47f7c7aa44bbc785835eaf4b04782912fed6922cc71a6840d5ff",
+      "sourceCommit": "34823220f3a8efe12edb5a99516631a34b7f4a23"
+    },
+    {
+      "owner": "approver",
+      "path": "approver-contract/src/main/resources/record-hub/approvals/bids-tender-publication-approval-request-v1.schema.json",
+      "family": "approvals",
+      "kind": "schema",
+      "schemaVersion": "urn:record-hub:bids-tender-publication-approval-request:v1",
+      "sha256": "sha256:a1651cdd75ad16631cb6cc35a12e9770fecf920ad36ae6e561a3938ea5cc8f4c",
+      "sourceCommit": "41ae52056405415fef14630ed11691d8958f144c"
+    },
+    {
+      "owner": "approver",
+      "path": "approver-contract/src/main/resources/record-hub/approvals/bids-tender-publication-approval-result-v1.schema.json",
+      "family": "approvals",
+      "kind": "schema",
+      "schemaVersion": "urn:record-hub:bids-tender-publication-approval-result:v1",
+      "sha256": "sha256:fe3fc3b88faa712f863b09d0aa9af17527b8230680486f8431d47cbb1f92bc96",
+      "sourceCommit": "41ae52056405415fef14630ed11691d8958f144c"
+    },
+    {
+      "owner": "approver",
+      "path": "approver-contract/src/main/resources/record-hub/approvals/dispatch-approval-request-v1.schema.json",
+      "family": "approvals",
+      "kind": "schema",
+      "schemaVersion": "urn:record-hub:dispatch-approval-request:v1",
+      "sha256": "sha256:2f87c58552b18cd144f0ee648840ff8c02833ead2247364b7d71e22cba973ddc",
+      "sourceCommit": "41ae52056405415fef14630ed11691d8958f144c"
+    },
+    {
+      "owner": "approver",
+      "path": "approver-contract/src/main/resources/record-hub/approvals/dispatch-approval-result-v1.schema.json",
+      "family": "approvals",
+      "kind": "schema",
+      "schemaVersion": "urn:record-hub:dispatch-approval-result:v1",
+      "sha256": "sha256:cbc624b1b2e786cd70e5e3005f3a084a36aaf98ca9abd0d5cbba0d60a6e2dcab",
+      "sourceCommit": "41ae52056405415fef14630ed11691d8958f144c"
+    },
+    {
+      "owner": "approver",
+      "path": "approver-contract/src/main/resources/record-hub/approvals/error-codes.json",
+      "family": "approvals",
+      "kind": "schema",
+      "schemaVersion": "1",
+      "sha256": "sha256:3b55ad8f12f72fada8be8141bae5e29bddfa5b13a79bfc25b3a3501148594983",
+      "sourceCommit": "41ae52056405415fef14630ed11691d8958f144c"
+    },
+    {
+      "owner": "approver",
+      "path": "approver-contract/src/main/resources/record-hub/approvals/manifest.json",
+      "family": "approvals",
+      "kind": "manifest",
+      "schemaVersion": "1",
+      "sha256": "sha256:ce0aaad03a4869b6b4ed09e7a71b8dcafec94ccc2c4c2f347d914c5630f4fc41",
+      "sourceCommit": "41ae52056405415fef14630ed11691d8958f144c"
+    },
+    {
+      "owner": "approver",
+      "path": "approver-contract/src/main/resources/record-hub/approvals/testdata/invalid/bids-tender-publication-approval-request-v1-sensitive-field.json",
+      "family": "approvals",
+      "kind": "fixture",
+      "schemaVersion": "1",
+      "sha256": "sha256:c1943e1e16ff49ca923ba6efe819900163ddccad5f28aaea4c231e8e9f7d8a87",
+      "sourceCommit": "41ae52056405415fef14630ed11691d8958f144c"
+    },
+    {
+      "owner": "approver",
+      "path": "approver-contract/src/main/resources/record-hub/approvals/testdata/invalid/bids-tender-publication-approval-request-v1-unknown-field.json",
+      "family": "approvals",
+      "kind": "fixture",
+      "schemaVersion": "1",
+      "sha256": "sha256:10dcfddb7c171c664c67f9532b6771174233abe908acc4106a15574d29e2cbe8",
+      "sourceCommit": "41ae52056405415fef14630ed11691d8958f144c"
+    },
+    {
+      "owner": "approver",
+      "path": "approver-contract/src/main/resources/record-hub/approvals/testdata/invalid/dispatch-approval-request-v1-unknown-field.json",
+      "family": "approvals",
+      "kind": "fixture",
+      "schemaVersion": "1",
+      "sha256": "sha256:633e2dbf4f0a17de671eb13b443d2bcd30441e3bf5b0e470487b6e7ad163716e",
+      "sourceCommit": "41ae52056405415fef14630ed11691d8958f144c"
+    },
+    {
+      "owner": "approver",
+      "path": "approver-contract/src/main/resources/record-hub/approvals/testdata/invalid/dispatch-approval-result-v1-decision.json",
+      "family": "approvals",
+      "kind": "fixture",
+      "schemaVersion": "1",
+      "sha256": "sha256:9bf716ca7d99770063ddd7201a114c0df718fcd67e4ee85ee04d0e6776d22b99",
+      "sourceCommit": "41ae52056405415fef14630ed11691d8958f144c"
+    },
+    {
+      "owner": "approver",
+      "path": "approver-contract/src/main/resources/record-hub/approvals/testdata/valid/bids-tender-publication-approval-request-v1.json",
+      "family": "approvals",
+      "kind": "fixture",
+      "schemaVersion": "1",
+      "sha256": "sha256:26f2af35c09c8041265bd9f29b3bc218b5e64f785e59ee3aaa85d6922454b702",
+      "sourceCommit": "41ae52056405415fef14630ed11691d8958f144c"
+    },
+    {
+      "owner": "approver",
+      "path": "approver-contract/src/main/resources/record-hub/approvals/testdata/valid/bids-tender-publication-approval-result-v1.json",
+      "family": "approvals",
+      "kind": "fixture",
+      "schemaVersion": "1",
+      "sha256": "sha256:93865ac4dda624b58e2c1de81c2279859fe0454e38ab1e0e5718230b1ff517b0",
+      "sourceCommit": "41ae52056405415fef14630ed11691d8958f144c"
+    },
+    {
+      "owner": "approver",
+      "path": "approver-contract/src/main/resources/record-hub/approvals/testdata/valid/dispatch-approval-request-v1.json",
+      "family": "approvals",
+      "kind": "fixture",
+      "schemaVersion": "1",
+      "sha256": "sha256:2e9638ee11b09aa0dfe5ea20f9925c52d0a34bcabd1e4ab804b49c769dd890ae",
+      "sourceCommit": "41ae52056405415fef14630ed11691d8958f144c"
+    },
+    {
+      "owner": "approver",
+      "path": "approver-contract/src/main/resources/record-hub/approvals/testdata/valid/dispatch-approval-result-v1.json",
+      "family": "approvals",
+      "kind": "fixture",
+      "schemaVersion": "1",
+      "sha256": "sha256:c54b48a3c6d176f8fd56e3c366fec021951e529789a597f7cc592aee22efacf2",
+      "sourceCommit": "41ae52056405415fef14630ed11691d8958f144c"
+    },
+    {
+      "owner": "approver",
+      "path": "approver-contract/src/main/resources/record-hub/commands/command-envelope-v1.schema.json",
+      "family": "commands",
+      "kind": "schema",
+      "schemaVersion": "urn:record-hub:command-envelope:v1",
+      "sha256": "sha256:3f738746784be6837cc30609c551189b3a44aa5c74a44c9e4d498a36188314d3",
+      "sourceCommit": "41ae52056405415fef14630ed11691d8958f144c"
+    },
+    {
+      "owner": "approver",
+      "path": "approver-contract/src/main/resources/record-hub/commands/error-codes.json",
+      "family": "commands",
+      "kind": "schema",
+      "schemaVersion": "1",
+      "sha256": "sha256:f013861c8700c02644fc2f86a8765625ddba00f944090fd421b7f325df96086f",
+      "sourceCommit": "41ae52056405415fef14630ed11691d8958f144c"
+    },
+    {
+      "owner": "approver",
+      "path": "approver-contract/src/main/resources/record-hub/commands/manifest.json",
+      "family": "commands",
+      "kind": "manifest",
+      "schemaVersion": "1",
+      "sha256": "sha256:f3ea00dc946f849d01091a0c74c283ea5212da4f78e805a6df2137df3241d9e4",
+      "sourceCommit": "41ae52056405415fef14630ed11691d8958f144c"
+    },
+    {
+      "owner": "approver",
+      "path": "approver-contract/src/main/resources/record-hub/commands/result-envelope-v1.schema.json",
+      "family": "commands",
+      "kind": "schema",
+      "schemaVersion": "urn:record-hub:result-envelope:v1",
+      "sha256": "sha256:ce0171d9ac2b549f0d4813cdf207a451d3f8c265f512da819e90e6655480bbf0",
+      "sourceCommit": "41ae52056405415fef14630ed11691d8958f144c"
+    },
+    {
+      "owner": "approver",
+      "path": "approver-contract/src/main/resources/record-hub/commands/testdata/invalid/command-envelope-v1-unknown-field.json",
+      "family": "commands",
+      "kind": "fixture",
+      "schemaVersion": "UNSPECIFIED",
+      "sha256": "sha256:830f23369f8e9bc8c6b37368b112a063b71688cf452640fea7ee70c827c40db5",
+      "sourceCommit": "41ae52056405415fef14630ed11691d8958f144c"
+    },
+    {
+      "owner": "approver",
+      "path": "approver-contract/src/main/resources/record-hub/commands/testdata/invalid/result-envelope-v1-status.json",
+      "family": "commands",
+      "kind": "fixture",
+      "schemaVersion": "UNSPECIFIED",
+      "sha256": "sha256:1e5c3dc7e24bd69038afe296d4602728ab3a9dd599b4e3483898f34f7db64d98",
+      "sourceCommit": "41ae52056405415fef14630ed11691d8958f144c"
+    },
+    {
+      "owner": "approver",
+      "path": "approver-contract/src/main/resources/record-hub/commands/testdata/valid/command-envelope-v1.json",
+      "family": "commands",
+      "kind": "fixture",
+      "schemaVersion": "UNSPECIFIED",
+      "sha256": "sha256:ecaab9c439034ca326a39d10dd11ace930f5e29727b787d9247ccb58fe423215",
+      "sourceCommit": "41ae52056405415fef14630ed11691d8958f144c"
+    },
+    {
+      "owner": "approver",
+      "path": "approver-contract/src/main/resources/record-hub/commands/testdata/valid/result-envelope-v1.json",
+      "family": "commands",
+      "kind": "fixture",
+      "schemaVersion": "UNSPECIFIED",
+      "sha256": "sha256:25d6a7845bdf8ded73c297db890bee9ebde2f2d85f3852147f882f1bf6a257b6",
+      "sourceCommit": "41ae52056405415fef14630ed11691d8958f144c"
+    },
+    {
+      "owner": "approver",
+      "path": "approver-contract/src/main/resources/record-hub/summaries/application-summary-v1.schema.json",
+      "family": "summaries",
+      "kind": "schema",
+      "schemaVersion": "urn:record-hub:summary:application:v1",
+      "sha256": "sha256:c7c269943d0d84c090a00c1c624fa5f08c1e994df82016c8dd26ba3d16f621ae",
+      "sourceCommit": "41ae52056405415fef14630ed11691d8958f144c"
+    },
+    {
+      "owner": "approver",
+      "path": "approver-contract/src/main/resources/record-hub/summaries/manifest.json",
+      "family": "summaries",
+      "kind": "manifest",
+      "schemaVersion": "1",
+      "sha256": "sha256:4294ad76da3233b16d3ad6f6b4151a5f1d8fe4bbd61fe4ad63608529852881be",
+      "sourceCommit": "41ae52056405415fef14630ed11691d8958f144c"
+    },
+    {
+      "owner": "approver",
+      "path": "approver-contract/src/main/resources/record-hub/summaries/testdata/valid/application-summary-v1.json",
+      "family": "summaries",
+      "kind": "fixture",
+      "schemaVersion": "7",
+      "sha256": "sha256:0959107cfa960ddea958a334d694698bd714a8000c3e5d98c0ba89d7b97c0838",
+      "sourceCommit": "41ae52056405415fef14630ed11691d8958f144c"
+    },
+    {
+      "owner": "fluxion",
+      "path": "server/src/main/resources/record-hub/approvals/dispatch-approval-request-v1.schema.json",
+      "family": "approvals",
+      "kind": "schema",
+      "schemaVersion": "urn:record-hub:dispatch-approval-request:v1",
+      "sha256": "sha256:2f87c58552b18cd144f0ee648840ff8c02833ead2247364b7d71e22cba973ddc",
+      "sourceCommit": "bf538f641bf9b41ac399cbad4fb60d8ecf89dba9"
+    },
+    {
+      "owner": "fluxion",
+      "path": "server/src/main/resources/record-hub/approvals/dispatch-approval-result-v1.schema.json",
+      "family": "approvals",
+      "kind": "schema",
+      "schemaVersion": "urn:record-hub:dispatch-approval-result:v1",
+      "sha256": "sha256:cbc624b1b2e786cd70e5e3005f3a084a36aaf98ca9abd0d5cbba0d60a6e2dcab",
+      "sourceCommit": "bf538f641bf9b41ac399cbad4fb60d8ecf89dba9"
+    },
+    {
+      "owner": "fluxion",
+      "path": "server/src/main/resources/record-hub/approvals/error-codes.json",
+      "family": "approvals",
+      "kind": "schema",
+      "schemaVersion": "1",
+      "sha256": "sha256:3b55ad8f12f72fada8be8141bae5e29bddfa5b13a79bfc25b3a3501148594983",
+      "sourceCommit": "bf538f641bf9b41ac399cbad4fb60d8ecf89dba9"
+    },
+    {
+      "owner": "fluxion",
+      "path": "server/src/main/resources/record-hub/approvals/manifest.json",
+      "family": "approvals",
+      "kind": "manifest",
+      "schemaVersion": "1",
+      "sha256": "sha256:35e77592410d087498eec0dc01facf96a37bb27f67c54029320eae32db6744b7",
+      "sourceCommit": "bf538f641bf9b41ac399cbad4fb60d8ecf89dba9"
+    },
+    {
+      "owner": "fluxion",
+      "path": "server/src/main/resources/record-hub/approvals/testdata/invalid/dispatch-approval-request-v1-unknown-field.json",
+      "family": "approvals",
+      "kind": "fixture",
+      "schemaVersion": "1",
+      "sha256": "sha256:633e2dbf4f0a17de671eb13b443d2bcd30441e3bf5b0e470487b6e7ad163716e",
+      "sourceCommit": "bf538f641bf9b41ac399cbad4fb60d8ecf89dba9"
+    },
+    {
+      "owner": "fluxion",
+      "path": "server/src/main/resources/record-hub/approvals/testdata/invalid/dispatch-approval-result-v1-decision.json",
+      "family": "approvals",
+      "kind": "fixture",
+      "schemaVersion": "1",
+      "sha256": "sha256:9bf716ca7d99770063ddd7201a114c0df718fcd67e4ee85ee04d0e6776d22b99",
+      "sourceCommit": "bf538f641bf9b41ac399cbad4fb60d8ecf89dba9"
+    },
+    {
+      "owner": "fluxion",
+      "path": "server/src/main/resources/record-hub/approvals/testdata/valid/dispatch-approval-request-v1.json",
+      "family": "approvals",
+      "kind": "fixture",
+      "schemaVersion": "1",
+      "sha256": "sha256:2e9638ee11b09aa0dfe5ea20f9925c52d0a34bcabd1e4ab804b49c769dd890ae",
+      "sourceCommit": "bf538f641bf9b41ac399cbad4fb60d8ecf89dba9"
+    },
+    {
+      "owner": "fluxion",
+      "path": "server/src/main/resources/record-hub/approvals/testdata/valid/dispatch-approval-result-v1.json",
+      "family": "approvals",
+      "kind": "fixture",
+      "schemaVersion": "1",
+      "sha256": "sha256:c54b48a3c6d176f8fd56e3c366fec021951e529789a597f7cc592aee22efacf2",
+      "sourceCommit": "bf538f641bf9b41ac399cbad4fb60d8ecf89dba9"
+    },
+    {
+      "owner": "fluxion",
+      "path": "server/src/main/resources/record-hub/commands/command-envelope-v1.schema.json",
+      "family": "commands",
+      "kind": "schema",
+      "schemaVersion": "urn:record-hub:command-envelope:v1",
+      "sha256": "sha256:3f738746784be6837cc30609c551189b3a44aa5c74a44c9e4d498a36188314d3",
+      "sourceCommit": "bf538f641bf9b41ac399cbad4fb60d8ecf89dba9"
+    },
+    {
+      "owner": "fluxion",
+      "path": "server/src/main/resources/record-hub/commands/error-codes.json",
+      "family": "commands",
+      "kind": "schema",
+      "schemaVersion": "1",
+      "sha256": "sha256:f013861c8700c02644fc2f86a8765625ddba00f944090fd421b7f325df96086f",
+      "sourceCommit": "bf538f641bf9b41ac399cbad4fb60d8ecf89dba9"
+    },
+    {
+      "owner": "fluxion",
+      "path": "server/src/main/resources/record-hub/commands/manifest.json",
+      "family": "commands",
+      "kind": "manifest",
+      "schemaVersion": "1",
+      "sha256": "sha256:f3ea00dc946f849d01091a0c74c283ea5212da4f78e805a6df2137df3241d9e4",
+      "sourceCommit": "bf538f641bf9b41ac399cbad4fb60d8ecf89dba9"
+    },
+    {
+      "owner": "fluxion",
+      "path": "server/src/main/resources/record-hub/commands/result-envelope-v1.schema.json",
+      "family": "commands",
+      "kind": "schema",
+      "schemaVersion": "urn:record-hub:result-envelope:v1",
+      "sha256": "sha256:ce0171d9ac2b549f0d4813cdf207a451d3f8c265f512da819e90e6655480bbf0",
+      "sourceCommit": "bf538f641bf9b41ac399cbad4fb60d8ecf89dba9"
+    },
+    {
+      "owner": "fluxion",
+      "path": "server/src/main/resources/record-hub/commands/testdata/invalid/command-envelope-v1-unknown-field.json",
+      "family": "commands",
+      "kind": "fixture",
+      "schemaVersion": "UNSPECIFIED",
+      "sha256": "sha256:830f23369f8e9bc8c6b37368b112a063b71688cf452640fea7ee70c827c40db5",
+      "sourceCommit": "bf538f641bf9b41ac399cbad4fb60d8ecf89dba9"
+    },
+    {
+      "owner": "fluxion",
+      "path": "server/src/main/resources/record-hub/commands/testdata/invalid/result-envelope-v1-status.json",
+      "family": "commands",
+      "kind": "fixture",
+      "schemaVersion": "UNSPECIFIED",
+      "sha256": "sha256:1e5c3dc7e24bd69038afe296d4602728ab3a9dd599b4e3483898f34f7db64d98",
+      "sourceCommit": "bf538f641bf9b41ac399cbad4fb60d8ecf89dba9"
+    },
+    {
+      "owner": "fluxion",
+      "path": "server/src/main/resources/record-hub/commands/testdata/valid/command-envelope-v1.json",
+      "family": "commands",
+      "kind": "fixture",
+      "schemaVersion": "UNSPECIFIED",
+      "sha256": "sha256:ecaab9c439034ca326a39d10dd11ace930f5e29727b787d9247ccb58fe423215",
+      "sourceCommit": "bf538f641bf9b41ac399cbad4fb60d8ecf89dba9"
+    },
+    {
+      "owner": "fluxion",
+      "path": "server/src/main/resources/record-hub/commands/testdata/valid/result-envelope-v1.json",
+      "family": "commands",
+      "kind": "fixture",
+      "schemaVersion": "UNSPECIFIED",
+      "sha256": "sha256:25d6a7845bdf8ded73c297db890bee9ebde2f2d85f3852147f882f1bf6a257b6",
+      "sourceCommit": "bf538f641bf9b41ac399cbad4fb60d8ecf89dba9"
+    },
+    {
+      "owner": "fluxion",
+      "path": "server/src/main/resources/record-hub/summaries/manifest.json",
+      "family": "summaries",
+      "kind": "manifest",
+      "schemaVersion": "1",
+      "sha256": "sha256:0d84d4dd715b9396be7ccb3608221dd8f00f63b8aef4d1c4806852d6c8406cba",
+      "sourceCommit": "bf538f641bf9b41ac399cbad4fb60d8ecf89dba9"
+    },
+    {
+      "owner": "fluxion",
+      "path": "server/src/main/resources/record-hub/summaries/project-summary-v1.schema.json",
+      "family": "summaries",
+      "kind": "schema",
+      "schemaVersion": "urn:record-hub:summary:project:v1",
+      "sha256": "sha256:311dbb7d1c9b3841cacd0ada034fba1077c494841b24baaca18a19ffe196a398",
+      "sourceCommit": "bf538f641bf9b41ac399cbad4fb60d8ecf89dba9"
+    },
+    {
+      "owner": "fluxion",
+      "path": "server/src/main/resources/record-hub/summaries/testdata/valid/project-summary-v1.json",
+      "family": "summaries",
+      "kind": "fixture",
+      "schemaVersion": "3",
+      "sha256": "sha256:46fb037ce84ab9e4265502d4fc647de699c8f0b39161ef3cd46d867c9d285a5d",
+      "sourceCommit": "bf538f641bf9b41ac399cbad4fb60d8ecf89dba9"
+    },
+    {
+      "owner": "bids",
+      "path": "backend/internal/recordhub/contracts/approvals/bids-tender-publication-approval-request-v1.schema.json",
+      "family": "approvals",
+      "kind": "schema",
+      "schemaVersion": "urn:record-hub:bids-tender-publication-approval-request:v1",
+      "sha256": "sha256:a1651cdd75ad16631cb6cc35a12e9770fecf920ad36ae6e561a3938ea5cc8f4c",
+      "sourceCommit": "b5d2541a50046011d21fae169b86f793a6b22158"
+    },
+    {
+      "owner": "bids",
+      "path": "backend/internal/recordhub/contracts/approvals/bids-tender-publication-approval-result-v1.schema.json",
+      "family": "approvals",
+      "kind": "schema",
+      "schemaVersion": "urn:record-hub:bids-tender-publication-approval-result:v1",
+      "sha256": "sha256:fe3fc3b88faa712f863b09d0aa9af17527b8230680486f8431d47cbb1f92bc96",
+      "sourceCommit": "b5d2541a50046011d21fae169b86f793a6b22158"
+    },
+    {
+      "owner": "bids",
+      "path": "backend/internal/recordhub/contracts/approvals/dispatch-approval-request-v1.schema.json",
+      "family": "approvals",
+      "kind": "schema",
+      "schemaVersion": "urn:record-hub:dispatch-approval-request:v1",
+      "sha256": "sha256:2f87c58552b18cd144f0ee648840ff8c02833ead2247364b7d71e22cba973ddc",
+      "sourceCommit": "b5d2541a50046011d21fae169b86f793a6b22158"
+    },
+    {
+      "owner": "bids",
+      "path": "backend/internal/recordhub/contracts/approvals/dispatch-approval-result-v1.schema.json",
+      "family": "approvals",
+      "kind": "schema",
+      "schemaVersion": "urn:record-hub:dispatch-approval-result:v1",
+      "sha256": "sha256:cbc624b1b2e786cd70e5e3005f3a084a36aaf98ca9abd0d5cbba0d60a6e2dcab",
+      "sourceCommit": "b5d2541a50046011d21fae169b86f793a6b22158"
+    },
+    {
+      "owner": "bids",
+      "path": "backend/internal/recordhub/contracts/approvals/error-codes.json",
+      "family": "approvals",
+      "kind": "schema",
+      "schemaVersion": "1",
+      "sha256": "sha256:3b55ad8f12f72fada8be8141bae5e29bddfa5b13a79bfc25b3a3501148594983",
+      "sourceCommit": "b5d2541a50046011d21fae169b86f793a6b22158"
+    },
+    {
+      "owner": "bids",
+      "path": "backend/internal/recordhub/contracts/approvals/manifest.json",
+      "family": "approvals",
+      "kind": "manifest",
+      "schemaVersion": "1",
+      "sha256": "sha256:3c4b46d8829924ba505603b02d52a72e68c8c0e49b1a1fc516fefe1690babf73",
+      "sourceCommit": "b5d2541a50046011d21fae169b86f793a6b22158"
+    },
+    {
+      "owner": "bids",
+      "path": "backend/internal/recordhub/contracts/approvals/testdata/invalid/bids-tender-publication-approval-request-v1-sensitive-field.json",
+      "family": "approvals",
+      "kind": "fixture",
+      "schemaVersion": "1",
+      "sha256": "sha256:c1943e1e16ff49ca923ba6efe819900163ddccad5f28aaea4c231e8e9f7d8a87",
+      "sourceCommit": "b5d2541a50046011d21fae169b86f793a6b22158"
+    },
+    {
+      "owner": "bids",
+      "path": "backend/internal/recordhub/contracts/approvals/testdata/invalid/bids-tender-publication-approval-request-v1-unknown-field.json",
+      "family": "approvals",
+      "kind": "fixture",
+      "schemaVersion": "1",
+      "sha256": "sha256:10dcfddb7c171c664c67f9532b6771174233abe908acc4106a15574d29e2cbe8",
+      "sourceCommit": "b5d2541a50046011d21fae169b86f793a6b22158"
+    },
+    {
+      "owner": "bids",
+      "path": "backend/internal/recordhub/contracts/approvals/testdata/invalid/dispatch-approval-request-v1-unknown-field.json",
+      "family": "approvals",
+      "kind": "fixture",
+      "schemaVersion": "1",
+      "sha256": "sha256:633e2dbf4f0a17de671eb13b443d2bcd30441e3bf5b0e470487b6e7ad163716e",
+      "sourceCommit": "b5d2541a50046011d21fae169b86f793a6b22158"
+    },
+    {
+      "owner": "bids",
+      "path": "backend/internal/recordhub/contracts/approvals/testdata/invalid/dispatch-approval-result-v1-decision.json",
+      "family": "approvals",
+      "kind": "fixture",
+      "schemaVersion": "1",
+      "sha256": "sha256:9bf716ca7d99770063ddd7201a114c0df718fcd67e4ee85ee04d0e6776d22b99",
+      "sourceCommit": "b5d2541a50046011d21fae169b86f793a6b22158"
+    },
+    {
+      "owner": "bids",
+      "path": "backend/internal/recordhub/contracts/approvals/testdata/valid/bids-tender-publication-approval-request-v1.json",
+      "family": "approvals",
+      "kind": "fixture",
+      "schemaVersion": "1",
+      "sha256": "sha256:26f2af35c09c8041265bd9f29b3bc218b5e64f785e59ee3aaa85d6922454b702",
+      "sourceCommit": "b5d2541a50046011d21fae169b86f793a6b22158"
+    },
+    {
+      "owner": "bids",
+      "path": "backend/internal/recordhub/contracts/approvals/testdata/valid/bids-tender-publication-approval-result-v1.json",
+      "family": "approvals",
+      "kind": "fixture",
+      "schemaVersion": "1",
+      "sha256": "sha256:93865ac4dda624b58e2c1de81c2279859fe0454e38ab1e0e5718230b1ff517b0",
+      "sourceCommit": "b5d2541a50046011d21fae169b86f793a6b22158"
+    },
+    {
+      "owner": "bids",
+      "path": "backend/internal/recordhub/contracts/approvals/testdata/valid/dispatch-approval-request-v1.json",
+      "family": "approvals",
+      "kind": "fixture",
+      "schemaVersion": "1",
+      "sha256": "sha256:2e9638ee11b09aa0dfe5ea20f9925c52d0a34bcabd1e4ab804b49c769dd890ae",
+      "sourceCommit": "b5d2541a50046011d21fae169b86f793a6b22158"
+    },
+    {
+      "owner": "bids",
+      "path": "backend/internal/recordhub/contracts/approvals/testdata/valid/dispatch-approval-result-v1.json",
+      "family": "approvals",
+      "kind": "fixture",
+      "schemaVersion": "1",
+      "sha256": "sha256:c54b48a3c6d176f8fd56e3c366fec021951e529789a597f7cc592aee22efacf2",
+      "sourceCommit": "b5d2541a50046011d21fae169b86f793a6b22158"
+    },
+    {
+      "owner": "bids",
+      "path": "backend/internal/recordhub/contracts/commands/command-envelope-v1.schema.json",
+      "family": "commands",
+      "kind": "schema",
+      "schemaVersion": "urn:record-hub:command-envelope:v1",
+      "sha256": "sha256:3f738746784be6837cc30609c551189b3a44aa5c74a44c9e4d498a36188314d3",
+      "sourceCommit": "b5d2541a50046011d21fae169b86f793a6b22158"
+    },
+    {
+      "owner": "bids",
+      "path": "backend/internal/recordhub/contracts/commands/error-codes.json",
+      "family": "commands",
+      "kind": "schema",
+      "schemaVersion": "1",
+      "sha256": "sha256:f013861c8700c02644fc2f86a8765625ddba00f944090fd421b7f325df96086f",
+      "sourceCommit": "b5d2541a50046011d21fae169b86f793a6b22158"
+    },
+    {
+      "owner": "bids",
+      "path": "backend/internal/recordhub/contracts/commands/manifest.json",
+      "family": "commands",
+      "kind": "manifest",
+      "schemaVersion": "1",
+      "sha256": "sha256:f3ea00dc946f849d01091a0c74c283ea5212da4f78e805a6df2137df3241d9e4",
+      "sourceCommit": "b5d2541a50046011d21fae169b86f793a6b22158"
+    },
+    {
+      "owner": "bids",
+      "path": "backend/internal/recordhub/contracts/commands/result-envelope-v1.schema.json",
+      "family": "commands",
+      "kind": "schema",
+      "schemaVersion": "urn:record-hub:result-envelope:v1",
+      "sha256": "sha256:ce0171d9ac2b549f0d4813cdf207a451d3f8c265f512da819e90e6655480bbf0",
+      "sourceCommit": "b5d2541a50046011d21fae169b86f793a6b22158"
+    },
+    {
+      "owner": "bids",
+      "path": "backend/internal/recordhub/contracts/commands/testdata/invalid/command-envelope-v1-unknown-field.json",
+      "family": "commands",
+      "kind": "fixture",
+      "schemaVersion": "UNSPECIFIED",
+      "sha256": "sha256:830f23369f8e9bc8c6b37368b112a063b71688cf452640fea7ee70c827c40db5",
+      "sourceCommit": "b5d2541a50046011d21fae169b86f793a6b22158"
+    },
+    {
+      "owner": "bids",
+      "path": "backend/internal/recordhub/contracts/commands/testdata/invalid/result-envelope-v1-status.json",
+      "family": "commands",
+      "kind": "fixture",
+      "schemaVersion": "UNSPECIFIED",
+      "sha256": "sha256:1e5c3dc7e24bd69038afe296d4602728ab3a9dd599b4e3483898f34f7db64d98",
+      "sourceCommit": "b5d2541a50046011d21fae169b86f793a6b22158"
+    },
+    {
+      "owner": "bids",
+      "path": "backend/internal/recordhub/contracts/commands/testdata/valid/command-envelope-v1.json",
+      "family": "commands",
+      "kind": "fixture",
+      "schemaVersion": "UNSPECIFIED",
+      "sha256": "sha256:ecaab9c439034ca326a39d10dd11ace930f5e29727b787d9247ccb58fe423215",
+      "sourceCommit": "b5d2541a50046011d21fae169b86f793a6b22158"
+    },
+    {
+      "owner": "bids",
+      "path": "backend/internal/recordhub/contracts/commands/testdata/valid/result-envelope-v1.json",
+      "family": "commands",
+      "kind": "fixture",
+      "schemaVersion": "UNSPECIFIED",
+      "sha256": "sha256:25d6a7845bdf8ded73c297db890bee9ebde2f2d85f3852147f882f1bf6a257b6",
+      "sourceCommit": "b5d2541a50046011d21fae169b86f793a6b22158"
+    },
+    {
+      "owner": "bids",
+      "path": "backend/internal/recordhub/contracts/manifest.json",
+      "family": "root",
+      "kind": "manifest",
+      "schemaVersion": "1",
+      "sha256": "sha256:630156586b921c6b50b45fcc863995cf69fa22535222b0442fc6fde9e89d670b",
+      "sourceCommit": "b5d2541a50046011d21fae169b86f793a6b22158"
+    },
+    {
+      "owner": "bids",
+      "path": "backend/internal/recordhub/contracts/tender-summary-v1.schema.json",
+      "family": "summaries",
+      "kind": "schema",
+      "schemaVersion": "urn:record-hub:summary:tender:v1",
+      "sha256": "sha256:024524fa5b60f8a8deac700bf19745c121f450439532ba22d7ab0f882cad1fff",
+      "sourceCommit": "b5d2541a50046011d21fae169b86f793a6b22158"
+    },
+    {
+      "owner": "bids",
+      "path": "backend/internal/recordhub/contracts/testdata/valid/tender-summary-v1.json",
+      "family": "root",
+      "kind": "fixture",
+      "schemaVersion": "4",
+      "sha256": "sha256:97b10d40291c47f7c7aa44bbc785835eaf4b04782912fed6922cc71a6840d5ff",
+      "sourceCommit": "b5d2541a50046011d21fae169b86f793a6b22158"
+    }
+  ],
+  "excluded": [
+    "generated classes",
+    "build outputs",
+    "target directories",
+    "untracked files"
+  ],
+  "prerequisite": {
+    "phase5": "INDEPENDENT_GATE",
+    "connectorEnablement": "NOT_GRANTED"
+  },
+  "next": "Use this inventory to define P6-200 registry entries and P6-201 SDK parity; do not enable unknown connectors."
+}
