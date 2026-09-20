@@ -71,3 +71,13 @@ Phase 5 的方案、需求、任务和验收见 [Phase 5 技术方案](phase-5-d
 - 集群级故障切换、容量扩展、长期 retention 和灾备演练。
 - connector 生命周期、兼容窗口、发布治理和自助接入规范。
 - 正式安全/合规/运维签字；依据实际需求评估多地域，而不预先承诺。
+
+## Phase 6：真实业务扩展与自助化数据平面
+
+Phase 6 的方案、需求、任务和验收见 [Phase 6 技术方案](phase-6-design.md)、[需求基线](phase-6-requirements.md)、
+[任务分解](phase-6-task-breakdown.md) 和 [验收计划](phase-6-acceptance-plan.md)。
+
+- 在 Phase 5 GA 证据完成后，扩展 Approver、Fluxion、Bids、Settlement 的真实 connector。
+- 增强 schema.org 语义、多维表格 tags/relations/views、redacted export 和 workflow binding。
+- 以 registry-backed NATS event/replay、Temporal/Conductor typed reference 和自助化 control plane 为重点。
+- 不默认承诺多地域 active-active、零 RPO 或跨 owner 分布式事务。
