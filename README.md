@@ -96,6 +96,7 @@ HTTP 契约以 [`api/openapi.yaml`](api/openapi.yaml) 为准。`make generate-cl
 - [Phase 6 Batch 3 P6-300 Approver projection](docs/phase-6-batch3-p6-300.md)
 - [Phase 6 Batch 3 P6-301 Fluxion approval](docs/phase-6-batch3-p6-301.md)
 - [Phase 6 Batch 3 P6-302 Bids approval](docs/phase-6-batch3-p6-302.md)
+- [Phase 6 Batch 3 P6-303 Settlement association](docs/phase-6-batch3-p6-303.md)
 - [原生隔离验收拓扑](deploy/local/isolated/README.md)
 - [参考资料](docs/references.md)
 - [ADR-0001：独立仓库与事实所有权](docs/adr/0001-independent-service-and-data-ownership.md)

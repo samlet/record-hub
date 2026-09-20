@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "phase": "6",
+  "task": "P6-303",
+  "status": "BLOCKED_BY_LIVE_CONNECTOR",
+  "generatedAt": "2026-09-20T08:22:56.113874Z",
+  "liveTraffic": false,
+  "sourceCommit": "0a9e68ef64703e2f4c28945357606ba404f922f3",
+  "static": {
+    "settlementManifest": true,
+    "applySchema": true,
+    "safeAssociation": true,
+    "ownerOnlyEvidence": true,
+    "approverApplyBoundary": true
+  },
+  "missingStatic": [],
+  "live": {
+    "status": "BLOCKED",
+    "reason": "no immutable Settlement native Apply report supplied",
+    "report": ""
+  },
+  "contract": {
+    "requestEvent": "settlement.confirmation.requested@v1",
+    "resultEvent": "settlement.confirmation.result@v1",
+    "applyEvent": "settlement.confirm@v1",
+    "sourceVersionRequired": true,
+    "snapshotHashRequired": true
+  },
+  "safeAssociation": [
+    "tenantId",
+    "workspaceId",
+    "settlementRef",
+    "approvalRef",
+    "organizationRef",
+    "decision",
+    "sourceVersion",
+    "snapshotHash",
+    "applyStatus",
+    "updatedAt"
+  ],
+  "forbidden": [
+    "grossAmount",
+    "netAmount",
+    "bankAccount",
+    "invoiceAttachment",
+    "sealedData",
+    "rawPayload"
+  ],
+  "applyBoundary": {
+    "recordHubRole": "ASSOCIATION_AND_RECEIPT_ONLY",
+    "ownerRole": "SETTLEMENT_APPLY",
+    "approvedOnly": true,
+    "idempotencyRequired": true,
+    "failureAction": "NO_ASSOCIATION_ADVANCE"
+  },
+  "reconciliation": {
+    "allowedFindings": [
+      "GAP",
+      "CONFLICT",
+      "HASH_MISMATCH",
+      "APPLY_MISSING"
+    ],
+    "unknownAction": "QUARANTINE"
+  },
+  "decision": "DO_NOT_APPLY_SETTLEMENT_FACTS",
+  "prerequisite": {
+    "phase5": "INDEPENDENT_GATE",
+    "connectorEnablement": "NOT_GRANTED"
+  },
+  "next": "Run cross-process Settlement request/result/Apply with idempotency, rollback and redaction evidence."
+}

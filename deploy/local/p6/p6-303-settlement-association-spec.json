@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "phase": "6",
+  "task": "P6-303",
+  "purpose": "freeze Settlement confirmation safe association and Apply boundary",
+  "liveTraffic": false,
+  "failClosed": true,
+  "contract": {
+    "requestEvent": "settlement.confirmation.requested@v1",
+    "resultEvent": "settlement.confirmation.result@v1",
+    "applyEvent": "settlement.confirm@v1",
+    "sourceVersionRequired": true,
+    "snapshotHashRequired": true
+  },
+  "safeAssociation": ["tenantId", "workspaceId", "settlementRef", "approvalRef", "organizationRef", "decision", "sourceVersion", "snapshotHash", "applyStatus", "updatedAt"],
+  "forbidden": ["grossAmount", "netAmount", "bankAccount", "invoiceAttachment", "sealedData", "rawPayload"],
+  "applyBoundary": {
+    "recordHubRole": "ASSOCIATION_AND_RECEIPT_ONLY",
+    "ownerRole": "SETTLEMENT_APPLY",
+    "approvedOnly": true,
+    "idempotencyRequired": true,
+    "failureAction": "NO_ASSOCIATION_ADVANCE"
+  },
+  "reconciliation": {"allowedFindings": ["GAP", "CONFLICT", "HASH_MISMATCH", "APPLY_MISSING"], "unknownAction": "QUARANTINE"},
+  "liveEvidenceRequired": true,
+  "missingAction": "BLOCKED_BY_LIVE_CONNECTOR",
+  "prerequisite": {"phase5": "INDEPENDENT_GATE", "connectorEnablement": "NOT_GRANTED"}
+}
