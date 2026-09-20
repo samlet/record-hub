@@ -1,0 +1,117 @@
+{
+  "finding": {
+    "allowedKinds": [
+      "GAP",
+      "CONFLICT",
+      "HASH_MISMATCH",
+      "FORBIDDEN",
+      "BROKEN"
+    ],
+    "rawPayload": "FORBIDDEN",
+    "requiredFields": [
+      "findingId",
+      "relationRef",
+      "kind",
+      "expectedVersion",
+      "observedVersion",
+      "sourcePointer",
+      "detectedAt",
+      "resolutionState"
+    ],
+    "resolutionStates": [
+      "OPEN",
+      "ACKNOWLEDGED",
+      "RESOLVED",
+      "QUARANTINED"
+    ]
+  },
+  "generatedAt": "2026-09-20T07:54:06Z",
+  "liveTraffic": false,
+  "next": "Persist only typed refs and safe summaries; record gaps/conflicts as findings and quarantine forbidden or unverifiable relations.",
+  "phase": "6",
+  "prerequisite": {
+    "connectorEnablement": "NOT_GRANTED",
+    "phase5": "INDEPENDENT_GATE"
+  },
+  "relation": {
+    "allowedCardinality": [
+      "one-to-one",
+      "one-to-many",
+      "many-to-one",
+      "many-to-many"
+    ],
+    "allowedRelationTypes": [
+      "project.application",
+      "workflow.approval",
+      "application.tender",
+      "record.source"
+    ],
+    "allowedStatus": [
+      "CURRENT",
+      "GAP",
+      "CONFLICT",
+      "BROKEN",
+      "FORBIDDEN"
+    ],
+    "relationTypePattern": "^[a-z][a-z0-9.-]{1,63}$",
+    "unknownRelationAction": "QUARANTINE"
+  },
+  "safeSummary": {
+    "allowedFields": [
+      "id",
+      "type",
+      "title",
+      "status",
+      "ownerRef",
+      "workflowRef",
+      "sourceVersion",
+      "snapshotHash",
+      "updatedAt"
+    ],
+    "forbiddenFields": [
+      "payload",
+      "rawPayload",
+      "workflowInput",
+      "accessToken",
+      "refreshToken",
+      "privateKey",
+      "secret",
+      "sealedBid",
+      "quote",
+      "bankAccount",
+      "invoiceAttachment"
+    ],
+    "maxBytes": 16384,
+    "redactionAction": "DROP_AND_AUDIT"
+  },
+  "schemaVersion": 1,
+  "source": {
+    "hashAlgorithm": "sha256-canonical-json",
+    "hashPattern": "^sha256:[0-9a-f]{64}$",
+    "pointerFormat": "system:type:id@version",
+    "requiredFields": [
+      "sourceVersion",
+      "snapshotHash",
+      "sourcePointer",
+      "observedAt"
+    ]
+  },
+  "sourceCommit": "e59a71b468b20fc58b0644c4d1c74f546f4d7aeb",
+  "status": "PASS",
+  "task": "P6-102",
+  "typedRef": {
+    "format": "system:type:id",
+    "idPattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+    "systemAllowlist": [
+      "approver",
+      "fluxion",
+      "bids",
+      "record-hub",
+      "settlement"
+    ],
+    "systemPattern": "^[a-z][a-z0-9-]{0,31}$",
+    "typePattern": "^[A-Z][A-Za-z0-9-]{0,63}$",
+    "versionMinimum": 1,
+    "versionRequired": true
+  }
+}

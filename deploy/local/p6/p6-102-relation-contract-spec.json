@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "phase": "6",
+  "task": "P6-102",
+  "purpose": "freeze typed relations, safe cross-owner summaries and reconciliation findings",
+  "liveTraffic": false,
+  "failClosed": true,
+  "typedRef": {
+    "format": "system:type:id",
+    "systemAllowlist": ["approver", "fluxion", "bids", "record-hub", "settlement"],
+    "systemPattern": "^[a-z][a-z0-9-]{0,31}$",
+    "typePattern": "^[A-Z][A-Za-z0-9-]{0,63}$",
+    "idPattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+    "versionRequired": true,
+    "versionMinimum": 1
+  },
+  "relation": {
+    "relationTypePattern": "^[a-z][a-z0-9.-]{1,63}$",
+    "allowedCardinality": ["one-to-one", "one-to-many", "many-to-one", "many-to-many"],
+    "allowedStatus": ["CURRENT", "GAP", "CONFLICT", "BROKEN", "FORBIDDEN"],
+    "unknownRelationAction": "QUARANTINE",
+    "allowedRelationTypes": ["project.application", "workflow.approval", "application.tender", "record.source"]
+  },
+  "source": {
+    "requiredFields": ["sourceVersion", "snapshotHash", "sourcePointer", "observedAt"],
+    "hashPattern": "^sha256:[0-9a-f]{64}$",
+    "hashAlgorithm": "sha256-canonical-json",
+    "pointerFormat": "system:type:id@version"
+  },
+  "safeSummary": {
+    "allowedFields": ["id", "type", "title", "status", "ownerRef", "workflowRef", "sourceVersion", "snapshotHash", "updatedAt"],
+    "forbiddenFields": ["payload", "rawPayload", "workflowInput", "accessToken", "refreshToken", "privateKey", "secret", "sealedBid", "quote", "bankAccount", "invoiceAttachment"],
+    "redactionAction": "DROP_AND_AUDIT",
+    "maxBytes": 16384
+  },
+  "finding": {
+    "allowedKinds": ["GAP", "CONFLICT", "HASH_MISMATCH", "FORBIDDEN", "BROKEN"],
+    "requiredFields": ["findingId", "relationRef", "kind", "expectedVersion", "observedVersion", "sourcePointer", "detectedAt", "resolutionState"],
+    "resolutionStates": ["OPEN", "ACKNOWLEDGED", "RESOLVED", "QUARANTINED"],
+    "rawPayload": "FORBIDDEN"
+  },
+  "prerequisite": {
+    "phase5": "INDEPENDENT_GATE",
+    "connectorEnablement": "NOT_GRANTED"
+  }
+}
