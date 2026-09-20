@@ -15,7 +15,7 @@ Phase 6 只在 Phase 5 GA 前置完成后进入 live implementation；当前先�
 | ID | 范围 | 任务 | 交付物 | 状态 |
 | --- | --- | --- | --- | --- |
 | P6-100 | Record Hub | schema.org 语义和继承 registry | IRI allowlist、版本、兼容检查；[registry contract](phase-6-schema-registry.json) 已通过静态 gate | IN_PROGRESS |
-| P6-101 | Record Hub | tags、tag dictionary 和 audit | 受控 tag、互斥组、scope API；[tag contract](phase-6-tags-contract.json) 已通过静态 gate | IN_PROGRESS |
+| P6-101 | Record Hub | tags、tag dictionary 和 audit | 受控 tag、互斥组、scope API；[tag contract](phase-6-tags-contract.json) 已冻结 | DONE |
 | P6-102 | Record Hub | typed relation 和安全摘要 | cardinality、source version、hash、gap/finding | TODO |
 | P6-103 | Record Hub/Web | views、查询 cost 和 redacted export | pagination、sort、rate/backpressure | TODO |
 
