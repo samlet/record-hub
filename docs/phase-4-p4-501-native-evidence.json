@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "phase": "4",
+  "task": "P4-501",
+  "gate": "P4-501",
+  "generatedAt": "2026-09-20T14:19:05Z",
+  "runner": "make p4-501-native",
+  "runnerCommit": "03b9cad4e67353b84774b8da6d21fa466847e37a",
+  "evidenceDir": "build/evidence/phase4/p4-501-native-run/run-20260920T141905Z-90925",
+  "topology": {
+    "status": "PASS",
+    "manifest": "build/evidence/phase4/p4-501-native-run/run-20260920T141905Z-90925/topology/manifest.json",
+    "meaning": "isolated four-owner readiness only"
+  },
+  "cases": [
+    {"id": "P4-G1", "contractStatus": "PASS", "liveStatus": "SKIPPED", "reason": "no approved owner rotation/revocation report attached"},
+    {"id": "P4-G2", "contractStatus": "PASS", "liveStatus": "SKIPPED", "reason": "no isolated restore report attached"},
+    {"id": "P4-G3", "contractStatus": "PASS", "liveStatus": "SKIPPED", "reason": "no four-owner mixed-load report attached"},
+    {"id": "P4-G4", "contractStatus": "PASS", "liveStatus": "SKIPPED", "reason": "no old/new rolling rollback report attached"},
+    {"id": "P4-G5", "contractStatus": "PASS", "liveStatus": "SKIPPED", "reason": "no cross-owner fault matrix report attached"}
+  ],
+  "status": "BLOCKED",
+  "decision": "DO_NOT_CLEAR_P4_501",
+  "next": "Attach approved immutable live reports for all five cases; any SKIPPED/PARTIAL case keeps P5-002 and P6-000 blocked."
+}
