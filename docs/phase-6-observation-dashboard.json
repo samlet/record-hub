@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "phase": "6",
   "task": "P6-502",
-  "status": "BLOCKED_BY_OBSERVABILITY_GAP",
-  "generatedAt": "2026-09-20T08:39:11.954235Z",
+  "status": "PASS_STATIC",
+  "generatedAt": "2026-09-20T12:56:22.466273Z",
   "liveTraffic": false,
-  "sourceCommit": "83281bef309177fafd5e6f19dd6fd80b2f6b5752",
+  "sourceCommit": "dad68666d29731daad7d53137b4e37a9638f6589",
   "static": {
     "operationsSnapshot": true,
     "boundedMetrics": true,
@@ -13,12 +13,10 @@
     "recovery": true,
     "scopedApi": true,
     "operationsConsole": true,
-    "findingSignal": false,
+    "findingSignal": true,
     "freshnessAudit": true
   },
-  "missingStatic": [
-    "findingSignal"
-  ],
+  "missingStatic": [],
   "scope": {
     "required": [
       "tenantId",
@@ -90,7 +88,7 @@
     "mutations": "NONE",
     "auditExport": "REQUIRED"
   },
-  "decision": "DO_NOT_ENABLE_OBSERVATION_DASHBOARD",
+  "decision": "STATIC_OBSERVATION_READY_FOR_RELEASE_GATE",
   "prerequisite": {
     "phase5": "INDEPENDENT_GATE",
     "connectorEnablement": "NOT_GRANTED"
