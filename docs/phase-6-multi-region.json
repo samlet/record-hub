@@ -3,9 +3,9 @@
   "phase": "6",
   "task": "P6-602",
   "status": "BLOCKED_BY_LIVE_MULTI_REGION_EVIDENCE",
-  "generatedAt": "2026-09-20T08:47:20.902924Z",
+  "generatedAt": "2026-09-20T13:13:05.091134Z",
   "liveTraffic": false,
-  "sourceCommit": "40812abd8d1cf9c9f67ae0a437e75415007dbaf5",
+  "sourceCommit": "c0a5bc3a70c5cefd1d8d67dd88d247f9060c8bab",
   "static": {
     "singleRegionDefault": true,
     "rpoRtoContract": true,
