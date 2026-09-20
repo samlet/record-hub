@@ -2,7 +2,7 @@
 
 BUILD_DIR := build
 
-.PHONY: p6-600 p6-601 p6-602 p6-closure p6-workflow-evidence p6-nats-event-evidence p6-event-table-evidence
+.PHONY: p6-600 p6-600-dry-run p6-601 p6-602 p6-closure p6-workflow-evidence p6-nats-event-evidence p6-event-table-evidence
 BINARY := $(BUILD_DIR)/record-hub
 
 build:
@@ -275,6 +275,9 @@ p6-503-dry-run:
 
 p6-600:
 	./scripts/verify-p6-600-mixed-load.sh
+
+p6-600-dry-run:
+	./scripts/verify-p6-600-capacity-dry-run.sh
 
 p6-601:
 	./scripts/verify-p6-601-retention-restore.sh

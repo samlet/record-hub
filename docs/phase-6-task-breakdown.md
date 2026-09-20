@@ -59,7 +59,7 @@ Phase 6 只在 Phase 5 GA 前置完成后进入 live implementation；当前先�
 
 | ID | 范围 | 任务 | 交付物 | 状态 |
 | --- | --- | --- | --- | --- |
-| P6-600 | 四仓库 | production-like mixed load | [mixed-load contract](phase-6-mixed-load.json)；synthetic capacity 和 bounded budget 基础存在，缺四 owner live evidence | BLOCKED_BY_LIVE_CAPACITY_EVIDENCE |
+| P6-600 | 四仓库 | production-like mixed load | [mixed-load contract](phase-6-mixed-load.json)；`make p6-600-dry-run` 已固化四 owner/六 plane 的安全容量计划预检，缺四 owner live evidence | BLOCKED_BY_LIVE_CAPACITY_EVIDENCE |
 | P6-601 | 数据层 | archive/retention/restore extension | [retention/restore contract](phase-6-retention-restore.json)；已有静态 PITR/archive/rebuild 边界，缺隔离 live restore evidence | BLOCKED_BY_LIVE_RESTORE_EVIDENCE |
 | P6-602 | 架构 | multi-region decision record | [multi-region decision](phase-6-multi-region.json)；默认 single-region，缺 capacity/RPO/RTO/cost/signoff live evidence | BLOCKED_BY_LIVE_MULTI_REGION_EVIDENCE |
 
