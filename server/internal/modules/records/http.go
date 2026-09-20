@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -47,6 +48,10 @@ type TagDictionaryHTTPService interface {
 	SaveTagDictionary(context.Context, identity.Principal, TagDictionaryInput, int64) (TagDictionary, error)
 }
 
+type ExportHTTPService interface {
+	ExportRecords(context.Context, identity.Principal, ExportInput) (ExportResult, error)
+}
+
 type HTTPService interface {
 	MutationService
 	RecordHTTPService
@@ -74,6 +79,7 @@ func NewHTTPHandler(service MutationService) http.Handler {
 	mux.HandleFunc("GET /api/v1/tables/{tableID}/views", handler.listViews)
 	mux.HandleFunc("PATCH /api/v1/tables/{tableID}/views/{viewID}", handler.updateView)
 	mux.HandleFunc("GET /api/v1/tables/{tableID}/records", handler.listRecords)
+	mux.HandleFunc("GET /api/v1/tables/{tableID}/export", handler.exportRecords)
 	mux.HandleFunc("POST /api/v1/tables/{tableID}/indexes", handler.createIndex)
 	mux.HandleFunc("GET /api/v1/tables/{tableID}/indexes", handler.listIndexes)
 	mux.HandleFunc("GET /api/v1/tag-dictionaries", handler.listTagDictionaries)
@@ -155,6 +161,34 @@ func (handler *HTTPHandler) listTagDictionaries(writer http.ResponseWriter, requ
 		return
 	}
 	writeJSON(writer, http.StatusOK, map[string]interface{}{"items": dictionaries})
+}
+
+func (handler *HTTPHandler) exportRecords(writer http.ResponseWriter, request *http.Request) {
+	principal, ok := identity.PrincipalFromContext(request.Context())
+	if !ok {
+		writeError(writer, http.StatusUnauthorized, "AUTHENTICATION_REQUIRED", "Authentication is required.")
+		return
+	}
+	service, ok := handler.exportService(writer)
+	if !ok {
+		return
+	}
+	input := ExportInput{TenantID: request.URL.Query().Get("tenantId"), WorkspaceID: request.URL.Query().Get("workspaceId"), TableID: request.PathValue("tableID"), ViewID: request.URL.Query().Get("viewId"), Format: request.URL.Query().Get("format"), RequestID: request.Header.Get("X-Request-ID")}
+	if input.TenantID == "" || input.WorkspaceID == "" || input.ViewID == "" {
+		writeError(writer, http.StatusBadRequest, "INVALID_REQUEST", "tenantId, workspaceId, and viewId are required.")
+		return
+	}
+	result, err := service.ExportRecords(request.Context(), principal, input)
+	if err != nil {
+		writeRecordsError(writer, err)
+		return
+	}
+	writer.Header().Set("Content-Type", result.ContentType)
+	writer.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s.%s", result.ExportID, strings.ToLower(input.Format)))
+	writer.Header().Set("X-Export-ID", result.ExportID)
+	writer.Header().Set("X-Export-Row-Count", strconv.Itoa(result.RowCount))
+	writer.WriteHeader(http.StatusOK)
+	_, _ = writer.Write(result.Body)
 }
 
 func (handler *HTTPHandler) saveTagDictionary(writer http.ResponseWriter, request *http.Request) {
@@ -576,6 +610,15 @@ func (handler *HTTPHandler) tagDictionaryService(writer http.ResponseWriter) (Ta
 	return service, true
 }
 
+func (handler *HTTPHandler) exportService(writer http.ResponseWriter) (ExportHTTPService, bool) {
+	service, ok := handler.service.(ExportHTTPService)
+	if !ok || service == nil {
+		writeError(writer, http.StatusNotImplemented, "EXPORT_API_UNAVAILABLE", "The export API is not configured.")
+		return nil, false
+	}
+	return service, true
+}
+
 func parseRecordIfMatch(value string) (int64, bool) {
 	value = strings.TrimSpace(value)
 	if len(value) >= 2 && value[0] == '"' && value[len(value)-1] == '"' {
@@ -696,6 +739,10 @@ func writeRecordsError(writer http.ResponseWriter, err error) {
 		writeError(writer, http.StatusBadRequest, "INVALID_CURSOR", "The record cursor is invalid or expired.")
 	case errors.Is(err, ErrQueryCostExceeded):
 		writeError(writer, http.StatusRequestEntityTooLarge, "QUERY_COST_EXCEEDED", "The record query exceeded the bounded cost budget.")
+	case errors.Is(err, ErrExportTooLarge):
+		writeError(writer, http.StatusRequestEntityTooLarge, "EXPORT_TOO_LARGE", "The export exceeded the bounded row or byte limit.")
+	case errors.Is(err, ErrExportViewRequired), errors.Is(err, ErrExportFormat):
+		writeError(writer, http.StatusBadRequest, "INVALID_EXPORT", "A published view and jsonl/csv format are required.")
 	case errors.Is(err, ErrIdempotencyKeyRequired):
 		writeError(writer, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key is required.")
 	case errors.Is(err, ErrIdempotencyConflict):

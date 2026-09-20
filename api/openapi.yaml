@@ -594,6 +594,50 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+  /api/v1/tables/{tableId}/export:
+    parameters:
+      - $ref: "#/components/parameters/TableId"
+    get:
+      tags: [Records]
+      operationId: exportRecords
+      summary: Export a bounded published view with sensitive fields dropped
+      parameters:
+        - $ref: "#/components/parameters/TenantIdQuery"
+        - $ref: "#/components/parameters/WorkspaceIdQuery"
+        - $ref: "#/components/parameters/ViewIdQuery"
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [jsonl, csv]
+      responses:
+        "200":
+          description: Redacted JSONL or CSV export. The response carries an X-Export-ID audit receipt.
+          headers:
+            X-Export-ID:
+              schema:
+                type: string
+            X-Export-Row-Count:
+              schema:
+                type: integer
+          content:
+            application/x-ndjson:
+              schema:
+                type: string
+            text/csv:
+              schema:
+                type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/RequestTooLarge"
   /api/v1/tables/{tableId}/records/stream:
     parameters:
       - $ref: "#/components/parameters/TableId"

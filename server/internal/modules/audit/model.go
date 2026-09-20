@@ -20,6 +20,9 @@ type Entry struct {
 	IdempotencyKey  string               `bson:"idempotencyKey,omitempty"`
 	BeforeHash      string               `bson:"beforeHash,omitempty"`
 	AfterHash       string               `bson:"afterHash,omitempty"`
+	ViewID          string               `bson:"viewId,omitempty"`
+	FieldSet        []string             `bson:"fieldSet,omitempty"`
+	RedactedFields  []string             `bson:"redactedFields,omitempty"`
 	CreatedAt       time.Time            `bson:"createdAt"`
 }
 
