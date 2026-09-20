@@ -76,7 +76,7 @@ result = {
     "missing": missing,
     "decision": "DO_NOT_RELEASE_SDK_PARITY" if missing else "STATIC_PARITY_MARKERS_PRESENT",
     "prerequisite": {"phase5": "INDEPENDENT_GATE", "connectorEnablement": "NOT_GRANTED"},
-    "next": "Add the missing typed-ref/command-result/receipt/error facets in owner SDKs, then rerun this inventory and add compile/contract evidence.",
+    "next": "Attach the owner commit and compile/contract matrix as immutable evidence; keep connector enablement gated until the Phase 5/P6-000 prerequisite passes.",
 }
 pathlib.Path(output_path).write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n")
 print(json.dumps({"task": "P6-201", "status": status, "missing": len(missing)}, ensure_ascii=False))

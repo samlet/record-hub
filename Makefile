@@ -2,6 +2,8 @@
 
 BUILD_DIR := build
 
+.PHONY: p6-201-compile
+
 .PHONY: p6-600 p6-600-dry-run p6-601 p6-601-dry-run p6-602 p6-602-dry-run p6-closure p6-workflow-evidence p6-nats-event-evidence p6-event-table-evidence
 BINARY := $(BUILD_DIR)/record-hub
 
@@ -227,6 +229,9 @@ p6-200:
 
 p6-201:
 	./scripts/verify-p6-201-sdk-parity.sh
+
+p6-201-compile:
+	./scripts/verify-p6-201-sdk-compile.sh
 
 p6-202:
 	./scripts/verify-p6-202-workload-identity.sh

@@ -7,8 +7,9 @@ P6-201 先完成跨仓库 source-marker inventory，检查 typed ref、command/r
 机器可读 contract 位于 [`p6-201-sdk-parity-spec.json`](../deploy/local/p6/p6-201-sdk-parity-spec.json)，
 盘点结果位于 [`phase-6-sdk-parity.json`](phase-6-sdk-parity.json)。入口是 `make p6-201`。
 
-当前只做只读盘点（`liveTraffic=false`）；还需要在缺口仓库补齐 typed ref、command/result、receipt、
-errors 的编译/契约测试后，才能转为 PASS 并进入真实 connector 工作。
+当前只做只读盘点（`liveTraffic=false`）。`make p6-201-compile` 会在四 owner 工作树执行 Go、
+Java、TypeScript 和 Kotlin 的编译/测试，并将 commit、命令和日志索引写入
+[`phase-6-sdk-parity-compile.json`](phase-6-sdk-parity-compile.json)；compile PASS 仍不等于 live connector PASS。
 
 Record Hub 本地 Go/Java SDK 已补齐 metadata-only `RecordRef`、`CommandResult`、`Receipt` 和
 可扩展 error-code marker，并新增 TypeScript parity types；P6-201 仍不会因此解除，因为

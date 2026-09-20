@@ -14,7 +14,7 @@
     "P6-102": {"file": "docs/phase-6-relations-contract.json", "breakdownStatus": "DONE", "reportStatus": "PASS"},
     "P6-103": {"file": "docs/phase-6-views-contract.json", "breakdownStatus": "DONE", "reportStatus": "PASS"},
     "P6-200": {"file": "docs/phase-6-connector-registry.json", "breakdownStatus": "DONE", "reportStatus": "PASS"},
-    "P6-201": {"file": "docs/phase-6-sdk-parity.json", "breakdownStatus": "BLOCKED_BY_SDK_GAP", "reportStatus": "BLOCKED_BY_SDK_GAP"},
+    "P6-201": {"file": "docs/phase-6-sdk-parity.json", "breakdownStatus": "BLOCKED_BY_SDK_GAP", "reportStatus": "PASS_STATIC"},
     "P6-202": {"file": "docs/phase-6-workload-identity.json", "breakdownStatus": "BLOCKED_BY_IDENTITY_LIFECYCLE_GAP", "reportStatus": "PASS_STATIC"},
     "P6-203": {"file": "docs/phase-6-fault-matrix.json", "breakdownStatus": "BLOCKED_BY_LIVE_FAULT_EVIDENCE", "reportStatus": "BLOCKED_BY_LIVE_FAULT_EVIDENCE"},
     "P6-300": {"file": "docs/phase-6-approver-projection.json", "breakdownStatus": "BLOCKED_BY_LIVE_CONNECTOR", "reportStatus": "BLOCKED_BY_LIVE_CONNECTOR"},
