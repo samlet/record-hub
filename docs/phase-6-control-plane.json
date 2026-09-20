@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 1,
+  "phase": "6",
+  "task": "P6-500",
+  "status": "BLOCKED_BY_CONTROL_PLANE_GAP",
+  "generatedAt": "2026-09-20T08:35:30.169606Z",
+  "liveTraffic": false,
+  "sourceCommit": "1ab9f46e96aa876f664e2fac39343ac184956cac",
+  "static": {
+    "rbac": true,
+    "scope": true,
+    "audit": true,
+    "tableSchemaApi": true,
+    "recordViewConsole": true,
+    "typedRelationApi": true,
+    "tagDictionary": false,
+    "relationConsole": false,
+    "redaction": true
+  },
+  "missingStatic": [
+    "tagDictionary",
+    "relationConsole"
+  ],
+  "scope": {
+    "required": [
+      "tenantId",
+      "workspaceId"
+    ],
+    "crossScopeAction": "REJECT",
+    "resourceScope": "tenant-workspace",
+    "membershipStatus": "ACTIVE_ONLY"
+  },
+  "roles": [
+    "VIEWER",
+    "EDITOR",
+    "OPERATOR",
+    "OWNER"
+  ],
+  "actions": {
+    "table.read": [
+      "VIEWER",
+      "EDITOR",
+      "OPERATOR",
+      "OWNER"
+    ],
+    "table.write": [
+      "EDITOR",
+      "OWNER"
+    ],
+    "schema.read": [
+      "VIEWER",
+      "EDITOR",
+      "OPERATOR",
+      "OWNER"
+    ],
+    "schema.draft": [
+      "EDITOR",
+      "OWNER"
+    ],
+    "schema.publish": [
+      "OWNER"
+    ],
+    "tag.read": [
+      "VIEWER",
+      "EDITOR",
+      "OPERATOR",
+      "OWNER"
+    ],
+    "tag.assign": [
+      "EDITOR",
+      "OWNER"
+    ],
+    "tag.dictionary.write": [
+      "OWNER"
+    ],
+    "relation.read": [
+      "VIEWER",
+      "EDITOR",
+      "OPERATOR",
+      "OWNER"
+    ],
+    "relation.write": [
+      "EDITOR",
+      "OWNER"
+    ],
+    "view.write": [
+      "EDITOR",
+      "OWNER"
+    ],
+    "export.read": [
+      "VIEWER",
+      "EDITOR",
+      "OPERATOR",
+      "OWNER"
+    ],
+    "audit.read": [
+      "OPERATOR",
+      "OWNER"
+    ]
+  },
+  "ui": {
+    "route": "/",
+    "requiredFeatures": [
+      "workspace-scoped table browser",
+      "schema draft/compatibility/publish workflow",
+      "controlled tag dictionary and assignment",
+      "typed relation browser and editor",
+      "redacted export with audit receipt"
+    ],
+    "unknownAction": "HIDE_AND_REJECT"
+  },
+  "audit": {
+    "immutable": true,
+    "requiredFields": [
+      "tenantId",
+      "workspaceId",
+      "actor",
+      "action",
+      "resourceType",
+      "resourceId",
+      "resourceVersion",
+      "requestId",
+      "beforeHash",
+      "afterHash",
+      "occurredAt"
+    ],
+    "failedAuthorizationAction": "AUDIT_AND_REJECT"
+  },
+  "export": {
+    "mode": "PUBLISHED_VIEW_ONLY",
+    "redaction": "DROP_AND_AUDIT",
+    "forbiddenFields": [
+      "rawPayload",
+      "workflowInput",
+      "accessToken",
+      "refreshToken",
+      "privateKey",
+      "secret",
+      "sealedBid",
+      "quote",
+      "bankAccount",
+      "invoiceAttachment"
+    ],
+    "receiptRequired": true
+  },
+  "decision": "DO_NOT_ENABLE_CONTROL_PLANE",
+  "prerequisite": {
+    "phase5": "INDEPENDENT_GATE",
+    "connectorEnablement": "NOT_GRANTED"
+  },
+  "next": "Implement the missing controlled tag dictionary and relation console/API facets, then add browser/API matrix and redacted export evidence."
+}
