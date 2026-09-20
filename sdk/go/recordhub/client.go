@@ -40,11 +40,49 @@ type Snapshot struct {
 	CreatedAt     time.Time       `json:"createdAt"`
 }
 
+// RecordRef is the stable owner/type/id reference used by command and
+// snapshot contracts. SnapshotRequest keeps its string field for backwards
+// compatibility; new callers may use RecordRef(value) at the boundary.
+type RecordRef string
+
+// Receipt is the idempotent acknowledgement shared by command clients.
+// It intentionally contains metadata only and never a business payload.
+type Receipt struct {
+	OperationID string    `json:"operationId"`
+	Status      string    `json:"status"`
+	Replayed    bool      `json:"replayed"`
+	OccurredAt  time.Time `json:"occurredAt"`
+}
+
+// CommandResult is the framework-neutral command/result envelope. Owners
+// remain responsible for applying side effects; Record Hub only carries the
+// bounded result and receipt metadata.
+type CommandResult struct {
+	OperationID string          `json:"operationId"`
+	Accepted    bool            `json:"accepted"`
+	Receipt     Receipt         `json:"receipt"`
+	Error       *APIError       `json:"error,omitempty"`
+	Data        json.RawMessage `json:"data,omitempty"`
+}
+
 type APIError struct {
 	StatusCode int
 	Code       string `json:"code"`
 	Message    string `json:"message"`
 }
+
+// ErrorCode is the portable error-code marker used by generated and hand-
+// written clients. Unknown values must remain forward-compatible strings.
+type ErrorCode string
+
+const (
+	ErrorCodeInvalidArgument ErrorCode = "INVALID_ARGUMENT"
+	ErrorCodeUnauthorized    ErrorCode = "UNAUTHORIZED"
+	ErrorCodeForbidden       ErrorCode = "FORBIDDEN"
+	ErrorCodeNotFound        ErrorCode = "NOT_FOUND"
+	ErrorCodeConflict        ErrorCode = "CONFLICT"
+	ErrorCodeRateLimited     ErrorCode = "RATE_LIMITED"
+)
 
 func (err *APIError) Error() string {
 	if err == nil {

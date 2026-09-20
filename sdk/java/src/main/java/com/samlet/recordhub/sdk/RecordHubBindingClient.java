@@ -51,6 +51,28 @@ public final class RecordHubBindingClient {
     public record SnapshotResult(Snapshot snapshot, boolean replayed) {
     }
 
+    /** Stable owner/type/id reference shared by command and snapshot clients. */
+    public record RecordRef(String owner, String type, String id) {
+        public RecordRef {
+            requireText(owner, "owner");
+            requireText(type, "type");
+            requireText(id, "id");
+        }
+
+        @Override
+        public String toString() {
+            return owner + ":" + type + ":" + id;
+        }
+    }
+
+    /** Metadata-only idempotent acknowledgement; business payloads stay out. */
+    public record Receipt(String operationId, String status, boolean replayed, String occurredAt) {
+    }
+
+    /** Framework-neutral command/result envelope shared by owner adapters. */
+    public record CommandResult(String operationId, boolean accepted, Receipt receipt, JsonNode data, ApiException error) {
+    }
+
     public static final class ApiException extends RuntimeException {
         private final int statusCode;
         private final String code;
@@ -68,6 +90,16 @@ public final class RecordHubBindingClient {
         public String code() {
             return code;
         }
+    }
+
+    /** Portable error-code marker; unknown values remain forward-compatible. */
+    public enum ErrorCode {
+        INVALID_ARGUMENT,
+        UNAUTHORIZED,
+        FORBIDDEN,
+        NOT_FOUND,
+        CONFLICT,
+        RATE_LIMITED
     }
 
     private static final int MAX_RESPONSE_BYTES = 2 << 20;
