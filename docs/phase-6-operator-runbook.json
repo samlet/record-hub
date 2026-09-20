@@ -3,9 +3,9 @@
   "phase": "6",
   "task": "P6-503",
   "status": "BLOCKED_BY_LIVE_ROLLBACK_EVIDENCE",
-  "generatedAt": "2026-09-20T08:40:49.415210Z",
+  "generatedAt": "2026-09-20T13:05:17.605679Z",
   "liveTraffic": false,
-  "sourceCommit": "019b4f3c237b786e6de57bef22417c367be181e6",
+  "sourceCommit": "82b334c9488b294dcd1aff2d2265bf2217ad7095",
   "static": {
     "recoveryRunbook": true,
     "stopDrainRollback": true,
