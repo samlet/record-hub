@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "phase": "6",
   "task": "P6-201",
-  "status": "BLOCKED_BY_SDK_GAP",
-  "generatedAt": "2026-09-20T13:34:37.947325Z",
+  "status": "PASS_STATIC",
+  "generatedAt": "2026-09-20T13:50:53.187848Z",
   "liveTraffic": false,
-  "sourceCommit": "9b2d2ac5c3f8d4c308c76f4f00f343175e6218cf",
+  "sourceCommit": "4beb91495aa27f18fc63a536c691ebc0469a1e0a",
   "mode": "SOURCE_MARKER_INVENTORY_ONLY",
   "facets": [
     "typedRef",
@@ -58,9 +58,9 @@
       "language": "java",
       "path": "approver-application/src/main/java",
       "exists": true,
-      "sourceFiles": 169,
+      "sourceFiles": 170,
       "facets": {
-        "typedRef": false,
+        "typedRef": true,
         "commandResult": true,
         "receipt": true,
         "errors": true
@@ -97,39 +97,20 @@
       "language": "java",
       "path": "sdk/bids-java-sdk-core/src/main/java",
       "exists": true,
-      "sourceFiles": 67,
+      "sourceFiles": 69,
       "facets": {
-        "typedRef": false,
-        "commandResult": false,
+        "typedRef": true,
+        "commandResult": true,
         "receipt": true,
         "errors": true
       }
     }
   ],
-  "missing": [
-    {
-      "owner": "approver",
-      "language": "java",
-      "path": "approver-application/src/main/java",
-      "facet": "typedRef"
-    },
-    {
-      "owner": "bids",
-      "language": "java",
-      "path": "sdk/bids-java-sdk-core/src/main/java",
-      "facet": "typedRef"
-    },
-    {
-      "owner": "bids",
-      "language": "java",
-      "path": "sdk/bids-java-sdk-core/src/main/java",
-      "facet": "commandResult"
-    }
-  ],
-  "decision": "DO_NOT_RELEASE_SDK_PARITY",
+  "missing": [],
+  "decision": "STATIC_PARITY_MARKERS_PRESENT",
   "prerequisite": {
     "phase5": "INDEPENDENT_GATE",
     "connectorEnablement": "NOT_GRANTED"
   },
-  "next": "Add the missing typed-ref/command-result/receipt/error facets in owner SDKs, then rerun this inventory and add compile/contract evidence."
+  "next": "Attach the owner commit and compile/contract matrix as immutable evidence; keep connector enablement gated until the Phase 5/P6-000 prerequisite passes."
 }

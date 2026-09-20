@@ -3,9 +3,9 @@
   "phase": "6",
   "task": "P6-CLOSURE",
   "status": "PASS_STATIC_WITH_BLOCKERS",
-  "generatedAt": "2026-09-20T13:42:13.890698Z",
+  "generatedAt": "2026-09-20T13:51:02.144359Z",
   "liveTraffic": false,
-  "sourceCommit": "b4257f24062d142b1fc6b91ee42ea14ebb358036",
+  "sourceCommit": "4beb91495aa27f18fc63a536c691ebc0469a1e0a",
   "sourceOfTruth": "docs/phase-6-task-breakdown.md",
   "counts": {
     "DONE": 7,
@@ -69,7 +69,7 @@
     {
       "task": "P6-201",
       "breakdownStatus": "BLOCKED_BY_SDK_GAP",
-      "reportStatus": "BLOCKED_BY_SDK_GAP",
+      "reportStatus": "PASS_STATIC",
       "file": "docs/phase-6-sdk-parity.json"
     },
     {

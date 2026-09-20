@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "phase": "6",
+  "task": "P6-201-COMPILE",
+  "status": "PASS_STATIC",
+  "generatedAt": "2026-09-20T13:51:01.915529Z",
+  "liveTraffic": false,
+  "sourceCommits": {
+    "record-hub": "4beb91495aa27f18fc63a536c691ebc0469a1e0a",
+    "approver": "bb91e5bbb5c05aa16078cfe4736502caf211076c",
+    "fluxion": "bf538f641bf9b41ac399cbad4fb60d8ecf89dba9",
+    "bids": "5414a37f736c3ebe1d11c11a15dbb7135863aa65"
+  },
+  "steps": [
+    {
+      "name": "record_hub_go",
+      "status": "PASS",
+      "workdir": "/Users/xiaofeiwu/apps/record-hub",
+      "command": "go test ./sdk/go/recordhub"
+    },
+    {
+      "name": "record_hub_java",
+      "status": "PASS",
+      "workdir": "/Users/xiaofeiwu/apps/record-hub",
+      "command": "(cd sdk/java && mvn -q test)"
+    },
+    {
+      "name": "record_hub_typescript",
+      "status": "PASS",
+      "workdir": "/Users/xiaofeiwu/apps/record-hub",
+      "command": "web/node_modules/.bin/tsc --noEmit --target ES2020 --module ESNext sdk/typescript/index.ts"
+    },
+    {
+      "name": "approver_java",
+      "status": "PASS",
+      "workdir": "/Users/xiaofeiwu/apps/approver",
+      "command": "mvn -q -pl approver-application -am test"
+    },
+    {
+      "name": "bids_java",
+      "status": "PASS",
+      "workdir": "/Users/xiaofeiwu/apps/bids/sdk/bids-java-sdk-core",
+      "command": "mvn -q test"
+    },
+    {
+      "name": "fluxion_kotlin",
+      "status": "PASS",
+      "workdir": "/Users/xiaofeiwu/portals/fluxion",
+      "command": "make test-server"
+    }
+  ],
+  "evidenceDir": "build/evidence/phase6/p6-201-sdk-compile",
+  "decision": "STATIC_SDK_COMPILE_READY_FOR_LIVE_GATE",
+  "next": "Attach these owner commits and logs to the Phase 5/P6-000 evidence manifest; compile PASS does not enable live connectors."
+}
