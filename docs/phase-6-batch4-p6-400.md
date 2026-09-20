@@ -2,6 +2,10 @@
 
 P6-400 固化 Temporal history 可保存的 typed ref/version/hash/operationId、四种事务属性以及
 Activity timeout/retry/idempotency/hash assertion 规则。当前只做静态 adapter 盘点，缺 native Temporal
-workflow 的 immutable history/replay evidence，状态为 `BLOCKED_BY_LIVE_WORKFLOW_EVIDENCE`。
+ workflow 的 immutable history/replay evidence，状态为 `BLOCKED_BY_LIVE_WORKFLOW_EVIDENCE`。
 
 入口是 `make p6-400`，结果见 [`phase-6-temporal-binding.json`](phase-6-temporal-binding.json)。
+
+原生证据采集入口为 `make p6-workflow-evidence`；它会验证同一 operation ID 的 Temporal
+execution replay、snapshot hash 和 Mongo 单条性。该证据不会越过独立 P4/P5 GA 前置门禁，因此
+本任务报告仍保持 blocked。

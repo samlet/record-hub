@@ -2,7 +2,7 @@
 
 BUILD_DIR := build
 
-.PHONY: p6-600 p6-601 p6-602 p6-closure
+.PHONY: p6-600 p6-601 p6-602 p6-closure p6-workflow-evidence
 BINARY := $(BUILD_DIR)/record-hub
 
 build:
@@ -155,6 +155,9 @@ p3-four-owner-topology:
 
 p3-workflow-e2e:
 	RECORD_HUB_P3_WORKFLOW_E2E_LIVE=1 ./scripts/verify-p3-workflow-e2e.sh
+
+p6-workflow-evidence:
+	./scripts/verify-p6-workflow-evidence.sh
 
 p3-nats-outage-recovery:
 	RECORD_HUB_P3_NATS_RECOVERY_LIVE=1 ./scripts/verify-p3-nats-outage-recovery.sh

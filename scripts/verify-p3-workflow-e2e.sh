@@ -104,6 +104,9 @@ hook_run() {
   [[ "$record_version" =~ ^[0-9]+$ && "$source_version" =~ ^[0-9]+$ ]] || { echo "Fluxion summary projection is incomplete" >&2; return 1; }
 
   local temporal_workflow_id temporal_input temporal_start temporal_result temporal_history snapshot_id
+  local replay_enabled="${RECORD_HUB_P3_WORKFLOW_E2E_REPLAY:-0}"
+  local temporal_replay_workflow_id temporal_replay_start temporal_replay_result temporal_replay_history
+  local temporal_replay_snapshot_id temporal_replay_hash temporal_replayed="false"
   temporal_workflow_id="p3-workflow-binding-${project_id}"
   temporal_input="$(jq -cn --arg project "$project_id" --arg tenant tenant-p3-fluxion --arg workspace workspace-p3-fluxion --argjson record "$record_version" --argjson source "$source_version" '{projectId:$project,tenantId:$tenant,workspaceId:$workspace,expectedRecordVersion:$record,expectedSourceVersion:$source,purpose:"diagnostic"}')"
   temporal_start="$(temporal workflow start --address "$temporal_address" --namespace p3-local --tls=false --workflow-id "$temporal_workflow_id" --type ProjectDiagnosticWorkflow --task-queue fluxion-p3-local --execution-timeout 90s --input "$temporal_input" --output json --color never)"
@@ -118,6 +121,33 @@ hook_run() {
   [[ -n "$snapshot_id" ]] || { echo "Temporal diagnostic result has no snapshotId" >&2; return 1; }
   jq -e --arg snapshot "$snapshot_id" '.snapshotId == $snapshot or .result.snapshotId == $snapshot or (.result[0].snapshotId? == $snapshot)' "$workflow_dir/temporal-result.json" >/dev/null 2>&1 || true
   mongosh --quiet "$mongo_uri" --eval "const s=db.binding_snapshots.findOne({_id:'${snapshot_id}'}); if (!s || s.tenantId !== 'tenant-p3-fluxion' || s.workspaceId !== 'workspace-p3-fluxion') quit(1); print(JSON.stringify({snapshotId:s._id,operationId:s.operationId,recordVersion:s.recordVersion,sourceVersion:s.sourceVersion}));" >"$workflow_dir/temporal-snapshot-db.json"
+
+  if [[ "$replay_enabled" == "1" ]]; then
+    # A new Temporal execution with the same typed input must reuse the stable
+    # binding operation ID.  The Record Hub adapter should return the original
+    # snapshot (HTTP 200/replayed=true), without creating a second snapshot.
+    temporal_replay_workflow_id="p3-workflow-binding-replay-${project_id}"
+    temporal_replay_start="$(temporal workflow start --address "$temporal_address" --namespace p3-local --tls=false --workflow-id "$temporal_replay_workflow_id" --type ProjectDiagnosticWorkflow --task-queue fluxion-p3-local --execution-timeout 90s --input "$temporal_input" --output json --color never)"
+    printf '%s\n' "$temporal_replay_start" >"$workflow_dir/temporal-replay-start.json"
+    temporal_replay_result="$(temporal workflow result --address "$temporal_address" --namespace p3-local --tls=false --workflow-id "$temporal_replay_workflow_id" --output json --color never)"
+    printf '%s\n' "$temporal_replay_result" >"$workflow_dir/temporal-replay-result.json"
+    temporal_replay_history="$(temporal workflow show --address "$temporal_address" --namespace p3-local --tls=false --workflow-id "$temporal_replay_workflow_id" --output json --color never)"
+    printf '%s\n' "$temporal_replay_history" >"$workflow_dir/temporal-replay-history.json"
+    ! grep -Fq 'P3-WORKFLOW-SECRET-MARKER' "$workflow_dir/temporal-replay-history.json"
+    grep -Eq 'ActivityTaskCompleted|ACTIVITY_TASK_COMPLETED' "$workflow_dir/temporal-replay-history.json"
+    temporal_replay_snapshot_id="$(jq -r '.. | objects | .snapshotId? // empty' "$workflow_dir/temporal-replay-result.json" | head -1)"
+    temporal_replay_hash="$(jq -r '.. | objects | .snapshotHash? // empty' "$workflow_dir/temporal-replay-result.json" | head -1)"
+    temporal_replayed="$(jq -r '.. | objects | .replayed? // empty' "$workflow_dir/temporal-replay-result.json" | head -1)"
+    [[ "$temporal_replay_snapshot_id" == "$snapshot_id" && -n "$temporal_replay_hash" && "$temporal_replayed" == "true" ]] || {
+      echo "Temporal replay did not return the original snapshot" >&2
+      return 1
+    }
+    [[ "$temporal_replay_hash" == "$(jq -r '.. | objects | .snapshotHash? // empty' "$workflow_dir/temporal-result.json" | head -1)" ]] || {
+      echo "Temporal replay changed snapshot hash" >&2
+      return 1
+    }
+    mongosh --quiet "$mongo_uri" --eval "const n=db.binding_snapshots.countDocuments({tenantId:'tenant-p3-fluxion',workspaceId:'workspace-p3-fluxion',operationId:{\$regex:'^fluxion:project-diagnostic:v1:${project_id}:'}}); if (n !== 1) quit(1); print(JSON.stringify({operationIdPrefix:'fluxion:project-diagnostic:v1:${project_id}:',snapshotCount:n}));" >"$workflow_dir/temporal-replay-snapshot-db.json"
+  fi
 
   local bids_project bids_project_status tender_json tender_id tender_status bids_workflow_id approval_submitted=0 last_bids_status=""
   curl --silent --show-error --fail -c "$bids_cookie" -H 'Content-Type: application/json' \
@@ -178,6 +208,7 @@ hook_run() {
   [[ "$record_version" =~ ^[0-9]+$ && "$source_version" =~ ^[0-9]+$ ]] || { echo "Bids tender summary projection is incomplete" >&2; return 1; }
 
   local conductor_workflow_id conductor_input conductor_output
+  local conductor_snapshot_id conductor_snapshot_hash conductor_replay_output conductor_replay_snapshot_id conductor_replay_hash conductor_replayed="false"
   conductor_workflow_id="p3-workflow-tender-${tender_id}"
   conductor_input="$(jq -cn --arg tenant "$bids_tenant_id" --arg workspace workspace-p3-bids --arg tender "$tender_id" --arg operation "bids:p3-workflow:${tender_id}" --argjson record "$record_version" --argjson source "$source_version" '{tenant_id:$tenant,workspace_id:$workspace,tender_id:$tender,expected_record_version:$record,expected_source_version:$source,operation_id:$operation,purpose:"diagnostic"}')"
   conductor_output="$(CONDUCTOR_SERVER_URL="$conductor_url" conductor workflow start --workflow bids_record_hub_tender_diagnostic --version 1 --sync --full --input "$conductor_input")"
@@ -185,6 +216,24 @@ hook_run() {
   jq -e '.. | objects | select(.snapshot_id? != null) | .snapshot_hash? != null' "$workflow_dir/conductor-result.json" >/dev/null
   ! grep -Fq 'P3-WORKFLOW-SECRET-MARKER' "$workflow_dir/conductor-result.json"
   jq -e --arg tender "$tender_id" '. | tostring | contains($tender)' "$workflow_dir/conductor-result.json" >/dev/null
+  conductor_snapshot_id="$(jq -r '.. | objects | .snapshot_id? // empty' "$workflow_dir/conductor-result.json" | head -1)"
+  conductor_snapshot_hash="$(jq -r '.. | objects | .snapshot_hash? // empty' "$workflow_dir/conductor-result.json" | head -1)"
+
+  if [[ "$replay_enabled" == "1" ]]; then
+    # Conductor starts a second execution, but the worker receives the same
+    # operation ID and must resolve the existing Record Hub receipt.
+    conductor_replay_output="$(CONDUCTOR_SERVER_URL="$conductor_url" conductor workflow start --workflow bids_record_hub_tender_diagnostic --version 1 --sync --full --input "$conductor_input")"
+    printf '%s\n' "$conductor_replay_output" >"$workflow_dir/conductor-replay-result.json"
+    jq -e '.. | objects | select(.snapshot_id? != null) | .snapshot_hash? != null' "$workflow_dir/conductor-replay-result.json" >/dev/null
+    ! grep -Fq 'P3-WORKFLOW-SECRET-MARKER' "$workflow_dir/conductor-replay-result.json"
+    conductor_replay_snapshot_id="$(jq -r '.. | objects | .snapshot_id? // empty' "$workflow_dir/conductor-replay-result.json" | head -1)"
+    conductor_replay_hash="$(jq -r '.. | objects | .snapshot_hash? // empty' "$workflow_dir/conductor-replay-result.json" | head -1)"
+    conductor_replayed="$(jq -r '.. | objects | .replayed? // empty' "$workflow_dir/conductor-replay-result.json" | head -1)"
+    [[ "$conductor_replay_snapshot_id" == "$conductor_snapshot_id" && "$conductor_replay_hash" == "$conductor_snapshot_hash" && "$conductor_replayed" == "true" ]] || {
+      echo "Conductor replay did not return the original snapshot" >&2
+      return 1
+    }
+  fi
 
   local snapshot_count command_inbox_count command_result_count
   snapshot_count="$(mongosh --quiet "$mongo_uri" --eval "print(db.binding_snapshots.countDocuments({tenantId:{\$in:['tenant-p3-fluxion','${bids_tenant_id}']}}))")"
@@ -200,7 +249,9 @@ hook_run() {
     --arg command "$operation_id" --arg commandStatus "$command_status" --arg snapshot "$snapshot_id" \
     --arg projectStatus "$fluxion_project_status" \
     --arg tenderStatus "$tender_status" --argjson recordVersion "$record_version" --argjson sourceVersion "$source_version" \
-    '{gate:"P3-402",status:"PASS",command:{operationId:$command,status:$commandStatus,inboxCount:1,resultOutboxSent:1},fluxion:{projectId:$project,recordVersion:$recordVersion,sourceVersion:$sourceVersion,status:$projectStatus,temporalWorkflowId:$temporal,snapshotId:$snapshot},bids:{tenderId:$tender,status:$tenderStatus,conductorWorkflowId:$conductor},history:{rawCommandMarkerAbsent:true,temporalActivityCompleted:true,conductorMetadataOnly:true}}' \
+    --arg replayEnabled "$replay_enabled" --arg temporalReplaySnapshot "$temporal_replay_snapshot_id" --arg temporalReplayHash "$temporal_replay_hash" --arg temporalReplayed "$temporal_replayed" \
+    --arg conductorReplaySnapshot "$conductor_replay_snapshot_id" --arg conductorReplayHash "$conductor_replay_hash" --arg conductorReplayed "$conductor_replayed" \
+    '{gate:"P3-402",status:"PASS",liveStatus:(if $replayEnabled == "1" then "PASS" else null end),command:{operationId:$command,status:$commandStatus,inboxCount:1,resultOutboxSent:1},fluxion:{projectId:$project,recordVersion:$recordVersion,sourceVersion:$sourceVersion,status:$projectStatus,temporalWorkflowId:$temporal,snapshotId:$snapshot},bids:{tenderId:$tender,status:$tenderStatus,conductorWorkflowId:$conductor},history:{rawCommandMarkerAbsent:true,temporalActivityCompleted:true,conductorMetadataOnly:true},replay:(if $replayEnabled == "1" then {status:"PASS",temporal:{sameSnapshot:($temporalReplaySnapshot == $snapshot),sameHash:($temporalReplayHash != ""),replayed:($temporalReplayed == "true")},conductor:{sameSnapshot:($conductorReplaySnapshot != ""),sameHash:($conductorReplayHash != ""),replayed:($conductorReplayed == "true")}} else null end)}' \
     >"$evidence_dir/workflow-e2e.json"
   cp "$evidence_dir/workflow-e2e.json" "$evidence_dir/db-assertions/p3-402-workflow.json"
   echo "P3-402 Temporal + Conductor workflow E2E passed"
