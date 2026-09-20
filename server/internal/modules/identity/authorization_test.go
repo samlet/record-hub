@@ -109,6 +109,35 @@ func TestRoleAllowDenyMatrix(t *testing.T) {
 	}
 }
 
+func TestControlPlaneRoleMatrix(t *testing.T) {
+	allowed := map[Role][]Action{
+		RoleViewer:   {ActionTagRead, ActionRelationRead, ActionExportRead},
+		RoleEditor:   {ActionTagRead, ActionTagAssign, ActionRelationRead, ActionRelationWrite, ActionExportRead},
+		RoleOperator: {ActionTagRead, ActionRelationRead, ActionExportRead, ActionAuditRead},
+		RoleOwner:    {ActionTagDictionaryWrite, ActionTagAssign, ActionRelationWrite, ActionAuditRead},
+	}
+	for role, actions := range allowed {
+		for _, action := range actions {
+			if !roleAllows(role, action) {
+				t.Errorf("roleAllows(%s, %s) = false, want true", role, action)
+			}
+		}
+	}
+	for _, denied := range []struct {
+		role   Role
+		action Action
+	}{
+		{RoleViewer, ActionTagAssign},
+		{RoleEditor, ActionTagDictionaryWrite},
+		{RoleOperator, ActionRelationWrite},
+		{RoleViewer, ActionAuditRead},
+	} {
+		if roleAllows(denied.role, denied.action) {
+			t.Errorf("roleAllows(%s, %s) = true, want false", denied.role, denied.action)
+		}
+	}
+}
+
 func TestAuthorizerUsesExactLocalMembership(t *testing.T) {
 	principal := Principal{Kind: PrincipalUser, Issuer: "https://issuer.example", Subject: "user-1", Groups: []string{"admins"}}
 	stored := WorkspaceMembership{

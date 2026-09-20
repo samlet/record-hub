@@ -32,17 +32,24 @@ const (
 type Action string
 
 const (
-	ActionWorkspaceRead    Action = "workspace.read"
-	ActionWorkspaceManage  Action = "workspace.manage"
-	ActionMembershipManage Action = "membership.manage"
-	ActionSchemaRead       Action = "schema.read"
-	ActionSchemaManage     Action = "schema.manage"
-	ActionRecordRead       Action = "record.read"
-	ActionRecordWrite      Action = "record.write"
-	ActionViewRead         Action = "view.read"
-	ActionViewWrite        Action = "view.write"
-	ActionOperationsRead   Action = "operations.read"
-	ActionProjectionManage Action = "projection.manage"
+	ActionWorkspaceRead      Action = "workspace.read"
+	ActionWorkspaceManage    Action = "workspace.manage"
+	ActionMembershipManage   Action = "membership.manage"
+	ActionSchemaRead         Action = "schema.read"
+	ActionSchemaManage       Action = "schema.manage"
+	ActionRecordRead         Action = "record.read"
+	ActionRecordWrite        Action = "record.write"
+	ActionViewRead           Action = "view.read"
+	ActionViewWrite          Action = "view.write"
+	ActionOperationsRead     Action = "operations.read"
+	ActionProjectionManage   Action = "projection.manage"
+	ActionTagRead            Action = "tag.read"
+	ActionTagAssign          Action = "tag.assign"
+	ActionTagDictionaryWrite Action = "tag.dictionary.write"
+	ActionRelationRead       Action = "relation.read"
+	ActionRelationWrite      Action = "relation.write"
+	ActionExportRead         Action = "export.read"
+	ActionAuditRead          Action = "audit.read"
 	// Projection writes are reserved for the event projector and are never
 	// granted by a human workspace role.
 	ActionProjectionWrite Action = "projection.write"
@@ -96,17 +103,17 @@ func roleAllows(role Role, action Action) bool {
 		return action != ActionProjectionWrite && knownAction(action)
 	case RoleOperator:
 		switch action {
-		case ActionWorkspaceRead, ActionSchemaRead, ActionRecordRead, ActionViewRead, ActionOperationsRead, ActionProjectionManage:
+		case ActionWorkspaceRead, ActionSchemaRead, ActionRecordRead, ActionViewRead, ActionOperationsRead, ActionProjectionManage, ActionTagRead, ActionRelationRead, ActionExportRead, ActionAuditRead:
 			return true
 		}
 	case RoleEditor:
 		switch action {
-		case ActionWorkspaceRead, ActionSchemaRead, ActionRecordRead, ActionRecordWrite, ActionViewRead, ActionViewWrite:
+		case ActionWorkspaceRead, ActionSchemaRead, ActionRecordRead, ActionRecordWrite, ActionViewRead, ActionViewWrite, ActionTagRead, ActionTagAssign, ActionRelationRead, ActionRelationWrite, ActionExportRead:
 			return true
 		}
 	case RoleViewer:
 		switch action {
-		case ActionWorkspaceRead, ActionSchemaRead, ActionRecordRead, ActionViewRead:
+		case ActionWorkspaceRead, ActionSchemaRead, ActionRecordRead, ActionViewRead, ActionTagRead, ActionRelationRead, ActionExportRead:
 			return true
 		}
 	}
@@ -116,7 +123,8 @@ func roleAllows(role Role, action Action) bool {
 func knownAction(action Action) bool {
 	switch action {
 	case ActionWorkspaceRead, ActionWorkspaceManage, ActionMembershipManage, ActionSchemaRead, ActionSchemaManage,
-		ActionRecordRead, ActionRecordWrite, ActionViewRead, ActionViewWrite, ActionOperationsRead, ActionProjectionManage, ActionProjectionWrite:
+		ActionRecordRead, ActionRecordWrite, ActionViewRead, ActionViewWrite, ActionOperationsRead, ActionProjectionManage, ActionProjectionWrite,
+		ActionTagRead, ActionTagAssign, ActionTagDictionaryWrite, ActionRelationRead, ActionRelationWrite, ActionExportRead, ActionAuditRead:
 		return true
 	default:
 		return false
