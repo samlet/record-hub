@@ -63,7 +63,7 @@ result = {
     "lifecyclePolicy": spec["lifecycle"],
     "auditPolicy": spec["audit"],
     "prerequisite": {"phase5": "INDEPENDENT_GATE", "connectorEnablement": "NOT_GRANTED"},
-    "next": "Implement owner-scoped candidate/dual-accept/drain/revoke state and audited fixtures, then rerun this gate.",
+    "next": "Run the isolated four-owner credential rotation/drain/revoke fixture with immutable audit evidence; do not enable owner credentials until the live gate passes.",
 }
 pathlib.Path(output_path).write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n")
 print(json.dumps({"task": "P6-202", "status": status, "missing": missing}, ensure_ascii=False))
